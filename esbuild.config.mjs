@@ -35,10 +35,12 @@ const context = await esbuild.context({
 	format: "cjs",
 	target: "es2018",
 	logLevel: "info",
-	sourcemap: prod ? false : "inline",
+	sourcemap: prod ? true : "inline",
 	treeShaking: true,
 	outfile: "main.js",
-	minify: prod,
+	minify: false,
+	keepNames: true,
+	legalComments: "eof",
 });
 
 if (prod) {

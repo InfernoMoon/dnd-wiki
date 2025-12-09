@@ -3,6 +3,34 @@ import { nameToSlug, displayNameFromSlug } from "./utils";
 
 // In-memory cache of rendered spell content, keyed by normalized id
 const spellRenderCache: Map<string, { titleText: string; contentHtml: string }> = new Map();
+// In-memory set of all known spell names (normalized ids)
+const spellNameCache: Set<string> = new Set();
+
+export function getKnownSpellIds(): string[] {
+  return Array.from(spellNameCache).sort((a, b) => a.localeCompare(b));
+}
+
+export async function preloadAllSpellNames(baseUrl: string): Promise<void> {
+  const base = baseUrl.replace(/\/$/, "");
+  try {
+    const res = await requestUrl({ url: `${base}/spells`, method: 'GET' });
+    if (res.status < 200 || res.status >= 300) return;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(res.text, 'text/html');
+    const rows = Array.from(doc.querySelectorAll('table tr'));
+    const names = rows
+      .map(tr => tr.querySelector('td'))
+      .filter(td => td?.textContent?.trim().length)
+      .map(td => (td?.textContent || '').trim())
+      .map(n => n.replace(/\(\s*ua\s*\)/ig, '').trim());
+    for (const n of names) {
+      const id = nameToSlug(n);
+      if (id) spellNameCache.add(id);
+    }
+  } catch (e) {
+    console.error('Failed to preload spell names', e);
+  }
+}
 
 export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name: string) {
   const id = nameToSlug(name);
@@ -10,27 +38,43 @@ export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name
     host.createEl('div', { text: 'No spell name provided' });
     return;
   }
+  // If not known, check UA variant; otherwise report unknown without requesting
+  let effectiveId = id;
+  if (!spellNameCache.has(id)) {
+    const uaId = `${id}-ua`;
+    if (spellNameCache.has(uaId)) {
+      effectiveId = uaId;
+    } else {
+      renderCollapsible(host, displayNameFromSlug(id) + ' (Error)', 'Spell unknown');
+      return;
+    }
+  }
   // If already rendered and cached, reuse without refetching
-  const cached = spellRenderCache.get(id);
+  const cached = spellRenderCache.get(effectiveId);
   if (cached) {
     renderCollapsible(host, cached.titleText, cached.contentHtml);
     return;
   }
   try {
-    let result = await fetchSpellPage(baseUrl, id);
+    const result = await fetchSpellPageWithFallback(baseUrl, effectiveId);
     if (!result.ok) {
-      // Try UA variant once
-      result = await fetchSpellPage(baseUrl, `${id}-ua`);
-    }
-    if (!result.ok) {
-      renderCollapsible(host, displayNameFromSlug(id) + ' (Error)', 'Error loading this spell');
+      // If not present in render cache, treat as unknown and show error
+      if (!spellRenderCache.has(effectiveId)) {
+        renderCollapsible(host, displayNameFromSlug(effectiveId) + ' (Error)', 'Error loading this spell');
+        return;
+      }
+      const cachedFallback = spellRenderCache.get(effectiveId);
+      if (cachedFallback) {
+        renderCollapsible(host, cachedFallback.titleText, cachedFallback.contentHtml);
+      } else {
+        renderCollapsible(host, displayNameFromSlug(effectiveId) + ' (Error)', 'Error loading this spell');
+      }
       return;
     }
-    spellRenderCache.set(id, { titleText: result.titleText, contentHtml: result.contentHtml });
+    spellRenderCache.set(effectiveId, { titleText: result.titleText, contentHtml: result.contentHtml });
     renderCollapsible(host, result.titleText, result.contentHtml);
   } catch (e) {
-    console.error('Failed to render spell', { name, id, error: e });
-    renderCollapsible(host, displayNameFromSlug(id) + ' (Error)', 'Error loading this spell');
+    renderCollapsible(host, displayNameFromSlug(effectiveId) + ' (Error)', 'Error getting this spell.');
   }
 }
 
@@ -47,16 +91,28 @@ async function fetchSpellPage(baseUrl: string, id: string): Promise<{ ok: boolea
   const titleText = titleEl ? (titleEl.textContent || '') : '';
   const missing = titleText.toLowerCase().includes('the page does not') || !titleEl || !contentEl;
   if (missing) return { ok: false, titleText: "", contentHtml: "" };
-
   // sanitize: replace anchors with spans
   const contentClone = contentEl.cloneNode(true) as HTMLElement;
   const links = contentClone.querySelectorAll('a');
   for (const a of Array.from(links)) {
     const span = doc.createElement('span');
-    span.textContent = a.textContent || '';
+    span.textContent 
+  = a.textContent || '';
     a.replaceWith(span);
   }
   return { ok: true, titleText, contentHtml: contentClone.innerHTML };
+}
+
+// Try standard id first; if missing, retry once with "-ua" suffix
+async function fetchSpellPageWithFallback(baseUrl: string, id: string): Promise<{ ok: boolean; titleText: string; contentHtml: string }> {
+  try {
+    const first = await fetchSpellPage(baseUrl, id);
+    if (first.ok) return first;
+  } catch (error_) {
+    // Ignore error and try fallback
+  }
+  const second = await fetchSpellPage(baseUrl, `${id}-ua`);
+  return second;
 }
 
 function renderCollapsible(el: HTMLElement, title: string, html: string) {

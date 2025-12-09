@@ -1,7 +1,7 @@
 import { Plugin } from 'obsidian';
 import { renderSpell } from './src/spell';
 import { renderSpellList } from './src/spelllist';
-import { initBaseUrlWatcher, configurePluginId, getBaseUrl } from './src/dataService';
+import { initBaseUrlWatcher, configurePluginId, getBaseUrl, initData } from './src/dataService';
 import { preloadAllSpellNames, getKnownSpellIds } from './src/spellUtils';
 import { SpellNameSuggest } from './src/suggestSpell';
 import { SpellListSuggest } from './src/suggestSpellList';
@@ -21,7 +21,10 @@ export default class Dnd5eSpellCards extends Plugin {
 		// Preload all available spell names into memory once base URL is known
 		try {
 			const baseUrl = await getBaseUrl();
-			if (baseUrl) await preloadAllSpellNames(baseUrl);
+			if (baseUrl) {
+				await preloadAllSpellNames(baseUrl);
+				await initData();
+			}
 		} catch (e) {
 			console.warn('Failed to preload spell names', e);
 		}

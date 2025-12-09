@@ -119,3 +119,65 @@ export async function getBaseUrl(): Promise<string | null> {
 		}).open();
 	});
 }
+
+function extractNames(arr: unknown): string[] {
+	if (!Array.isArray(arr)) return [];
+	return arr
+		.map((x) => {
+			if (typeof x === "string") return x;
+			if (x && typeof x === "object") {
+				const o = x as Record<string, unknown>;
+				const name = o["name"] ?? o["title"] ?? o["label"];
+				return typeof name === "string" ? name : "";
+			}
+			return "";
+		})
+		.filter(Boolean)
+		.sort((a, b) => a.localeCompare(b));
+}
+
+export async function getClassNames(): Promise<string[]> {
+	const dataFolder = getDataFolder();
+	await ensureFolder(dataFolder);
+	const classesPath = `${dataFolder}/classes.json`;
+	const json = await readJson<unknown>(classesPath);
+	return extractNames(json);
+}
+
+export async function getSchoolNames(): Promise<string[]> {
+	const dataFolder = getDataFolder();
+	await ensureFolder(dataFolder);
+	const schoolsPath = `${dataFolder}/schools.json`;
+	const json = await readJson<unknown>(schoolsPath);
+	return extractNames(json);
+}
+
+// In-memory caches for directive value suggestions
+let cachedClassNames: string[] = [];
+let cachedSchoolNames: string[] = [];
+
+export async function preloadDirectiveNames(): Promise<void> {
+	try {
+		cachedClassNames = await getClassNames();
+	} catch {
+		cachedClassNames = [];
+	}
+	try {
+		cachedSchoolNames = await getSchoolNames();
+	} catch {
+		cachedSchoolNames = [];
+	}
+}
+
+export function getCachedClassNames(): string[] {
+	return cachedClassNames;
+}
+
+export function getCachedSchoolNames(): string[] {
+	return cachedSchoolNames;
+}
+
+// Initialize cached directive data (classes, schools). Spell ids are preloaded separately.
+export async function initData(): Promise<void> {
+	await preloadDirectiveNames();
+}

@@ -1,4 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
+import { getCachedClassNames, getCachedSchoolNames } from './dataService';
+// Future: import class/school names from dataService for value suggestions
 
 export class SpellListSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;
@@ -35,22 +37,28 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
           query: fragment,
         } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
       }
-      // If we have `level:`, suggest level values
+      // If we have a directive key, capture it and compute value fragment
       const key = uptoCursor.slice(0, colonIdx).trim().toLowerCase();
       this.currentKey = key;
-      const afterColon = uptoCursor.slice(colonIdx + 1);
-      const valueFragment = afterColon.trim();
-      if (key === 'level') {
-        // Start position right after colon and any spaces
-        let startCh = colonIdx + 1;
-        while (startCh < uptoCursor.length && /\s/.test(uptoCursor[startCh])) startCh++;
-        return {
-          start: { line: cursor.line, ch: startCh },
-          end: { line: cursor.line, ch: cursor.ch },
-          query: valueFragment,
-        } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+      // Compute start position after colon
+      // Start position right after colon and any spaces
+      let startCh = colonIdx + 1;
+      while (startCh < uptoCursor.length && /\s/.test(uptoCursor[startCh])) startCh++;
+      // For class/school, operate on last fragment after comma
+      if (key === 'class' || key === 'school') {
+        const uptoValue = uptoCursor.slice(startCh);
+        const lastCommaIdx = uptoValue.lastIndexOf(',');
+        if (lastCommaIdx !== -1) {
+          startCh += lastCommaIdx + 1;
+          while (startCh < uptoCursor.length && /\s/.test(uptoCursor[startCh])) startCh++;
+        }
       }
-      return null;
+      const queryFrag = uptoCursor.slice(startCh).trim();
+      return {
+        start: { line: cursor.line, ch: startCh },
+        end: { line: cursor.line, ch: cursor.ch },
+        query: queryFrag,
+      } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
     } catch {
       return null;
     }
@@ -65,10 +73,18 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
         .filter(d => d.startsWith(q) || q.length === 0)
         .map(d => ({ text: d }));
     }
-    // Value suggestion mode for `level:`
+    // Value suggestion mode for keys
     if (this.currentKey === 'level') {
       const levels = ['all','0','1','2','3','4','5','6','7','8','9'];
       return levels.filter(n => n.startsWith(q)).map(n => ({ text: n }));
+    }
+    if (this.currentKey === 'class') {
+      const options = getCachedClassNames();
+      return options.filter(n => n.toLowerCase().includes(q)).slice(0, 50).map(n => ({ text: n }));
+    }
+    if (this.currentKey === 'school') {
+      const options = getCachedSchoolNames();
+      return options.filter(n => n.toLowerCase().includes(q)).slice(0, 50).map(n => ({ text: n }));
     }
     return [];
   }

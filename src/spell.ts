@@ -36,7 +36,7 @@ export async function renderSpell(source: string, el: HTMLElement, _ctx?: Markdo
   await Promise.all(tasks);
 }
 
-async function renderSingleSpell(host: HTMLElement, baseUrl: string, name: string) {
+export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name: string) {
   const id = nameToSlug(name);
   if (!id) {
     host.createEl('div', { text: 'No spell name provided' });

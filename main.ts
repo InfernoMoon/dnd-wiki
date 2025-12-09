@@ -4,6 +4,7 @@ import { renderSpellList } from './src/spelllist';
 import { initBaseUrlWatcher, configurePluginId, getBaseUrl } from './src/dataService';
 import { preloadAllSpellNames, getKnownSpellIds } from './src/spellUtils';
 import { SpellNameSuggest } from './src/suggestSpell';
+import { SpellListSuggest } from './src/suggestSpellList';
 
 
 export default class Dnd5eSpellCards extends Plugin {
@@ -12,6 +13,8 @@ export default class Dnd5eSpellCards extends Plugin {
 		initBaseUrlWatcher(this);
 		// Register editor suggestions for ```spell blocks using known spell ids
 		this.registerEditorSuggest(new SpellNameSuggest(this, () => getKnownSpellIds()));
+		// Register directive suggestions for ```spelllist blocks
+		this.registerEditorSuggest(new SpellListSuggest(this));
 		this.registerMarkdownCodeBlockProcessor('spell', async (source, el, ctx) => {
 			await renderSpell(source, el, ctx);
 		});

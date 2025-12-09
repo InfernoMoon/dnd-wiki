@@ -4,35 +4,59 @@ import { nameToSlug, displayNameFromSlug } from "./utils";
 
 export async function renderSpell(source: string, el: HTMLElement, _ctx?: MarkdownPostProcessorContext) {
   el.empty();
-  const box = el.createDiv({ cls: "dnd5e-spell-card" });
 
-  const raw = source.trim();
-  const firstLine = raw.split(/\r?\n/)[0] ?? "";
-  const name = firstLine.trim();
-  if (!name) {
-    box.createEl("div", { text: "No spell name provided." });
+  const lines = source
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  if (!lines.length) {
+    el.createEl("div", { text: "No spell name provided." });
     return;
   }
 
   const baseUrl = await getBaseUrl();
   if (!baseUrl) {
-    box.createEl("div", { text: "Base URL is not configured." });
+    el.createEl("div", { text: "Base URL is not configured." });
     return;
   }
 
+  // Container for multiple cards
+  const containerId = `spell-multi-${Math.random().toString(36).slice(2, 11)}`;
+  const container = document.createElement("div");
+  container.id = containerId;
+  el.appendChild(container);
+
+  const tasks = lines.map(async (name) => {
+    const host = document.createElement('div');
+    host.style.marginBottom = '0.75em';
+    container.appendChild(host);
+    await renderSingleSpell(host, baseUrl, name);
+  });
+  await Promise.all(tasks);
+}
+
+async function renderSingleSpell(host: HTMLElement, baseUrl: string, name: string) {
   const id = nameToSlug(name);
-  const { ok, titleText, contentHtml } = await fetchSpellPage(baseUrl, id);
-  if (!ok) {
-    // Try UA variant once
-    const attempt = await fetchSpellPage(baseUrl, `${id}-ua`);
-    if (!attempt.ok) {
-      renderCollapsible(box, displayNameFromSlug(id) + " (Error)", "Error loading this spell");
-      return;
-    }
-    renderCollapsible(box, attempt.titleText, attempt.contentHtml);
+  if (!id) {
+    host.createEl('div', { text: 'No spell name provided' });
     return;
   }
-  renderCollapsible(box, titleText, contentHtml);
+  try {
+    let result = await fetchSpellPage(baseUrl, id);
+    if (!result.ok) {
+      // Try UA variant once
+      result = await fetchSpellPage(baseUrl, `${id}-ua`);
+    }
+    if (!result.ok) {
+      renderCollapsible(host, displayNameFromSlug(id) + ' (Error)', 'Error loading this spell');
+      return;
+    }
+    renderCollapsible(host, result.titleText, result.contentHtml);
+  } catch (e) {
+    console.error('Failed to render spell', { name, id, error: e });
+    renderCollapsible(host, displayNameFromSlug(id) + ' (Error)', 'Error loading this spell');
+  }
 }
 
 async function fetchSpellPage(baseUrl: string, id: string): Promise<{ ok: boolean; titleText: string; contentHtml: string }> {

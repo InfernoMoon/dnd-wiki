@@ -1,11 +1,10 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
-	"version": "1.0.0",
-	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
-	"isDesktopOnly": false
+  "id": "dnd-5e-spell-cards",
+  "name": "DND 5e Spell Cards",
+  "version": "1.0.0",
+  "minAppVersion": "1.15.0",
+  "description": "Fetch DND 5e Spells from a configurable URL and display neatly",
+  "author": "Inferno Moon",
+  "authorUrl": "",
+  "isDesktopOnly": false
 }

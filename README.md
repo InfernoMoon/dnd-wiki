@@ -46,23 +46,20 @@ Quick starting guide for new plugin devs:
 
 ## How to use
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
 
 ## Manually installing the plugin
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+
+## Licensing
+
+- Code in this repository is licensed under the MIT License. See `LICENSE`.
+- Portions derived from upstream work by Dynalist Inc retain their original attribution and notice, which is preserved in `LICENSE`.
+- Third-party assets (e.g., D&D SRD content) are subject to their own terms. This plugin includes only content intended to be compatible with the SRD; users are responsible for ensuring any added content complies with applicable licenses and IP policies.
 
 ## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
   - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
   - `eslint main.ts`
   - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
   - `eslint ./src/`
 
 ## Funding URL

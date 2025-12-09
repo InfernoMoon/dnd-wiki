@@ -1,5 +1,12 @@
+/**
+ * prompts.ts
+ * UI modals used by the plugin.
+ *
+ * Contains a simple modal to collect the Base URL from the user.
+ */
 import { App, Modal, Setting } from "obsidian";
 
+/** Modal prompting the user for the data source Base URL */
 export class BaseUrlPromptModal extends Modal {
 	private readonly onSubmit: (value: string) => void;
 

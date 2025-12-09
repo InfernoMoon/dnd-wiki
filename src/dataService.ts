@@ -1,12 +1,28 @@
+/**
+ * dataService.ts
+ * Centralized data access for plugin configuration and cached directive values.
+ *
+ * Responsibilities:
+ * - Manage plugin data folder and JSON read/write (settings, classes, schools).
+ * - Prompt and persist Base URL used for content fetching.
+ * - Preload and expose cached lists for `class:` and `school:` suggesters.
+ */
+
 import { App, Notice, Plugin, TFile } from "obsidian";
 import manifest from "../manifest.json";
 import { BaseUrlPromptModal } from "./prompts";
 declare const app: App;
 
+/** Settings file structure */
 interface PluginSettingsJson {
 	baseurl?: string;
 }
 
+// ------------------------------
+// Low-level vault helpers
+// ------------------------------
+
+/** Ensure a folder exists under the vault adapter */
 async function ensureFolder(folderPath: string) {
 	const adapter = app.vault.adapter;
 	const exists = await adapter.exists(folderPath);
@@ -15,6 +31,7 @@ async function ensureFolder(folderPath: string) {
 	}
 }
 
+/** Read a JSON file and parse to type T, returning null on error or missing */
 async function readJson<T>(file: string): Promise<T | null> {
 	const adapter = app.vault.adapter;
 	const exists = await adapter.exists(file);
@@ -27,27 +44,42 @@ async function readJson<T>(file: string): Promise<T | null> {
 	}
 }
 
+/** Write an object to a JSON file with pretty formatting */
 async function writeJson(file: string, data: unknown) {
 	const adapter = app.vault.adapter;
 	await adapter.write(file, JSON.stringify(data, null, 2));
 }
 
-let cachedBaseUrl: string | undefined;
+// ------------------------------
+// Plugin identity and paths
+// ------------------------------
+
 let pluginId = (manifest as { id: string }).id;
+/** Configure the plugin ID used to compute data paths */
 export function configurePluginId(id: string) {
 	pluginId = id || pluginId;
 }
+
+/** Absolute path to this plugin's data folder inside the vault */
 function getDataFolder() {
 	// Ensure settings live under the Obsidian data directory for this plugin, within a dedicated /data subfolder
 	return `${app.vault.configDir}/plugins/${pluginId}/data`;
 }
+
+/** Absolute path to the settings.json file */
 function getSettingsPath() {
 	const settingsPath = `${getDataFolder()}/settings.json`;
 	return settingsPath;
 }
 
+// ------------------------------
+// Base URL management
+// ------------------------------
+
+let cachedBaseUrl: string | undefined;
+
+/** Keep Base URL cache in sync with changes to settings.json */
 export function initBaseUrlWatcher(plugin: Plugin) {
-	// Keep cached value in sync if settings.json changes or is deleted
 	plugin.registerEvent(
 		app.vault.on("modify", async (file: TFile) => {
 			const settingsPath = getSettingsPath();
@@ -68,6 +100,12 @@ export function initBaseUrlWatcher(plugin: Plugin) {
 	);
 }
 
+/**
+ * Resolve the Base URL used for fetching content.
+ * - Returns cached value if present
+ * - Reads from settings.json if available
+ * - Prompts the user to enter a URL when missing and persists it
+ */
 export async function getBaseUrl(): Promise<string | null> {
 	if (typeof cachedBaseUrl === "string") {
 		return cachedBaseUrl;
@@ -120,6 +158,11 @@ export async function getBaseUrl(): Promise<string | null> {
 	});
 }
 
+// ------------------------------
+// Directive values (classes, schools)
+// ------------------------------
+
+/** Normalize and sort names from string or object entries */
 function extractNames(arr: unknown): string[] {
 	if (!Array.isArray(arr)) return [];
 	return arr
@@ -136,6 +179,7 @@ function extractNames(arr: unknown): string[] {
 		.sort((a, b) => a.localeCompare(b));
 }
 
+/** Read classes.json from the plugin data folder */
 export async function getClassNames(): Promise<string[]> {
 	const dataFolder = getDataFolder();
 	await ensureFolder(dataFolder);
@@ -144,6 +188,7 @@ export async function getClassNames(): Promise<string[]> {
 	return extractNames(json);
 }
 
+/** Read schools.json from the plugin data folder */
 export async function getSchoolNames(): Promise<string[]> {
 	const dataFolder = getDataFolder();
 	await ensureFolder(dataFolder);
@@ -152,10 +197,11 @@ export async function getSchoolNames(): Promise<string[]> {
 	return extractNames(json);
 }
 
-// In-memory caches for directive value suggestions
+// In-memory caches used by suggesters for synchronous access
 let cachedClassNames: string[] = [];
 let cachedSchoolNames: string[] = [];
 
+/** Preload and cache directive names (classes, schools) */
 export async function preloadDirectiveNames(): Promise<void> {
 	try {
 		cachedClassNames = await getClassNames();
@@ -169,15 +215,21 @@ export async function preloadDirectiveNames(): Promise<void> {
 	}
 }
 
+/** Get cached class names (may be empty until initData runs) */
 export function getCachedClassNames(): string[] {
 	return cachedClassNames;
 }
 
+/** Get cached school names (may be empty until initData runs) */
 export function getCachedSchoolNames(): string[] {
 	return cachedSchoolNames;
 }
 
-// Initialize cached directive data (classes, schools). Spell ids are preloaded separately.
+// ------------------------------
+// Public initializer
+// ------------------------------
+
+/** Initialize directive caches. Spell IDs are preloaded elsewhere. */
 export async function initData(): Promise<void> {
 	await preloadDirectiveNames();
 }

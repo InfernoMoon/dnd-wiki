@@ -59,6 +59,8 @@ export class SpellNameSuggest extends EditorSuggest<{ slug: string; display: str
     if (!editor) return;
     // Insert the display name into the editor
     editor.replaceRange(item.display, start, end);
+    // Move cursor to just after the inserted text
+    editor.setCursor({ line: end.line, ch: start.ch + item.display.length });
     this.close();
   }
 }

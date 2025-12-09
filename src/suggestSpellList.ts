@@ -100,6 +100,7 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
     const { editor, start, end } = ctx;
     if (!editor) return;
     editor.replaceRange(item.text, start, end);
+    editor.setCursor({ line: end.line, ch: start.ch + item.text.length });
     this.close();
   }
 }

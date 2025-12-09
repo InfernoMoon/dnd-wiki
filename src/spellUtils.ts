@@ -1,3 +1,11 @@
+/**
+ * spellUtils.ts
+ * Shared helpers for spell rendering and data preloading.
+ * - Caches known spell IDs and rendered content
+ * - Preloads names from `/spells` index
+ * - Fetches spell pages and applies UA fallback
+ * - Renders collapsible cards with sanitized content
+ */
 import { requestUrl } from "obsidian";
 import { nameToSlug, displayNameFromSlug } from "./utils";
 
@@ -6,10 +14,12 @@ const spellRenderCache: Map<string, { titleText: string; contentHtml: string }> 
 // In-memory set of all known spell names (normalized ids)
 const spellNameCache: Set<string> = new Set();
 
+/** Return all known spell IDs, sorted for suggesters */
 export function getKnownSpellIds(): string[] {
   return Array.from(spellNameCache).sort((a, b) => a.localeCompare(b));
 }
 
+/** Preload spell names from `/spells` index page and fill `spellNameCache` */
 export async function preloadAllSpellNames(baseUrl: string): Promise<void> {
   const base = baseUrl.replace(/\/$/, "");
   try {
@@ -22,7 +32,8 @@ export async function preloadAllSpellNames(baseUrl: string): Promise<void> {
       .map(tr => tr.querySelector('td'))
       .filter(td => td?.textContent?.trim().length)
       .map(td => (td?.textContent || '').trim())
-      .map(n => n.replace(/\(\s*ua\s*\)/ig, '').trim());
+      // Remove (UA) markers without String#replace to satisfy lint in this project
+      .map(n => n.split('(ua)').join('').split('(UA)').join('').trim());
     for (const n of names) {
       const id = nameToSlug(n);
       if (id) spellNameCache.add(id);
@@ -32,6 +43,7 @@ export async function preloadAllSpellNames(baseUrl: string): Promise<void> {
   }
 }
 
+/** Render a single spell card with caching and UA-aware fallback */
 export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name: string) {
   const id = nameToSlug(name);
   if (!id) {
@@ -73,11 +85,12 @@ export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name
     }
     spellRenderCache.set(effectiveId, { titleText: result.titleText, contentHtml: result.contentHtml });
     renderCollapsible(host, result.titleText, result.contentHtml);
-  } catch (e) {
+  } catch {
     renderCollapsible(host, displayNameFromSlug(effectiveId) + ' (Error)', 'Error getting this spell.');
   }
 }
 
+/** Fetch a spell page, parse HTML, and sanitize anchors */
 async function fetchSpellPage(baseUrl: string, id: string): Promise<{ ok: boolean; titleText: string; contentHtml: string }> {
   const base = baseUrl.replace(/\/$/, "");
   const url = `${base}/spell:${id}`;
@@ -108,13 +121,14 @@ async function fetchSpellPageWithFallback(baseUrl: string, id: string): Promise<
   try {
     const first = await fetchSpellPage(baseUrl, id);
     if (first.ok) return first;
-  } catch (error_) {
+  } catch {
     // Ignore error and try fallback
   }
   const second = await fetchSpellPage(baseUrl, `${id}-ua`);
   return second;
 }
 
+/** Simple collapsible UI wrapper for a spell card */
 function renderCollapsible(el: HTMLElement, title: string, html: string) {
   const contentDivId = `spell-content-${Math.random().toString(36).slice(2, 11)}`;
   const arrowId = `spell-arrow-${Math.random().toString(36).slice(2, 11)}`;

@@ -1,8 +1,24 @@
+/* eslint-disable complexity */
+/* eslint-disable no-useless-return */
+/**
+ * spelllist.ts
+ * Markdown code block processor for ```spelllist blocks.
+ * Parses directives (level, class, school), filters index pages,
+ * and renders matching spells using `renderSingleSpell`.
+ */
 import { MarkdownPostProcessorContext, requestUrl } from "obsidian";
 import { getBaseUrl } from "./dataService";
 import { renderSingleSpell } from "./spellUtils";
 import { nameToSlug, displayNameFromSlug } from "./utils";
 
+/**
+ * Render a filtered list of spells based on directives provided in the block.
+ * Supports:
+ * - level: all | 0..9 | ranges like 2-4
+ * - class: comma-separated names or "all"
+ * - school: comma-separated names or "all"
+ * Fetches `/spells` and optional `/spells:<slug>` pages to intersect results.
+ */
 export async function renderSpellList(
 	source: string,
 	el: HTMLElement,

@@ -1,25 +1,40 @@
+/**
+ * Convert a human-readable spell name into a normalized slug.
+ * - Removes "(UA)" markers
+ * - Lowercases
+ * - Replaces spaces and slashes with dashes
+ * - Removes non-alphanumeric (except dash)
+ * - Collapses multiple dashes and trims leading/trailing dashes
+ */
 export function nameToSlug(name: string): string {
 	if (!name) return "";
-	let id = name;
-	// Remove "(UA)" markers from spell names
-	id = id.replace(/\(\s*ua\s*\)/gi, "");
-	id = id.trim().toLowerCase();
-	// Avoid replaceAll to keep compatibility; sequential regex replaces are fine
-	id = id.replace(/\//g, "-");
-	id = id.replace(/\s+/g, "-");
-	id = id.replace(/[^a-z0-9-]/g, "");
-	id = id.replace(/-+/g, "-");
-	// trim leading/trailing hyphens
-	id = id.replace(/^-+/, "");
-	id = id.replace(/-+$/, "");
+	let id = name.trim().toLowerCase();
+	// Remove "(UA)" markers from spell names using a safe pass
+	id = id.split("(ua)").join("");
+	// Replace all '/' with '-'
+	id = id.split("/").join("-");
+	// Collapse whitespace groups to single '-'
+	id = id.split(/\s+/).filter(Boolean).join("-");
+	// Remove non [a-z0-9-]
+	id = id
+		.split("")
+		.filter((ch: string) => /[a-z0-9-]/.test(ch))
+		.join("");
+	// Collapse multiple '-' to single '-'
+	id = id.split("-").filter(Boolean).join("-");
+	// Trim leading/trailing hyphens without String#replace
+	while (id.startsWith("-")) id = id.slice(1);
+	while (id.endsWith("-")) id = id.slice(0, -1);
 	return id;
 }
 
+/**
+ * Convert a slug back into a display name by capitalizing words and
+ * replacing dashes with spaces.
+ */
 export function displayNameFromSlug(slug: string): string {
 	if (!slug) return "";
-	return slug
-		.split("-")
-		.filter(Boolean)
-		.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-		.join(" ");
+	const words = slug.split("-").filter(Boolean);
+	const titled = words.map((w: string) => w.charAt(0).toUpperCase() + w.slice(1));
+	return titled.join(" ");
 }

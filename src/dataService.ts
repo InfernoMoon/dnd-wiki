@@ -8,8 +8,7 @@
  * - Preload and expose cached lists for `class:` and `school:` suggesters.
  */
 
-import { App, Notice, Plugin, TFile, MarkdownView } from "obsidian";
-import manifest from "../manifest.json";
+import { App, Notice, Plugin, MarkdownView } from "obsidian";
 import { BaseUrlPromptModal } from "./prompts";
 declare const app: App;
 
@@ -18,59 +17,30 @@ interface PluginSettingsJson {
 	baseurl?: string;
 }
 
-// ------------------------------
-// Low-level vault helpers
-// ------------------------------
-
-/** Ensure a folder exists under the vault adapter */
-async function ensureFolder(folderPath: string) {
-	const adapter = app.vault.adapter;
-	const exists = await adapter.exists(folderPath);
-	if (!exists) {
-		await adapter.mkdir(folderPath);
-	}
+// Use Obsidian's official plugin data APIs via plugin.loadData/saveData
+let pluginRef: Plugin | undefined;
+export function configurePluginRef(plugin: Plugin) {
+	pluginRef = plugin;
 }
 
-/** Read a JSON file and parse to type T, returning null on error or missing */
-async function readJson<T>(file: string): Promise<T | null> {
-	const adapter = app.vault.adapter;
-	const exists = await adapter.exists(file);
-	if (!exists) return null;
+async function readSettings(): Promise<PluginSettingsJson> {
 	try {
-		const raw = await adapter.read(file);
-		return JSON.parse(raw) as T;
+		const data = (await pluginRef?.loadData()) as PluginSettingsJson | undefined;
+		return data ?? {};
 	} catch {
-		return null;
+		return {};
 	}
 }
 
-/** Write an object to a JSON file with pretty formatting */
-async function writeJson(file: string, data: unknown) {
-	const adapter = app.vault.adapter;
-	await adapter.write(file, JSON.stringify(data, null, 2));
+async function writeSettings(data: PluginSettingsJson): Promise<void> {
+	await pluginRef?.saveData(data);
 }
 
 // ------------------------------
 // Plugin identity and paths
 // ------------------------------
 
-let pluginId = (manifest as { id: string }).id;
-/** Configure the plugin ID used to compute data paths */
-export function configurePluginId(id: string) {
-	pluginId = id || pluginId;
-}
-
-/** Absolute path to this plugin's data folder inside the vault */
-function getDataFolder() {
-	// Ensure settings live under the Obsidian data directory for this plugin, within a dedicated /data subfolder
-	return `${app.vault.configDir}/plugins/${pluginId}/data`;
-}
-
-/** Absolute path to the settings.json file */
-function getSettingsPath() {
-	const settingsPath = `${getDataFolder()}/settings.json`;
-	return settingsPath;
-}
+// No filesystem paths needed when using loadData/saveData
 
 // ------------------------------
 // Base URL management
@@ -82,24 +52,8 @@ let baseUrlTask: Promise<string | null> | undefined;
 
 /** Keep Base URL cache in sync with changes to settings.json */
 export function initBaseUrlWatcher(plugin: Plugin) {
-	plugin.registerEvent(
-		app.vault.on("modify", async (file: TFile) => {
-			const settingsPath = getSettingsPath();
-			if (file.path === settingsPath) {
-				const current =
-					(await readJson<PluginSettingsJson>(settingsPath)) ?? {};
-				cachedBaseUrl = current.baseurl || undefined;
-			}
-		})
-	);
-	plugin.registerEvent(
-		app.vault.on("delete", async (file) => {
-			const settingsPath = getSettingsPath();
-			if ((file as TFile).path === settingsPath) {
-				cachedBaseUrl = undefined;
-			}
-		})
-	);
+	// With loadData/saveData, we don't need file watchers. Keep a weak ref.
+	configurePluginRef(plugin);
 }
 
 /**
@@ -114,14 +68,9 @@ export async function getBaseUrl(): Promise<string | null> {
 		return cachedBaseUrl;
 	}
 
-	// 2) Ensure data folder exists and read settings
-	const dataFolder = getDataFolder();
-	const settingsPath = getSettingsPath();
-	await ensureFolder(dataFolder);
-
-	const current = (await readJson<PluginSettingsJson>(settingsPath)) ?? {};
+	// 2) Read settings via plugin API
+	const current = await readSettings();
 	if (current.baseurl) {
-		await writeJson(settingsPath, current); // ensure file exists
 		cachedBaseUrl = current.baseurl;
 		return cachedBaseUrl;
 	}
@@ -149,7 +98,7 @@ export async function getBaseUrl(): Promise<string | null> {
 					return;
 				}
 				const updated: PluginSettingsJson = { ...current, baseurl: value };
-				await writeJson(settingsPath, updated);
+				await writeSettings(updated);
 				const n2 = new Notice("DnD 5e Cards: Base URL saved.");
 				(
 					globalThis as unknown as { __dnd5eCardsNotices?: unknown[] }
@@ -207,6 +156,21 @@ export async function getBaseUrl(): Promise<string | null> {
 	return result;
 }
 
+/** Update and persist the Base URL, updating cache and settings.json */
+export async function setBaseUrl(value: string | undefined): Promise<void> {
+		const current = await readSettings();
+		const updated: PluginSettingsJson = { ...current, baseurl: value || undefined };
+		await writeSettings(updated);
+		cachedBaseUrl = value || undefined;
+}
+
+/** Peek the Base URL without prompting the user. */
+export async function peekBaseUrl(): Promise<string | undefined> {
+	if (typeof cachedBaseUrl === 'string') return cachedBaseUrl;
+	const current = await readSettings();
+	return current.baseurl || undefined;
+}
+
 // ------------------------------
 // Directive values (classes, schools)
 // ------------------------------
@@ -230,19 +194,15 @@ function extractNames(arr: unknown): string[] {
 
 /** Read classes.json from the plugin data folder */
 export async function getClassNames(): Promise<string[]> {
-	const dataFolder = getDataFolder();
-	await ensureFolder(dataFolder);
-	const classesPath = `${dataFolder}/classes.json`;
-	const json = await readJson<unknown>(classesPath);
+	const settings = await readSettings();
+	const json = (settings as unknown as { classes?: unknown }).classes ?? [];
 	return extractNames(json);
 }
 
 /** Read schools.json from the plugin data folder */
 export async function getSchoolNames(): Promise<string[]> {
-	const dataFolder = getDataFolder();
-	await ensureFolder(dataFolder);
-	const schoolsPath = `${dataFolder}/schools.json`;
-	const json = await readJson<unknown>(schoolsPath);
+	const settings = await readSettings();
+	const json = (settings as unknown as { schools?: unknown }).schools ?? [];
 	return extractNames(json);
 }
 

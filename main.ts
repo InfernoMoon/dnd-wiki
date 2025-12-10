@@ -2,7 +2,7 @@ import { Plugin } from 'obsidian';
 import { renderSpell } from './src/spell';
 import { renderSpellList } from './src/spellList';
 import { renderFeat } from './src/feat';
-import { initBaseUrlWatcher, configurePluginId, getBaseUrl, initData } from './src/dataService';
+import { initBaseUrlWatcher, configurePluginRef, getBaseUrl, initData } from './src/dataService';
 import { preloadAllSpellNames, getKnownSpellIds } from './src/spellUtils';
 import { SpellNameSuggest } from './src/suggestSpell';
 import { SpellListSuggest } from './src/suggestSpellList';
@@ -10,11 +10,12 @@ import { FeatNameSuggest } from './src/suggestFeat';
 import { preloadAllFeatIds } from './src/featUtils';
 import { renderFeatList } from './src/featList';
 import { DndPrefixSuggest } from './src/suggestDndPrefix';
+import { DndCardsSettingTab } from './src/settings';
 
 
 export default class Dnd5eSpellCards extends Plugin {
 	async onload() {
-		configurePluginId(this.manifest.id);
+		configurePluginRef(this);
 		initBaseUrlWatcher(this);
 		// Register editor suggestions for ```spell blocks using known spell ids
 		this.registerEditorSuggest(new SpellNameSuggest(this, () => getKnownSpellIds()));
@@ -54,5 +55,8 @@ export default class Dnd5eSpellCards extends Plugin {
 				console.warn('Failed to preload spell names', e);
 			}
 		});
+
+		// Add settings tab to show and edit Base URL
+		this.addSettingTab(new DndCardsSettingTab(this.app, this));
 	}
 }

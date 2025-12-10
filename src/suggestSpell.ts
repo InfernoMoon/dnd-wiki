@@ -15,12 +15,12 @@ export class SpellNameSuggest extends EditorSuggest<{ slug: string; display: str
     try {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
-      // Detect if inside a ```spell block by scanning upward
+      // Detect if inside a ```dnd-spell block by scanning upward
       let inSpellBlock = false;
       for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
         const l = editor.getLine(i).trim();
         if (l.startsWith('```')) {
-          inSpellBlock = /^```\s*spell\s*$/i.test(l);
+          inSpellBlock = /^```\s*dnd-spell\s*$/i.test(l);
           break;
         }
       }

@@ -8,12 +8,12 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
   constructor(appPlugin: { app: import('obsidian').App }) {
     super(appPlugin.app);
   }
-  // Detect if cursor is inside a spell list code block (supports aliases)
+  // Detect if cursor is inside a spelllist code block
   private isInSpellListBlock(cursor: EditorPosition, editor: Editor): boolean {
     for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
       const l = editor.getLine(i).trim();
       if (l.startsWith('```')) {
-        return /^(?:```\s*(?:spelllist|spellList|spell-list)\s*)$/i.test(l);
+        return /^(?:```\s*dnd-spelllist\s*)$/i.test(l);
       }
     }
     return false;

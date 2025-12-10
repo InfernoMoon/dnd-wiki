@@ -1,6 +1,6 @@
 /**
  * spell.ts
- * Markdown code block processor for ```spell blocks.
+ * Markdown code block processor for ```dnd-spell blocks.
  * Renders one or more spell cards by delegating to `renderSingleSpell`.
  * Keeps the entrypoint minimal and focused on parsing input and layout.
  */
@@ -9,7 +9,7 @@ import { getBaseUrl } from "./dataService";
 import { renderSingleSpell } from "./spellUtils";
 
 /**
- * Render one or more spells inside a ```spell code block.
+ * Render one or more spells inside a ```dnd-spell code block.
  * - Splits the block content into lines (each a spell name)
  * - Validates Base URL from settings
  * - Creates a container and renders each spell as a collapsible card

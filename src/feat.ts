@@ -19,6 +19,7 @@ function renderFeatCard(container: HTMLElement, title: string, html: string) {
   renderCollapsible(host, title, html);
 }
 
+// Markdown code block processor for ```dnd-feat blocks.
 export async function renderFeat(source: string, el: HTMLElement, _ctx?: MarkdownPostProcessorContext) {
   el.empty();
   const baseUrl = await getBaseUrl();

@@ -11,7 +11,7 @@ export class FeatNameSuggest extends EditorSuggest<{ text: string }> {
     for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
       const l = editor.getLine(i).trim();
       if (l.startsWith('```')) {
-        return /^(?:```\s*feat\s*)$/i.test(l);
+        return /^(?:```\s*dnd-feat\s*)$/i.test(l);
       }
     }
     return false;

@@ -21,25 +21,22 @@ export default class Dnd5eSpellCards extends Plugin {
 		this.registerEditorSuggest(new FeatNameSuggest(this));
 		// Register directive suggestions for ```spelllist blocks
 		this.registerEditorSuggest(new SpellListSuggest(this));
-		this.registerMarkdownCodeBlockProcessor('spell', async (source, el, ctx) => {
+		this.registerMarkdownCodeBlockProcessor('dnd-spell', async (source, el, ctx) => {
 			await renderSpell(source, el, ctx);
 		});
 		// Feat block processor
-		this.registerMarkdownCodeBlockProcessor('feat', async (source, el, ctx) => {
+		this.registerMarkdownCodeBlockProcessor('dnd-feat', async (source, el, ctx) => {
 			await renderFeat(source, el, ctx);
 		});
 
 		// Feat list block processor (no filters)
-		this.registerMarkdownCodeBlockProcessor('featlist', async (source, el, ctx) => {
+		this.registerMarkdownCodeBlockProcessor('dnd-featlist', async (source, el, ctx) => {
 			await renderFeatList(source, el, ctx);
 		});
-		// Support multiple aliases for spell list blocks
-		const spellListAliases = ['spelllist', 'spellList', 'spell-list'];
-		for (const alias of spellListAliases) {
-			this.registerMarkdownCodeBlockProcessor(alias, async (source, el, ctx) => {
-				await renderSpellList(source, el, ctx);
-			});
-		}
+		// Register only the canonical spelllist block
+		this.registerMarkdownCodeBlockProcessor('dnd-spelllist', async (source, el, ctx) => {
+			await renderSpellList(source, el, ctx);
+		});
 
 		// Kick off preload after initialization so Obsidian doesn't wait on it
 		this.app.workspace.onLayoutReady(async () => {

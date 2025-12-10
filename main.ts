@@ -18,18 +18,21 @@ export default class Dnd5eSpellCards extends Plugin {
 		this.registerMarkdownCodeBlockProcessor('spell', async (source, el, ctx) => {
 			await renderSpell(source, el, ctx);
 		});
-		// Preload all available spell names into memory once base URL is known
-		try {
-			const baseUrl = await getBaseUrl();
-			if (baseUrl) {
-				await preloadAllSpellNames(baseUrl);
-				await initData();
-			}
-		} catch (e) {
-			console.warn('Failed to preload spell names', e);
-		}
 		this.registerMarkdownCodeBlockProcessor('spelllist', async (source, el, ctx) => {
 			await renderSpellList(source, el, ctx);
+		});
+
+		// Kick off preload after initialization so Obsidian doesn't wait on it
+		this.app.workspace.onLayoutReady(async () => {
+			try {
+				const baseUrl = await getBaseUrl();
+				if (baseUrl) {
+					await preloadAllSpellNames(baseUrl);
+					await initData();
+				}
+			} catch (e) {
+				console.warn('Failed to preload spell names', e);
+			}
 		});
 	}
 }

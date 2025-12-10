@@ -77,6 +77,8 @@ function getSettingsPath() {
 // ------------------------------
 
 let cachedBaseUrl: string | undefined;
+// Singleton in-flight prompt task to avoid multiple modals
+let baseUrlTask: Promise<string | null> | undefined;
 
 /** Keep Base URL cache in sync with changes to settings.json */
 export function initBaseUrlWatcher(plugin: Plugin) {
@@ -107,9 +109,12 @@ export function initBaseUrlWatcher(plugin: Plugin) {
  * - Prompts the user to enter a URL when missing and persists it
  */
 export async function getBaseUrl(): Promise<string | null> {
+	// 1) Return from memory if available
 	if (typeof cachedBaseUrl === "string") {
 		return cachedBaseUrl;
 	}
+
+	// 2) Ensure data folder exists and read settings
 	const dataFolder = getDataFolder();
 	const settingsPath = getSettingsPath();
 	await ensureFolder(dataFolder);
@@ -121,41 +126,67 @@ export async function getBaseUrl(): Promise<string | null> {
 		return cachedBaseUrl;
 	}
 
-	return await new Promise<string | null>((resolve) => {
-		new BaseUrlPromptModal(app, async (value: string) => {
-			if (!value) {
-				const n = new Notice(
-					"DnD 5e Cards: No URL provided; plugin may not work."
-				);
+	// 3) If a prompt task is already in-flight, await it; else start one
+	if (!baseUrlTask) {
+		baseUrlTask = new Promise<string | null>((resolve) => {
+			new BaseUrlPromptModal(app, async (value: string) => {
+				if (!value) {
+					const n = new Notice(
+						"DnD 5e Cards: No URL provided; plugin may not work."
+					);
+					(
+						globalThis as unknown as { __dnd5eCardsNotices?: unknown[] }
+					).__dnd5eCardsNotices =
+						(
+							globalThis as unknown as {
+								__dnd5eCardsNotices?: unknown[];
+							}
+						).__dnd5eCardsNotices || [];
+					(
+						globalThis as unknown as { __dnd5eCardsNotices: unknown[] }
+					).__dnd5eCardsNotices.push(n);
+					resolve(null);
+					return;
+				}
+				const updated: PluginSettingsJson = { ...current, baseurl: value };
+				await writeJson(settingsPath, updated);
+				const n2 = new Notice("DnD 5e Cards: Base URL saved.");
 				(
 					globalThis as unknown as { __dnd5eCardsNotices?: unknown[] }
 				).__dnd5eCardsNotices =
-					(
-						globalThis as unknown as {
-							__dnd5eCardsNotices?: unknown[];
-						}
-					).__dnd5eCardsNotices || [];
+					(globalThis as unknown as { __dnd5eCardsNotices?: unknown[] })
+						.__dnd5eCardsNotices || [];
 				(
 					globalThis as unknown as { __dnd5eCardsNotices: unknown[] }
-				).__dnd5eCardsNotices.push(n);
-				resolve(null);
-				return;
-			}
-			const updated: PluginSettingsJson = { ...current, baseurl: value };
-			await writeJson(settingsPath, updated);
-			const n2 = new Notice("DnD 5e Cards: Base URL saved.");
-			(
-				globalThis as unknown as { __dnd5eCardsNotices?: unknown[] }
-			).__dnd5eCardsNotices =
-				(globalThis as unknown as { __dnd5eCardsNotices?: unknown[] })
-					.__dnd5eCardsNotices || [];
-			(
-				globalThis as unknown as { __dnd5eCardsNotices: unknown[] }
-			).__dnd5eCardsNotices.push(n2);
-			cachedBaseUrl = value;
-			resolve(cachedBaseUrl);
-		}).open();
-	});
+				).__dnd5eCardsNotices.push(n2);
+				cachedBaseUrl = value;
+				resolve(cachedBaseUrl);
+			}).open();
+		}).finally(() => {
+			// Clear the task so subsequent calls can re-prompt if needed
+			baseUrlTask = undefined;
+		});
+	}
+
+	const result = await baseUrlTask;
+	// 4) Return from memory if set by the task
+	if (typeof cachedBaseUrl === "string") {
+		return cachedBaseUrl;
+	}
+	// 5) If still missing, warn and return empty string-equivalent
+	if (!result) {
+		const warn = new Notice("DnD 5e Cards: Base URL not set; please configure it.");
+		(
+			globalThis as unknown as { __dnd5eCardsNotices?: unknown[] }
+		).__dnd5eCardsNotices =
+			(globalThis as unknown as { __dnd5eCardsNotices?: unknown[] })
+				.__dnd5eCardsNotices || [];
+		(
+			globalThis as unknown as { __dnd5eCardsNotices: unknown[] }
+		).__dnd5eCardsNotices.push(warn);
+		return "";
+	}
+	return result;
 }
 
 // ------------------------------

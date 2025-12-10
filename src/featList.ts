@@ -49,7 +49,7 @@ export async function renderFeatList(_source: string, el: HTMLElement, _ctx?: Ma
           globalThis.clearInterval(intervalId);
           msg.textContent = 'No feats found after 30s. Please ensure preloading ran or reload the plugin.';
         } else {
-          msg.textContent = `No feats found yet… retrying (${secs}s)`;
+          msg.textContent = `No feats found yet…`;
         }
       }
     }, 1000);

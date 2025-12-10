@@ -57,7 +57,11 @@ export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name
     if (spellNameCache.has(uaId)) {
       effectiveId = uaId;
     } else {
-      renderCollapsible(host, displayNameFromSlug(id) + ' (Error)', 'Spell unknown');
+      renderCollapsible(
+        host,
+        displayNameFromSlug(id) + ' (Not Found)',
+        'Spell not found. Verify the name, or reload the page to refresh data.'
+      );
       return;
     }
   }

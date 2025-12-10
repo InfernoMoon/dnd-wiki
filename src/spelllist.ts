@@ -40,11 +40,13 @@ function parseDirectives(source: string): {
 	levelDirective: LevelDirective;
 	classDirective: string[] | "all" | null;
 	schoolDirective: string[] | "all" | null;
+	addSpells: string[]; // list of slugs to add (not a filter)
 } {
 	const lines = source.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 	let levelDirective: LevelDirective = null;
 	let classDirective: string[] | "all" | null = null;
 	let schoolDirective: string[] | "all" | null = null;
+	const addSpells: string[] = [];
 
 	const expandLevels = (raw: string): number[] => {
 		const out: number[] = [];
@@ -95,8 +97,18 @@ function parseDirectives(source: string): {
 				: raw.split(",").map((s) => s.trim()).filter(Boolean).map((p) => nameToSlug(p)).filter(Boolean);
 			continue;
 		}
+		const mAdd = /^addspells:\s*(.+)$/i.exec(line);
+		if (mAdd) {
+			const raw = mAdd[1].trim();
+			const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+			for (const p of parts) {
+				const slug = nameToSlug(p);
+				if (slug) addSpells.push(slug);
+			}
+			continue;
+		}
 	}
-	return { levelDirective, classDirective, schoolDirective };
+	return { levelDirective, classDirective, schoolDirective, addSpells };
 }
 
 function extractNames(root: NamesDoc): string[] {
@@ -198,7 +210,7 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx?: Ma
 		return;
 	}
 
-	const { levelDirective, classDirective, schoolDirective } = parseDirectives(source);
+	const { levelDirective, classDirective, schoolDirective, addSpells } = parseDirectives(source);
 	const spellLevel = typeof levelDirective === "number" ? levelDirective : undefined;
 	const classSlugs = Array.isArray(classDirective) ? classDirective : undefined;
 	const schoolSlugs = Array.isArray(schoolDirective) ? schoolDirective : undefined;
@@ -222,6 +234,20 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx?: Ma
 		}
 		names = levelResult.names;
 		spellListCache.set(cacheKey, names);
+	}
+	// Merge in explicit addSpells (avoid duplicates by slug)
+	if (addSpells && addSpells.length) {
+		const existingSlugs = new Set(names.map((n) => nameToSlug(n)));
+		for (const slug of addSpells) {
+			if (!existingSlugs.has(slug)) {
+				names.push(slug);
+			}
+		}
+		// Normalize names array to display names for any slugs added
+		names = names.map((n) => {
+			const s = nameToSlug(n);
+			return s === n ? displayNameFromSlug(n) : n;
+		});
 	}
 	if (!names.length) {
 		el.setText("No Spell Names found");

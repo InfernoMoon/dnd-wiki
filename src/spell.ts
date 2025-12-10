@@ -23,7 +23,7 @@ export async function renderSpell(source: string, el: HTMLElement, _ctx?: Markdo
     .filter(Boolean);
 
   if (!lines.length) {
-    el.createEl("div", { text: "No spell name provided." });
+    el.createEl("div", { text: "Provide one or more spell IDs or names." });
     return;
   }
 

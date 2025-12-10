@@ -7,7 +7,7 @@
  * - Renders collapsible cards with sanitized content
  */
 import { requestUrl } from "obsidian";
-import { nameToSlug, displayNameFromSlug } from "./utils";
+import { nameToSlug, displayNameFromSlug, fetchPageContent } from "./utils";
 
 // In-memory cache of rendered spell content, keyed by normalized id
 const spellRenderCache: Map<string, { titleText: string; contentHtml: string }> = new Map();
@@ -90,30 +90,9 @@ export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name
   }
 }
 
-/** Fetch a spell page, parse HTML, and sanitize anchors */
+/** Fetch a spell page via generic wiki fetcher */
 async function fetchSpellPage(baseUrl: string, id: string): Promise<{ ok: boolean; titleText: string; contentHtml: string }> {
-  const base = baseUrl.replace(/\/$/, "");
-  const url = `${base}/spell:${id}`;
-  const res = await requestUrl({ url, method: 'GET' });
-  if (res.status < 200 || res.status >= 300) return { ok: false, titleText: "", contentHtml: "" };
-  const html = res.text;
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-  const titleEl = doc.querySelector('.page-title.page-header');
-  const contentEl = doc.querySelector('#page-content');
-  const titleText = titleEl ? (titleEl.textContent || '') : '';
-  const missing = titleText.toLowerCase().includes('the page does not') || !titleEl || !contentEl;
-  if (missing) return { ok: false, titleText: "", contentHtml: "" };
-  // sanitize: replace anchors with spans
-  const contentClone = contentEl.cloneNode(true) as HTMLElement;
-  const links = contentClone.querySelectorAll('a');
-  for (const a of Array.from(links)) {
-    const span = doc.createElement('span');
-    span.textContent 
-  = a.textContent || '';
-    a.replaceWith(span);
-  }
-  return { ok: true, titleText, contentHtml: contentClone.innerHTML };
+  return fetchPageContent(baseUrl, 'spell', id);
 }
 
 // Try standard id first; if missing, retry once with "-ua" suffix

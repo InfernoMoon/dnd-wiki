@@ -1,6 +1,7 @@
 import { Plugin } from 'obsidian';
 import { renderSpell } from './src/spell';
 import { renderSpellList } from './src/spellList';
+import { renderFeat } from './src/feat';
 import { initBaseUrlWatcher, configurePluginId, getBaseUrl, initData } from './src/dataService';
 import { preloadAllSpellNames, getKnownSpellIds } from './src/spellUtils';
 import { SpellNameSuggest } from './src/suggestSpell';
@@ -17,6 +18,10 @@ export default class Dnd5eSpellCards extends Plugin {
 		this.registerEditorSuggest(new SpellListSuggest(this));
 		this.registerMarkdownCodeBlockProcessor('spell', async (source, el, ctx) => {
 			await renderSpell(source, el, ctx);
+		});
+		// Feat block processor
+		this.registerMarkdownCodeBlockProcessor('feat', async (source, el, ctx) => {
+			await renderFeat(source, el, ctx);
 		});
 		// Support multiple aliases for spell list blocks
 		const spellListAliases = ['spelllist', 'spellList', 'spell-list'];

@@ -40,3 +40,58 @@ export function displayNameFromSlug(slug: string): string {
 	const titled = words.map((w: string) => w.charAt(0).toUpperCase() + w.slice(1));
 	return titled.join(" ");
 }
+
+// Generic page fetcher for wiki-like pages (spell, feat, etc.)
+// Builds URL as `${baseUrlNoTrailing}/${kind}:${id}` and extracts title/body.
+// Also sanitizes anchors in the body by replacing <a> with <span> text nodes.
+import { requestUrl } from 'obsidian';
+
+export async function fetchPageContent(
+	baseUrl: string,
+	kind: string,
+	id: string
+): Promise<{ ok: boolean; titleText: string; contentHtml: string }> {
+	const base = baseUrl.replace(/\/$/, '');
+	const url = `${base}/${kind}:${id}`;
+	try {
+		const res = await requestUrl({ url, method: 'GET' });
+		if (res.status < 200 || res.status >= 300) return { ok: false, titleText: '', contentHtml: '' };
+		const html = res.text;
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(html, 'text/html');
+		const titleEl = doc.querySelector('.page-title.page-header') || doc.querySelector('.page-title');
+		const contentEl = doc.querySelector('#page-content') || doc.querySelector('#wiki-content') || doc.body;
+		const titleText = titleEl ? (titleEl.textContent || '').trim() : '';
+		const missing = titleText.toLowerCase().includes('the page does not') || !titleEl || !contentEl;
+		if (missing) return { ok: false, titleText: '', contentHtml: '' };
+		const contentClone = contentEl.cloneNode(true) as HTMLElement;
+		const links = contentClone.querySelectorAll('a');
+		for (const a of Array.from(links)) {
+			const span = doc.createElement('span');
+			span.textContent = a.textContent || '';
+			a.replaceWith(span);
+		}
+		return { ok: true, titleText, contentHtml: contentClone.innerHTML };
+	} catch {
+		return { ok: false, titleText: '', contentHtml: '' };
+	}
+}
+
+// Fetch a page and extract title (.page-title) and body (#page-content)
+// Falls back to #wiki-content or document.body if needed
+export async function fetchTitleAndBody(url: string): Promise<{ title: string; html: string } | null> {
+	try {
+		const { requestUrl } = await import('obsidian');
+		const res = await requestUrl({ url, method: 'GET' });
+		if (res.status < 200 || res.status >= 300) return null;
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(res.text, 'text/html');
+		const titleEl = doc.querySelector('.page-title');
+		const contentEl = doc.querySelector('#page-content') || doc.querySelector('#wiki-content') || doc.body;
+		const title = (titleEl?.textContent || '').trim();
+		const html = contentEl?.innerHTML || '';
+		return { title, html };
+	} catch {
+		return null;
+	}
+}

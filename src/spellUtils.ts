@@ -7,7 +7,7 @@
  * - Renders collapsible cards with sanitized content
  */
 import { requestUrl } from "obsidian";
-import { nameToSlug, displayNameFromSlug, fetchPageContent } from "./utils";
+import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible } from "./utils";
 
 // In-memory cache of rendered spell content, keyed by normalized id
 const spellRenderCache: Map<string, { titleText: string; contentHtml: string }> = new Map();
@@ -107,26 +107,4 @@ async function fetchSpellPageWithFallback(baseUrl: string, id: string): Promise<
   return second;
 }
 
-/** Simple collapsible UI wrapper for a spell card */
-function renderCollapsible(el: HTMLElement, title: string, html: string) {
-  const contentDivId = `spell-content-${Math.random().toString(36).slice(2, 11)}`;
-  const arrowId = `spell-arrow-${Math.random().toString(36).slice(2, 11)}`;
-  el.innerHTML = `
-    <div style="display:flex; align-items:center; cursor:pointer;" id="title-${contentDivId}">
-      <span style="margin-right:0.5em;" id="${arrowId}">▼</span>
-      <span style="font-size: 1.1em; font-weight: 600; margin:0;">${title}</span>
-    </div>
-    <div id="${contentDivId}" style="display:none; margin-top:0.5em;">${html}</div>
-  `;
-  const titleDiv = el.querySelector(`#title-${contentDivId}`);
-  const contentDiv = el.querySelector(`#${contentDivId}`);
-  const arrow = el.querySelector(`#${arrowId}`);
-  if (!titleDiv || !contentDiv || !arrow) return;
-  titleDiv.addEventListener('click', () => {
-    const c = contentDiv as HTMLElement;
-    const a = arrow as HTMLElement;
-    const isHidden = c.style.display === 'none';
-    c.style.display = isHidden ? 'block' : 'none';
-    a.textContent = isHidden ? '▲' : '▼';
-  });
-}
+// renderCollapsible moved to utils.ts and imported

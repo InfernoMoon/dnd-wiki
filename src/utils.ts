@@ -77,6 +77,31 @@ export async function fetchPageContent(
 	}
 }
 
+// Shared collapsible renderer used by spells (and can be reused elsewhere)
+export function renderCollapsible(el: HTMLElement, title: string, html: string) {
+	const uid = Math.random().toString(36).slice(2, 11);
+	const contentDivId = `card-content-${uid}`;
+	const arrowId = `card-arrow-${uid}`;
+	el.innerHTML = `
+		<div style="display:flex; align-items:center; cursor:pointer;" id="title-${contentDivId}">
+			<span style="margin-right:0.5em;" id="${arrowId}">▼</span>
+			<span style="font-size: 1.1em; font-weight: 600; margin:0;">${title}</span>
+		</div>
+		<div id="${contentDivId}" style="display:none; margin-top:0.5em;">${html}</div>
+	`;
+	const titleDiv = el.querySelector(`#title-${contentDivId}`);
+	const contentDiv = el.querySelector(`#${contentDivId}`);
+	const arrow = el.querySelector(`#${arrowId}`);
+	if (!titleDiv || !contentDiv || !arrow) return;
+	titleDiv.addEventListener('click', () => {
+		const c = contentDiv as HTMLElement;
+		const a = arrow as HTMLElement;
+		const isHidden = c.style.display === 'none';
+		c.style.display = isHidden ? 'block' : 'none';
+		a.textContent = isHidden ? '▲' : '▼';
+	});
+}
+
 // Fetch a page and extract title (.page-title) and body (#page-content)
 // Falls back to #wiki-content or document.body if needed
 export async function fetchTitleAndBody(url: string): Promise<{ title: string; html: string } | null> {

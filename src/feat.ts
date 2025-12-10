@@ -1,22 +1,15 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { getBaseUrl } from './dataService';
-import { nameToSlug, fetchPageContent } from './utils';
+import { nameToSlug, fetchPageContent, renderCollapsible } from './utils';
 
 // In-memory cache for fetched feat content by id/slug
 const featCache = new Map<string, { title: string; html: string }>();
 
 
 function renderFeatCard(container: HTMLElement, title: string, html: string) {
-  const wrap = document.createElement('div');
-  const header = document.createElement('div');
-  header.className = 'page-title';
-  header.textContent = title;
-  const body = document.createElement('div');
-  body.id = 'page-content';
-  body.innerHTML = html;
-  wrap.appendChild(header);
-  wrap.appendChild(body);
-  container.appendChild(wrap);
+  const host = document.createElement('div');
+  container.appendChild(host);
+  renderCollapsible(host, title, html);
 }
 
 export async function renderFeat(source: string, el: HTMLElement, _ctx?: MarkdownPostProcessorContext) {

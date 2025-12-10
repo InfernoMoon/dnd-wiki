@@ -6,6 +6,8 @@ import { initBaseUrlWatcher, configurePluginId, getBaseUrl, initData } from './s
 import { preloadAllSpellNames, getKnownSpellIds } from './src/spellUtils';
 import { SpellNameSuggest } from './src/suggestSpell';
 import { SpellListSuggest } from './src/suggestSpellList';
+import { FeatNameSuggest } from './src/suggestFeat';
+import { preloadAllFeatIds } from './src/featUtils';
 
 
 export default class Dnd5eSpellCards extends Plugin {
@@ -14,6 +16,8 @@ export default class Dnd5eSpellCards extends Plugin {
 		initBaseUrlWatcher(this);
 		// Register editor suggestions for ```spell blocks using known spell ids
 		this.registerEditorSuggest(new SpellNameSuggest(this, () => getKnownSpellIds()));
+		// Register editor suggestions for ```feat blocks using known feat ids
+		this.registerEditorSuggest(new FeatNameSuggest(this));
 		// Register directive suggestions for ```spelllist blocks
 		this.registerEditorSuggest(new SpellListSuggest(this));
 		this.registerMarkdownCodeBlockProcessor('spell', async (source, el, ctx) => {
@@ -37,6 +41,7 @@ export default class Dnd5eSpellCards extends Plugin {
 				const baseUrl = await getBaseUrl();
 				if (baseUrl) {
 					await preloadAllSpellNames(baseUrl);
+					await preloadAllFeatIds(baseUrl);
 					await initData();
 				}
 			} catch (e) {

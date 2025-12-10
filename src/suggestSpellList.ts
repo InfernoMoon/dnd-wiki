@@ -1,19 +1,17 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import { getCachedClassNames, getCachedSchoolNames } from './dataService';
-// Future: import class/school names from dataService for value suggestions
 
 export class SpellListSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;
-  // Accept plugin with `app` property; type as unknown to avoid `any`
   constructor(appPlugin: { app: import('obsidian').App }) {
     super(appPlugin.app);
   }
-  // Detect if cursor is inside a ```spelllist code block
+  // Detect if cursor is inside a spell list code block (supports aliases)
   private isInSpellListBlock(cursor: EditorPosition, editor: Editor): boolean {
     for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
       const l = editor.getLine(i).trim();
       if (l.startsWith('```')) {
-        return /^```\s*spelllist\s*$/i.test(l);
+        return /^(?:```\s*(?:spelllist|spellList|spell-list)\s*)$/i.test(l);
       }
     }
     return false;

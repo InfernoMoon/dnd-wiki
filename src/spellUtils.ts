@@ -32,7 +32,7 @@ export async function preloadAllSpellNames(baseUrl: string): Promise<void> {
       .map(tr => tr.querySelector('td'))
       .filter(td => td?.textContent?.trim().length)
       .map(td => (td?.textContent || '').trim())
-      // Remove (UA) markers without String#replace to satisfy lint in this project
+      // Remove (UA) markers
       .map(n => n.split('(ua)').join('').split('(UA)').join('').trim());
     for (const n of names) {
       const id = nameToSlug(n);

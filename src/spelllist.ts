@@ -1,8 +1,6 @@
-/* eslint-disable complexity */
-/* eslint-disable no-useless-return */
 /**
- * spelllist.ts
- * Markdown code block processor for ```spelllist blocks.
+ * spellList.ts
+ * Markdown code block processor for ```spellList blocks.
  * Parses directives (level, class, school), filters index pages,
  * and renders matching spells using `renderSingleSpell`.
  */

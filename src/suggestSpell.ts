@@ -7,7 +7,6 @@ export class SpellNameSuggest extends EditorSuggest<{ slug: string; display: str
   private readonly getSlugs: GetSlugsFn;
 
   constructor(appPlugin: any, getSlugs: GetSlugsFn) {
-    // @ts-ignore - base class requires App type which is available at runtime
     super(appPlugin.app);
     this.getSlugs = getSlugs;
   }

@@ -1,6 +1,6 @@
 import { Plugin } from 'obsidian';
 import { renderSpell } from './src/spell';
-import { renderSpellList } from './src/spelllist';
+import { renderSpellList } from './src/spellList';
 import { initBaseUrlWatcher, configurePluginId, getBaseUrl, initData } from './src/dataService';
 import { preloadAllSpellNames, getKnownSpellIds } from './src/spellUtils';
 import { SpellNameSuggest } from './src/suggestSpell';
@@ -18,9 +18,13 @@ export default class Dnd5eSpellCards extends Plugin {
 		this.registerMarkdownCodeBlockProcessor('spell', async (source, el, ctx) => {
 			await renderSpell(source, el, ctx);
 		});
-		this.registerMarkdownCodeBlockProcessor('spelllist', async (source, el, ctx) => {
-			await renderSpellList(source, el, ctx);
-		});
+		// Support multiple aliases for spell list blocks
+		const spellListAliases = ['spelllist', 'spellList', 'spell-list'];
+		for (const alias of spellListAliases) {
+			this.registerMarkdownCodeBlockProcessor(alias, async (source, el, ctx) => {
+				await renderSpellList(source, el, ctx);
+			});
+		}
 
 		// Kick off preload after initialization so Obsidian doesn't wait on it
 		this.app.workspace.onLayoutReady(async () => {

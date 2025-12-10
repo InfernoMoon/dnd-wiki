@@ -1,9 +1,9 @@
 /**
- * Convert a human-readable spell name into a normalized slug.
+ * Convert a formatted name into a normalized slug.
  * - Removes "(UA)" markers
  * - Lowercases
- * - Replaces spaces and slashes with dashes
- * - Removes non-alphanumeric (except dash)
+ * - Replaces spaces and some punctuation with dashes
+ * - Removes other non-alphanumeric
  * - Collapses multiple dashes and trims leading/trailing dashes
  */
 export function nameToSlug(name: string): string {
@@ -13,6 +13,8 @@ export function nameToSlug(name: string): string {
 	id = id.split("(ua)").join("");
 	// Replace all '/' with '-'
 	id = id.split("/").join("-");
+	// Replace all ':' with '-'
+	id = id.split(":").join("-");
 	// Collapse whitespace groups to single '-'
 	id = id.split(/\s+/).filter(Boolean).join("-");
 	// Remove non [a-z0-9-]

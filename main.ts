@@ -9,6 +9,7 @@ import { SpellListSuggest } from './src/suggestSpellList';
 import { FeatNameSuggest } from './src/suggestFeat';
 import { preloadAllFeatIds } from './src/featUtils';
 import { renderFeatList } from './src/featList';
+import { DndPrefixSuggest } from './src/suggestDndPrefix';
 
 
 export default class Dnd5eSpellCards extends Plugin {
@@ -21,6 +22,8 @@ export default class Dnd5eSpellCards extends Plugin {
 		this.registerEditorSuggest(new FeatNameSuggest(this));
 		// Register directive suggestions for ```spelllist blocks
 		this.registerEditorSuggest(new SpellListSuggest(this));
+		// Register suggestions when typing ```dnd for block suffixes
+		this.registerEditorSuggest(new DndPrefixSuggest(this));
 		this.registerMarkdownCodeBlockProcessor('dnd-spell', async (source, el, ctx) => {
 			await renderSpell(source, el, ctx);
 		});

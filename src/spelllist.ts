@@ -41,12 +41,14 @@ function parseDirectives(source: string): {
 	classDirective: string[] | "all" | null;
 	schoolDirective: string[] | "all" | null;
 	addSpells: string[]; // list of slugs to add (not a filter)
+	removeSpells: string[]; // list of slugs to remove (post-add removal)
 } {
 	const lines = source.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 	let levelDirective: LevelDirective = null;
 	let classDirective: string[] | "all" | null = null;
 	let schoolDirective: string[] | "all" | null = null;
 	const addSpells: string[] = [];
+	const removeSpells: string[] = [];
 
 	const expandLevels = (raw: string): number[] => {
 		const out: number[] = [];
@@ -107,8 +109,18 @@ function parseDirectives(source: string): {
 			}
 			continue;
 		}
+		const mRemove = /^removespells:\s*(.+)$/i.exec(line);
+		if (mRemove) {
+			const raw = mRemove[1].trim();
+			const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+			for (const p of parts) {
+				const slug = nameToSlug(p);
+				if (slug) removeSpells.push(slug);
+			}
+			continue;
+		}
 	}
-	return { levelDirective, classDirective, schoolDirective, addSpells };
+	return { levelDirective, classDirective, schoolDirective, addSpells, removeSpells };
 }
 
 function extractNames(root: NamesDoc): string[] {
@@ -210,7 +222,7 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx?: Ma
 		return;
 	}
 
-	const { levelDirective, classDirective, schoolDirective, addSpells } = parseDirectives(source);
+	const { levelDirective, classDirective, schoolDirective, addSpells, removeSpells } = parseDirectives(source);
 	const spellLevel = typeof levelDirective === "number" ? levelDirective : undefined;
 	const classSlugs = Array.isArray(classDirective) ? classDirective : undefined;
 	const schoolSlugs = Array.isArray(schoolDirective) ? schoolDirective : undefined;
@@ -248,6 +260,11 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx?: Ma
 			const s = nameToSlug(n);
 			return s === n ? displayNameFromSlug(n) : n;
 		});
+	}
+	// Apply removespells after add: remove any matching slugs
+	if (removeSpells && removeSpells.length) {
+		const removeSet = new Set(removeSpells);
+		names = names.filter((n) => !removeSet.has(nameToSlug(n)));
 	}
 	if (!names.length) {
 		el.setText("No Spell Names found");

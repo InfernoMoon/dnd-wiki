@@ -1,5 +1,7 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import { getCachedClassNames, getCachedSchoolNames } from './dataService';
+import { getKnownSpellIds } from './spellUtils';
+import { displayNameFromSlug } from './utils';
 
 export class SpellListSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;
@@ -42,8 +44,8 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
       // Start position right after colon and any spaces
       let startCh = colonIdx + 1;
       while (startCh < uptoCursor.length && /\s/.test(uptoCursor[startCh])) startCh++;
-      // For class/school/addspells, operate on last fragment after comma
-      if (key === 'class' || key === 'school' || key === 'addspells') {
+      // For class/school/addspells/removespell, operate on last fragment after comma
+      if (key === 'class' || key === 'school' || key === 'addspells' || key === 'removespells') {
         const uptoValue = uptoCursor.slice(startCh);
         const lastCommaIdx = uptoValue.lastIndexOf(',');
         if (lastCommaIdx !== -1) {
@@ -66,7 +68,7 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
     const q = (context.query || '').toLowerCase();
     // If querying for directive keyword (no colon typed yet), suggest with colon suffix
     if (!this.currentKey) {
-      const directives = ['level:', 'class:', 'school:', 'addspells:'];
+      const directives = ['level:', 'class:', 'school:', 'addspells:', 'removespells:'];
       return directives
         .filter(d => d.startsWith(q) || q.length === 0)
         .map(d => ({ text: d }));
@@ -84,12 +86,11 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
       const options = getCachedSchoolNames();
       return options.filter(n => n.toLowerCase().includes(q)).slice(0, 50).map(n => ({ text: n }));
     }
-    if (this.currentKey === 'addspells') {
+    if (this.currentKey === 'addspells' || this.currentKey === 'removespells') {
       // Suggest known spell display names
       try {
-        const { getKnownSpellIds } = require('./spellUtils');
         const ids: string[] = getKnownSpellIds();
-        const items = ids.map((s) => ({ text: require('./utils').displayNameFromSlug(s) }));
+        const items = ids.map((s) => ({ text: displayNameFromSlug(s) }));
         return items.filter(it => it.text.toLowerCase().includes(q)).slice(0, 50);
       } catch {
         return [];

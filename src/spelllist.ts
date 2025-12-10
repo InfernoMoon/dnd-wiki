@@ -232,10 +232,34 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx?: Ma
 	const cacheKey = buildCacheKey(levelDirective, classSlugs, schoolSlugs);
 	let names = spellListCache.get(cacheKey);
 	if (!names) {
-		const { baseDoc, classDocs, schoolDocs } = await fetchIndexAndFilters(baseUrl, classSlugs, schoolSlugs);
+		let { baseDoc, classDocs, schoolDocs } = await fetchIndexAndFilters(baseUrl, classSlugs, schoolSlugs);
 		if (!baseDoc) {
-			el.createEl("div", { text: "Failed to load spells index." });
-			return;
+			const msg = el.createEl("div", { text: "Failed to load spells index. Retrying…" });
+			const start = Date.now();
+			await new Promise<void>((resolve) => {
+				const intervalId = globalThis.setInterval(async () => {
+					const attempt = await fetchIndexAndFilters(baseUrl, classSlugs, schoolSlugs);
+					if (attempt.baseDoc) {
+						globalThis.clearInterval(intervalId);
+						// Clear and proceed
+						el.empty();
+						baseDoc = attempt.baseDoc;
+						classDocs = attempt.classDocs;
+						schoolDocs = attempt.schoolDocs;
+						resolve();
+					} else {
+						const secs = Math.floor((Date.now() - start) / 1000);
+						if (secs >= 30) {
+							globalThis.clearInterval(intervalId);
+							msg.textContent = "Failed to load spells index after 30s. Please check Base URL or network.";
+							resolve();
+						} else {
+							msg.textContent = `Failed to load spells index. Retrying (${secs}s)…`;
+						}
+					}
+				}, 1000);
+			});
+			if (!baseDoc) return;
 		}
 		let fetched = extractNames(baseDoc);
 		fetched = applyClassSchoolFilters(fetched, classDocs, schoolDocs);

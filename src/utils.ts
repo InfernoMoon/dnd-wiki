@@ -105,18 +105,25 @@ export function renderCollapsible(el: HTMLElement, title: string, html: string) 
 // Fetch a page and extract title (.page-title) and body (#page-content)
 // Falls back to #wiki-content or document.body if needed
 export async function fetchTitleAndBody(url: string): Promise<{ title: string; html: string } | null> {
-	try {
-		const { requestUrl } = await import('obsidian');
-		const res = await requestUrl({ url, method: 'GET' });
-		if (res.status < 200 || res.status >= 300) return null;
-		const parser = new DOMParser();
-		const doc = parser.parseFromString(res.text, 'text/html');
-		const titleEl = doc.querySelector('.page-title');
-		const contentEl = doc.querySelector('#page-content') || doc.querySelector('#wiki-content') || doc.body;
-		const title = (titleEl?.textContent || '').trim();
-		const html = contentEl?.innerHTML || '';
-		return { title, html };
-	} catch {
-		return null;
-	}
+	const attempt = async (): Promise<{ title: string; html: string } | null> => {
+		try {
+			const { requestUrl } = await import('obsidian');
+			const res = await requestUrl({ url, method: 'GET' });
+			if (res.status < 200 || res.status >= 300) return null;
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(res.text, 'text/html');
+			const titleEl = doc.querySelector('.page-title');
+			const contentEl = doc.querySelector('#page-content') || doc.querySelector('#wiki-content') || doc.body;
+			const title = (titleEl?.textContent || '').trim();
+			const html = contentEl?.innerHTML || '';
+			return { title, html };
+		} catch {
+			return null;
+		}
+	};
+	const first = await attempt();
+	if (first) return first;
+	// Retry once after 5 seconds
+	await new Promise(resolve => setTimeout(resolve, 5000));
+	return attempt();
 }

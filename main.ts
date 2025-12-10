@@ -8,6 +8,7 @@ import { SpellNameSuggest } from './src/suggestSpell';
 import { SpellListSuggest } from './src/suggestSpellList';
 import { FeatNameSuggest } from './src/suggestFeat';
 import { preloadAllFeatIds } from './src/featUtils';
+import { renderFeatList } from './src/featList';
 
 
 export default class Dnd5eSpellCards extends Plugin {
@@ -26,6 +27,11 @@ export default class Dnd5eSpellCards extends Plugin {
 		// Feat block processor
 		this.registerMarkdownCodeBlockProcessor('feat', async (source, el, ctx) => {
 			await renderFeat(source, el, ctx);
+		});
+
+		// Feat list block processor (no filters)
+		this.registerMarkdownCodeBlockProcessor('featlist', async (source, el, ctx) => {
+			await renderFeatList(source, el, ctx);
 		});
 		// Support multiple aliases for spell list blocks
 		const spellListAliases = ['spelllist', 'spellList', 'spell-list'];

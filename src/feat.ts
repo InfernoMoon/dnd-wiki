@@ -5,6 +5,13 @@ import { nameToSlug, fetchPageContent, renderCollapsible } from './utils';
 // In-memory cache for fetched feat content by id/slug
 const featCache = new Map<string, { title: string; html: string }>();
 
+export function getCachedFeat(id: string): { title: string; html: string } | null {
+  return featCache.get(id) || null;
+}
+
+export function setCachedFeat(id: string, data: { title: string; html: string }): void {
+  featCache.set(id, data);
+}
 
 function renderFeatCard(container: HTMLElement, title: string, html: string) {
   const host = document.createElement('div');
@@ -39,7 +46,7 @@ export async function renderFeat(source: string, el: HTMLElement, _ctx?: Markdow
         featCache.set(featId, cached);
       }
     }
-    if (cached && cached.html) {
+    if (cached?.html) {
       renderFeatCard(container, cached.title, cached.html);
     } else {
       const err = document.createElement('div');

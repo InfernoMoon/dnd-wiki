@@ -8,7 +8,7 @@
  * - Preload and expose cached lists for `class:` and `school:` suggesters.
  */
 
-import { App, Notice, Plugin, TFile } from "obsidian";
+import { App, Notice, Plugin, TFile, MarkdownView } from "obsidian";
 import manifest from "../manifest.json";
 import { BaseUrlPromptModal } from "./prompts";
 declare const app: App;
@@ -128,7 +128,7 @@ export async function getBaseUrl(): Promise<string | null> {
 
 	// 3) If a prompt task is already in-flight, await it; else start one
 	if (!baseUrlTask) {
-		baseUrlTask = new Promise<string | null>((resolve) => {
+		const task = (baseUrlTask ??= new Promise<string | null>((resolve) => {
 			new BaseUrlPromptModal(app, async (value: string) => {
 				if (!value) {
 					const n = new Notice(
@@ -160,9 +160,27 @@ export async function getBaseUrl(): Promise<string | null> {
 					globalThis as unknown as { __dnd5eCardsNotices: unknown[] }
 				).__dnd5eCardsNotices.push(n2);
 				cachedBaseUrl = value;
+				// Best-effort: refresh the active Markdown view after a short delay
+				setTimeout(() => {
+					const view = app.workspace.getActiveViewOfType(MarkdownView);
+					const leaf = app.workspace.getLeaf(true);
+					if (leaf && view) {
+						const state = leaf.getViewState();
+						leaf.setViewState(state);
+						app.workspace.trigger('active-leaf-change');
+					} else {
+						// Fallback: reopen the active file
+						const file = app.workspace.getActiveFile();
+						if (file) {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any
+							(app.workspace as any).openLinkText?.(file.path, '', true);
+						}
+					}
+				}, 1000);
 				resolve(cachedBaseUrl);
 			}).open();
-		}).finally(() => {
+		}));
+		task.finally(() => {
 			// Clear the task so subsequent calls can re-prompt if needed
 			baseUrlTask = undefined;
 		});

@@ -1,4 +1,5 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
+import { getCachedItemTypes } from './itemUtils';
 
 // Hardcoded type options for itemlist filtering
 const HARD_CODED_TYPES = [
@@ -85,7 +86,9 @@ export class ItemListSuggest extends EditorSuggest<{ text: string }> {
       return levels.filter(n => n.toLowerCase().startsWith(q)).map(n => ({ text: n }));
     }
     if (this.currentKey === 'type') {
-      return HARD_CODED_TYPES
+      const dynamicTypes = getCachedItemTypes();
+      const allTypes = Array.from(new Set([...HARD_CODED_TYPES, ...dynamicTypes]));
+      return allTypes
         .filter(t => t.toLowerCase().includes(q))
         .slice(0, 50)
         .map(t => ({ text: t }));

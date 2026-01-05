@@ -40,7 +40,7 @@ export class DndCardsSettingTab extends PluginSettingTab {
           .onClick(async () => {
             const vault = this.app.vault;
             const root = 'DnD-Cards';
-            const subs = ['Spells', 'Feats'];
+            const subs = ['Spells', 'Feats', 'Items'];
 
             try {
               // Ensure root folder exists
@@ -126,6 +126,39 @@ export class DndCardsSettingTab extends PluginSettingTab {
                   '```'
                 ].join('\n');
                 await vault.create(luckyPath, luckyContent);
+              }
+
+              // Create sample custom item files in the Items folder
+              const itemsFolder = `${root}/Items`;
+              const customItemTemplatePath = `${itemsFolder}/Custom Item.md`;
+              const bagOfHoldingPath = `${itemsFolder}/Custom Bag of Holding.md`;
+
+              if (!vault.getAbstractFileByPath(customItemTemplatePath)) {
+                const customItemTemplateContent = [
+                  '```',
+                  'type: ',
+                  'level: ',
+                  'attuned: ',
+                  'description: ""',
+                  '```'
+                ].join('\n');
+                await vault.create(customItemTemplatePath, customItemTemplateContent);
+              }
+
+              if (!vault.getAbstractFileByPath(bagOfHoldingPath)) {
+                const bagOfHoldingContent = [
+                  '```',
+                  'type: Wondrous Item',
+                  'level: Uncommon',
+                  'attuned: Not-Required',
+                  'description: "This bag has an interior space considerably larger than its outside dimensions, roughly 2 feet in diameter at the mouth and 4 feet deep. The bag can hold up to 500 pounds, not exceeding a volume of 64 cubic feet. The bag weighs 15 pounds, regardless of its contents. Retrieving an item from the bag requires an action.',
+                  '',
+                  'If the bag is overloaded, pierced, or torn, it ruptures and is destroyed, and its contents are scattered in the Astral Plane. If the bag is turned inside out, its contents spill forth, unharmed, but the bag must be put right before it can be used again. Breathing creatures inside the bag can survive up to a number of minutes equal to 10 divided by the number of creatures (minimum 1 minute), after which time they begin to suffocate.',
+                  '',
+                  'Placing a bag of holding inside an extradimensional space created by a _Heward\'s Handy Haversack, Portable Hole_, or similar item instantly destroys both items and opens a gate to the Astral Plane. The gate originates where the one item was placed inside the other. Any creature within 10 feet of the gate is sucked through it to a random location on the Astral Plane. The gate then closes. The gate is one-way only and can\'t be reopened."',
+                  '```'
+                ].join('\n');
+                await vault.create(bagOfHoldingPath, bagOfHoldingContent);
               }
               new Notice('You can now add your custom cards to the DnD-Cards folder!');
             } catch (err) {

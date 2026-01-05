@@ -1,4 +1,4 @@
-import { requestUrl } from 'obsidian';
+import { requestUrl, App, TFolder, TFile, TAbstractFile } from 'obsidian';
 import { nameToSlug } from './utils';
 
 // In-memory set of all known wondrous item ids (normalized slugs)
@@ -37,6 +37,39 @@ export async function preloadAllItemIds(baseUrl: string): Promise<void> {
         const key = typeRaw.toLowerCase();
         if (!itemTypeCache.has(key)) itemTypeCache.set(key, typeRaw);
       }
+    }
+    // Also include any custom items from the vault folder DnD-Cards/Items
+    try {
+      const app = (globalThis as unknown as { app?: App }).app;
+      const vault = app?.vault;
+      const folderPath = 'DnD-Cards/Items';
+      const folder = vault?.getAbstractFileByPath(folderPath);
+      if (folder instanceof TFolder) {
+        const children: TAbstractFile[] = folder.children;
+        for (const child of children) {
+          if (child instanceof TFile && child.extension?.toLowerCase() === 'md') {
+            const baseName: string = child.basename || child.name.replace(/\.md$/i, '');
+            const idSlug = nameToSlug(baseName);
+            if (idSlug) itemIdCache.add(idSlug);
+            // Attempt to parse type from file content
+            if (vault) {
+              try {
+                const raw = await vault.read(child);
+                const typeMatch = /^(?:type)\s*:\s*(.+)$/im.exec(raw);
+                const typeRawLocal = (typeMatch?.[1] || '').trim();
+                if (typeRawLocal) {
+                  const key = typeRawLocal.toLowerCase();
+                  if (!itemTypeCache.has(key)) itemTypeCache.set(key, typeRawLocal);
+                }
+              } catch {
+                // ignore per-file errors
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Unable to include custom items during preload', err);
     }
   } catch (e) {
     console.warn('Failed to preload item ids', e);

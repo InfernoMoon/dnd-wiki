@@ -1,5 +1,5 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { requestUrl } from 'obsidian';
+import { requestUrl, App, TFolder, TAbstractFile, TFile, MarkdownRenderer, Component } from 'obsidian';
 import { getBaseUrl } from './dataService';
 import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible, extractTableNamesFromFirstCell } from './utils';
 import { STATIC_ITEM_RARITY_WORD_TO_INDEX } from './data/staticData';
@@ -135,7 +135,7 @@ function parseTypeDirective(source: string): string[] | 'all' | null {
   if (/^all$/i.test(raw)) return 'all';
   return raw
     .split(',')
-    .map((s) => s.trim().toLowerCase())
+    .map((s) => s.trim().toLowerCase().replace(/\s+/g, '-'))
     .filter((s) => s.length > 0);
 }
 
@@ -159,6 +159,153 @@ function extractItems(root: Document | Element): Array<{ name: string; type: str
     const attunedTd = tds[nameIdx + 2] || null;
     const attuned = (attunedTd?.textContent || '').trim();
     out.push({ name, type, attuned });
+  }
+  return out;
+}
+
+// ---------------------------
+// Custom item support
+// ---------------------------
+
+function escapeHtml(s: string): string {
+  return s
+    .split('&').join('&amp;')
+    .split('<').join('&lt;')
+    .split('>').join('&gt;');
+}
+
+function capitalizeWords(s?: string): string {
+  if (!s) return '';
+  return s
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function normalizeSpaces(s: string): string {
+  return s.replace(/\u00A0/g, ' ').trim();
+}
+
+function parseCustomItemMeta(raw: string): Record<string, string> {
+  const meta: Record<string, string> = {};
+  const lines = raw.split(/\r?\n/);
+  let collectingKey: string | null = null;
+  let collectingBuf: string[] = [];
+  const finishCollect = () => {
+    if (collectingKey) {
+      meta[collectingKey] = collectingBuf.join('\n');
+    }
+    collectingKey = null;
+    collectingBuf = [];
+  };
+  for (const element of lines) {
+    const rawLine = element;
+    const trimmed = rawLine.trim();
+    if (!trimmed) continue;
+    if (collectingKey) {
+      const endsWithQuote = /"\s*$/.test(trimmed);
+      if (endsWithQuote) {
+        const body = trimmed.replace(/"\s*$/, '');
+        collectingBuf.push(body);
+        finishCollect();
+      } else {
+        collectingBuf.push(trimmed);
+      }
+      continue;
+    }
+    const idx = trimmed.indexOf(':');
+    if (idx === -1) continue;
+    const key = trimmed.slice(0, idx).toLowerCase().trim().replace(/\s+/g, '-');
+    let value = trimmed.slice(idx + 1).trim();
+    if (/^"/.test(value)) {
+      value = value.replace(/^"/, '');
+      const endsSameLine = /"\s*$/.test(value);
+      if (endsSameLine) {
+        meta[key] = value.replace(/"\s*$/, '');
+      } else {
+        collectingKey = key;
+        collectingBuf = [value];
+      }
+    } else {
+      meta[key] = value;
+    }
+  }
+  if (collectingKey) finishCollect();
+  return meta;
+}
+
+function buildCustomItemHtmlStructured(content: string, title: string, uid: string): { html: string; descMarkdown: string | null; descMountId: string } {
+  const meta = parseCustomItemMeta(content);
+  const type = meta['type'] ? capitalizeWords(normalizeSpaces(meta['type'])) : '';
+  const level = meta['level'] ? capitalizeWords(normalizeSpaces(meta['level'])) : '';
+  const attuned = meta['attuned'] ? capitalizeWords(normalizeSpaces(meta['attuned'])) : '';
+  const descriptionRaw = meta['description'] || '';
+
+  const parts: string[] = [];
+  const spacer = '<div style="height:0.5em;"></div>';
+  parts.push('<div>Source: Custom</div>');
+  parts.push(spacer);
+  if (type) parts.push(`<div><strong>Type:</strong> ${escapeHtml(type)}</div>`);
+  if (level) parts.push(`<div><strong>Rarity:</strong> ${escapeHtml(level)}</div>`);
+  if (attuned) parts.push(`<div><strong>Attunement:</strong> ${escapeHtml(attuned)}</div>`);
+  if (type || level || attuned) parts.push(spacer);
+  const descMountId = `desc-${uid}`;
+  if (descriptionRaw) {
+    parts.push(`<div id="${descMountId}" style="margin-top:0.5em;"></div>`);
+    parts.push(spacer);
+  }
+  return { html: parts.join(''), descMarkdown: descriptionRaw || null, descMountId };
+}
+
+async function findCustomItemById(id: string): Promise<{ file: TFile; title: string; content: string } | null> {
+  try {
+    const app = (globalThis as unknown as { app?: App }).app;
+    const vault = app?.vault;
+    const folderPath = 'DnD-Cards/Items';
+    const folder = vault?.getAbstractFileByPath(folderPath);
+    if (!(folder instanceof TFolder)) return null;
+    const children: TAbstractFile[] = folder.children;
+    for (const child of children) {
+      if (child instanceof TFile && child.extension?.toLowerCase() === 'md') {
+        const baseName: string = child.basename || child.name.replace(/\.md$/i, '');
+        if (nameToSlug(baseName) === id) {
+          if (!vault) return null;
+          const content = await vault.read(child);
+          const title = baseName;
+          return { file: child, title, content };
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function extractCustomItems(): Promise<Array<{ name: string; type: string; attuned: string; levelIdx: number | null }>> {
+  const out: Array<{ name: string; type: string; attuned: string; levelIdx: number | null }> = [];
+  try {
+    const app = (globalThis as unknown as { app?: App }).app;
+    const vault = app?.vault;
+    const folderPath = 'DnD-Cards/Items';
+    const folder = vault?.getAbstractFileByPath(folderPath);
+    if (!(folder instanceof TFolder) || !vault) return out;
+    for (const child of folder.children) {
+      if (child instanceof TFile && child.extension?.toLowerCase() === 'md') {
+        const baseName: string = child.basename || child.name.replace(/\.md$/i, '');
+        const raw = await vault.read(child);
+        const meta = parseCustomItemMeta(raw);
+        const type = (meta['type'] || '').trim();
+        const attunedRaw = (meta['attuned'] || '').trim().toLowerCase();
+        const attuned = (attunedRaw === 'required' || attunedRaw === 'true') ? 'Attuned' : '';
+        const levelWord = (meta['level'] || '').trim().toLowerCase().replace(/\s+/g, '-');
+        const levelIdx = typeof STATIC_ITEM_RARITY_WORD_TO_INDEX[levelWord] === 'number' ? STATIC_ITEM_RARITY_WORD_TO_INDEX[levelWord] : null;
+        out.push({ name: baseName, type, attuned, levelIdx });
+      }
+    }
+  } catch {
+    // ignore
   }
   return out;
 }
@@ -237,6 +384,7 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx?: Mar
   const base = baseUrl.replace(/\/$/, '');
   names = [];
   let items: Array<{ name: string; type: string; attuned: string }> = [];
+  let customItems: Array<{ name: string; type: string; attuned: string; levelIdx: number | null }> = [];
   let doc: Document | null = null;
   try {
     const res = await requestUrl({ url: `${base}/wondrous-items`, method: 'GET' });
@@ -244,27 +392,45 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx?: Mar
       const parser = new DOMParser();
       doc = parser.parseFromString(res.text, 'text/html');
       items = extractItems(doc);
-      names = items.map((i) => i.name);
     }
   } catch {
     // ignore
   }
+  // Load custom items from vault
+  customItems = await extractCustomItems();
+  items.push(...customItems.map(ci => ({ name: ci.name, type: ci.type, attuned: ci.attuned })));
+  names = items.map((i) => i.name);
+
   if (doc) {
-    const levelResult = applyLevelFilters(doc, names, itemLevel, itemLevels);
-    if (!levelResult.ok) {
+    // Apply level filters to remote items via DOM tabs
+    const remoteNames = extractItems(doc).map(i => i.name);
+    const levelResult = applyLevelFilters(doc, remoteNames, itemLevel, itemLevels);
+    let filteredNames = levelResult.ok ? levelResult.names : [];
+    // Apply level filters to custom items by levelIdx
+    let customEligible: string[] = [];
+    if (Array.isArray(itemLevels) && itemLevels.length) {
+      const setLvls = new Set(itemLevels);
+      customEligible = customItems.filter(ci => ci.levelIdx !== null && setLvls.has(ci.levelIdx!)).map(ci => ci.name);
+    } else if (typeof itemLevel === 'number' && !Number.isNaN(itemLevel)) {
+      customEligible = customItems.filter(ci => ci.levelIdx === itemLevel).map(ci => ci.name);
+    } else {
+      // level: all or null => include all custom
+      customEligible = customItems.map(ci => ci.name);
+    }
+    names = Array.from(new Set([ ...filteredNames, ...customEligible ]));
+    if (!names.length) {
       el.setText(levelResult.message || 'No Wondrous Items found');
       return;
     }
-    names = levelResult.names;
   }
 
   // Apply type filter after level filters using extracted items
   if (typeDirective && typeDirective !== 'all' && items.length) {
-    const typeSet = new Set(typeDirective.map((t) => t.toLowerCase()));
+    const typeSet = new Set(typeDirective.map((t) => t.toLowerCase().replace(/\s+/g, '-')));
     const typeBySlug = new Map<string, string>();
     for (const it of items) {
       const slug = nameToSlug(it.name);
-      typeBySlug.set(slug, (it.type || '').trim().toLowerCase());
+      typeBySlug.set(slug, (it.type || '').trim().toLowerCase().replace(/\s+/g, '-'));
     }
     names = names.filter((n) => {
       const slug = nameToSlug(n);
@@ -305,6 +471,30 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx?: Mar
     const host = document.createElement('div');
     container.appendChild(host);
     const id = nameToSlug(name);
+    // Try custom first
+    const custom = await findCustomItemById(id);
+    if (custom) {
+      const { file, title, content } = custom;
+      const uid = Math.random().toString(36).slice(2, 11);
+      const structured = buildCustomItemHtmlStructured(content, title, uid);
+      renderCollapsible(host, title, structured.html);
+      if (structured.descMarkdown) {
+        try {
+          const app = (globalThis as unknown as { app?: App }).app;
+          if (app) {
+            const mount = host.querySelector(`#${structured.descMountId}`);
+            if (mount instanceof HTMLElement) {
+              const component = new Component();
+              await MarkdownRenderer.render(app, structured.descMarkdown, mount, file.path, component);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+      return;
+    }
+    // Fallback to remote item
     const res = await fetchPageContent(baseUrl, 'wondrous-items', id);
     if (res.ok) {
       const title = res.titleText || displayNameFromSlug(id);

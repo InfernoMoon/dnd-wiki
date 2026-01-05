@@ -5,6 +5,7 @@
  * Uses a simple in-memory cache and shared collapsible UI renderer.
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
+import { App, TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
 import { getBaseUrl } from './dataService';
 import { nameToSlug, fetchPageContent, renderCollapsible, displayNameFromSlug } from './utils';
 
@@ -67,6 +68,48 @@ export async function renderItem(source: string, el: HTMLElement, _ctx?: Markdow
   el.appendChild(container);
 
   for (const id of ids) {
+    // Try custom item first
+    const custom = await findCustomItemById(id);
+    if (custom) {
+      const { file, title, content } = custom;
+      const uid = Math.random().toString(36).slice(2, 11);
+      const structured = buildCustomItemHtmlStructured(content, title, uid);
+      const host = document.createElement('div');
+      host.style.marginBottom = '0.75em';
+      container.appendChild(host);
+      renderCollapsible(host, title, structured.html);
+      if (structured.descMarkdown) {
+        try {
+          const app = (globalThis as unknown as { app?: App }).app;
+          if (app) {
+            const mount = host.querySelector(`#${structured.descMountId}`);
+            if (mount instanceof HTMLElement) {
+              const component = new Component();
+              await MarkdownRenderer.render(app, structured.descMarkdown, mount, file.path, component);
+              const contentDiv = mount.parentElement as HTMLElement | null;
+              if (contentDiv) {
+                setCachedItem(id, { title, html: contentDiv.innerHTML });
+              }
+            }
+          }
+        } catch {
+          // Best effort cache
+          const contentDiv = host.querySelector('div[id^="card-content-"]');
+          if (contentDiv) {
+            setCachedItem(id, { title, html: contentDiv.innerHTML });
+          }
+        }
+        continue;
+      } else {
+        const contentDiv = host.querySelector('div[id^="card-content-"]');
+        if (contentDiv) {
+          setCachedItem(id, { title, html: contentDiv.innerHTML });
+        }
+        continue;
+      }
+    }
+
+    // Fallback to remote item
     let cached = itemCache.get(id) || null;
     if (!cached) {
       const res = await fetchPageContent(baseUrl, 'wondrous-items', id);
@@ -83,5 +126,125 @@ export async function renderItem(source: string, el: HTMLElement, _ctx?: Markdow
       err.textContent = `Failed to load item: ${displayNameFromSlug(id)}`;
       container.appendChild(err);
     }
+  }
+}
+
+// ---------------------------
+// Custom item support
+// ---------------------------
+
+function escapeHtml(s: string): string {
+  return s
+    .split('&').join('&amp;')
+    .split('<').join('&lt;')
+    .split('>').join('&gt;');
+}
+
+function capitalizeWords(s?: string): string {
+  if (!s) return '';
+  return s
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function normalizeSpaces(s: string): string {
+  return s.replace(/\u00A0/g, ' ').trim();
+}
+
+function parseCustomItemMeta(raw: string): Record<string, string> {
+  const meta: Record<string, string> = {};
+  const lines = raw.split(/\r?\n/);
+  let collectingKey: string | null = null;
+  let collectingBuf: string[] = [];
+  const finishCollect = () => {
+    if (collectingKey) {
+      meta[collectingKey] = collectingBuf.join('\n');
+    }
+    collectingKey = null;
+    collectingBuf = [];
+  };
+  for (const element of lines) {
+    const rawLine = element;
+    const trimmed = rawLine.trim();
+    if (!trimmed) continue;
+    if (collectingKey) {
+      const endsWithQuote = /"\s*$/.test(trimmed);
+      if (endsWithQuote) {
+        const body = trimmed.replace(/"\s*$/, '');
+        collectingBuf.push(body);
+        finishCollect();
+      } else {
+        collectingBuf.push(trimmed);
+      }
+      continue;
+    }
+    const idx = trimmed.indexOf(':');
+    if (idx === -1) continue;
+    const key = trimmed.slice(0, idx).toLowerCase().trim().replace(/\s+/g, '-');
+    let value = trimmed.slice(idx + 1).trim();
+    if (/^"/.test(value)) {
+      value = value.replace(/^"/, '');
+      const endsSameLine = /"\s*$/.test(value);
+      if (endsSameLine) {
+        meta[key] = value.replace(/"\s*$/, '');
+      } else {
+        collectingKey = key;
+        collectingBuf = [value];
+      }
+    } else {
+      meta[key] = value;
+    }
+  }
+  if (collectingKey) finishCollect();
+  return meta;
+}
+
+function buildCustomItemHtmlStructured(content: string, title: string, uid: string): { html: string; descMarkdown: string | null; descMountId: string } {
+  const meta = parseCustomItemMeta(content);
+  const type = meta['type'] ? capitalizeWords(normalizeSpaces(meta['type'])) : '';
+  const level = meta['level'] ? capitalizeWords(normalizeSpaces(meta['level'])) : '';
+  const attuned = meta['attuned'] ? capitalizeWords(normalizeSpaces(meta['attuned'])) : '';
+  const descriptionRaw = meta['description'] || '';
+
+  const parts: string[] = [];
+  const spacer = '<div style="height:0.5em;"></div>';
+  parts.push('<div>Source: Custom</div>');
+  parts.push(spacer);
+  if (type) parts.push(`<div><strong>Type:</strong> ${escapeHtml(type)}</div>`);
+  if (level) parts.push(`<div><strong>Rarity:</strong> ${escapeHtml(level)}</div>`);
+  if (attuned) parts.push(`<div><strong>Attunement:</strong> ${escapeHtml(attuned)}</div>`);
+  if (type || level || attuned) parts.push(spacer);
+  const descMountId = `desc-${uid}`;
+  if (descriptionRaw) {
+    parts.push(`<div id="${descMountId}" style="margin-top:0.5em;"></div>`);
+    parts.push(spacer);
+  }
+  return { html: parts.join(''), descMarkdown: descriptionRaw || null, descMountId };
+}
+
+async function findCustomItemById(id: string): Promise<{ file: TFile; title: string; content: string } | null> {
+  try {
+    const app = (globalThis as unknown as { app?: App }).app;
+    const vault = app?.vault;
+    const folderPath = 'DnD-Cards/Items';
+    const folder = vault?.getAbstractFileByPath(folderPath);
+    if (!(folder instanceof TFolder)) return null;
+    const children: TAbstractFile[] = folder.children;
+    for (const child of children) {
+      if (child instanceof TFile && child.extension?.toLowerCase() === 'md') {
+        const baseName: string = child.basename || child.name.replace(/\.md$/i, '');
+        if (nameToSlug(baseName) === id) {
+          if (!vault) return null;
+          const content = await vault.read(child);
+          const title = baseName;
+          return { file: child, title, content };
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
   }
 }

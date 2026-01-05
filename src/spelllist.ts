@@ -6,7 +6,7 @@
  */
 import { MarkdownPostProcessorContext, requestUrl } from "obsidian";
 import { getBaseUrl } from "./dataService";
-import { renderSingleSpell } from "./spellUtils";
+import { renderSingleSpell, getCustomSpellEntries } from "./spellUtils";
 import { nameToSlug, displayNameFromSlug } from "./utils";
 
 /**
@@ -269,10 +269,47 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx?: Ma
 			return;
 		}
 		names = levelResult.names;
+		// Merge matching custom spells according to filters
+		try {
+			const customs = await getCustomSpellEntries();
+			const wantAllLevels = levelDirective === 'all' || levelDirective === null;
+			const classSet = Array.isArray(classSlugs) && classSlugs.length ? new Set(classSlugs) : null;
+			const schoolSet = Array.isArray(schoolSlugs) && schoolSlugs.length ? new Set(schoolSlugs) : null;
+			const levelSet = Array.isArray(spellLevels) && spellLevels.length ? new Set(spellLevels) : null;
+			const singleLevel = typeof spellLevel === 'number' ? spellLevel : undefined;
+			const existingSlugs = new Set(names.map((n) => nameToSlug(n)));
+			for (const cs of customs) {
+				// Level filter
+				let ok = true;
+				if (!wantAllLevels) {
+					if (levelSet) ok = cs.level !== undefined && levelSet.has(cs.level);
+					else if (singleLevel !== undefined) ok = cs.level === singleLevel;
+				}
+				if (!ok) continue;
+				// Class filter
+				if (classDirective !== 'all' && classSet) {
+					const cls = cs.classes || [];
+					ok = cls.some((c) => classSet.has(c));
+				}
+				if (!ok) continue;
+				// School filter
+				if (schoolDirective !== 'all' && schoolSet) {
+					ok = !!(cs.school && schoolSet.has(cs.school));
+				}
+				if (!ok) continue;
+				const s = cs.id;
+				if (!existingSlugs.has(s)) {
+					names.push(cs.displayName);
+					existingSlugs.add(s);
+				}
+			}
+		} catch {
+			// ignore custom merge errors
+		}
 		spellListCache.set(cacheKey, names);
 	}
 	// Merge in explicit addSpells (avoid duplicates by slug)
-	if (addSpells && addSpells.length) {
+	if (addSpells?.length) {
 		const existingSlugs = new Set(names.map((n) => nameToSlug(n)));
 		for (const slug of addSpells) {
 			if (!existingSlugs.has(slug)) {
@@ -286,7 +323,7 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx?: Ma
 		});
 	}
 	// Apply removespells after add: remove any matching slugs
-	if (removeSpells && removeSpells.length) {
+	if (removeSpells?.length) {
 		const removeSet = new Set(removeSpells);
 		names = names.filter((n) => !removeSet.has(nameToSlug(n)));
 	}

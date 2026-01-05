@@ -278,3 +278,44 @@ function buildCustomSpellHtml(content: string, title: string, sourcePath: string
   if (spellLists) parts.push(`<div style="margin-top:0.5em;"><strong><em>Spell Lists.</em></strong> ${spellLists}</div>`);
   return parts.join('');
 }
+
+// ---------------------------
+// Custom spell metadata export
+// ---------------------------
+
+export interface CustomSpellEntry {
+  id: string; // slug from filename
+  displayName: string; // filename as display
+  level?: number;
+  classes?: string[]; // slugs
+  school?: string; // slug
+}
+
+export async function getCustomSpellEntries(): Promise<CustomSpellEntry[]> {
+  const out: CustomSpellEntry[] = [];
+  try {
+    const app = (globalThis as unknown as { app?: App }).app;
+    const vault = app?.vault;
+    const folderPath = 'DnD-Cards/Spells';
+    const folder = vault?.getAbstractFileByPath(folderPath);
+    if (!(folder instanceof TFolder) || !vault) return out;
+    for (const child of folder.children) {
+      if (child instanceof TFile && child.extension?.toLowerCase() === 'md') {
+        const baseName: string = child.basename || child.name.replace(/\.md$/i, '');
+        const id = nameToSlug(baseName);
+        const raw = await vault.read(child);
+        const meta = parseCustomSpellMeta(raw);
+        const levelRaw = meta['level'];
+        const level = levelRaw !== undefined ? Number.parseInt(String(levelRaw).trim(), 10) : undefined;
+        const classes = meta['spell-lists']
+          ? meta['spell-lists'].split(',').map(s => s.trim()).filter(Boolean).map(nameToSlug)
+          : undefined;
+        const school = meta['school'] ? nameToSlug(meta['school']) : undefined;
+        out.push({ id, displayName: baseName, level: Number.isNaN(level!) ? undefined : level, classes, school });
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return out;
+}

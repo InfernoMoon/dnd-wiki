@@ -9,6 +9,7 @@
  */
 
 import { App, Notice, Plugin, MarkdownView } from "obsidian";
+import { STATIC_CLASSES, STATIC_SCHOOLS } from "./data/staticData";
 import { BaseUrlPromptModal } from "./prompts";
 declare const app: App;
 
@@ -194,16 +195,14 @@ function extractNames(arr: unknown): string[] {
 
 /** Read classes.json from the plugin data folder */
 export async function getClassNames(): Promise<string[]> {
-	const settings = await readSettings();
-	const json = (settings as unknown as { classes?: unknown }).classes ?? [];
-	return extractNames(json);
+	// Return hardcoded, locale-sorted class names
+	return STATIC_CLASSES.slice().sort((a, b) => a.localeCompare(b));
 }
 
 /** Read schools.json from the plugin data folder */
 export async function getSchoolNames(): Promise<string[]> {
-	const settings = await readSettings();
-	const json = (settings as unknown as { schools?: unknown }).schools ?? [];
-	return extractNames(json);
+	// Return hardcoded, locale-sorted school names
+	return STATIC_SCHOOLS.slice().sort((a, b) => a.localeCompare(b));
 }
 
 // In-memory caches used by suggesters for synchronous access

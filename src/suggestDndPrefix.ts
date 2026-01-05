@@ -1,6 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 
-const BLOCK_SUFFIXES = ['-spell', '-spelllist', '-feat', '-featlist'];
+const BLOCK_SUFFIXES = ['-spell', '-spelllist', '-feat', '-featlist', '-item', '-itemlist'];
 
 export class DndPrefixSuggest extends EditorSuggest<{ text: string }> {
   constructor(appPlugin: { app: import('obsidian').App }) {

@@ -178,23 +178,6 @@ export async function peekBaseUrl(): Promise<string | undefined> {
 // Directive values (classes, schools)
 // ------------------------------
 
-/** Normalize and sort names from string or object entries */
-function extractNames(arr: unknown): string[] {
-	if (!Array.isArray(arr)) return [];
-	return arr
-		.map((x) => {
-			if (typeof x === "string") return x;
-			if (x && typeof x === "object") {
-				const o = x as Record<string, unknown>;
-				const name = o["name"] ?? o["title"] ?? o["label"];
-				return typeof name === "string" ? name : "";
-			}
-			return "";
-		})
-		.filter(Boolean)
-		.sort((a, b) => a.localeCompare(b));
-}
-
 /** Read classes.json from the plugin data folder */
 export async function getClassNames(): Promise<string[]> {
 	// Merge static classes with any classes referenced by custom spells

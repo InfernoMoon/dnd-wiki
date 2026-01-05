@@ -1,6 +1,6 @@
 import { Plugin } from 'obsidian';
 import { renderSpell } from './src/spell';
-import { renderSpellList } from './src/spellList';
+import { renderSpellList } from './src/spelllist';
 import { renderFeat } from './src/feat';
 import { renderItem } from './src/item';
 import { initBaseUrlWatcher, configurePluginRef, getBaseUrl, initData } from './src/dataService';
@@ -8,7 +8,10 @@ import { preloadAllSpellNames, getKnownSpellIds } from './src/spellUtils';
 import { SpellNameSuggest } from './src/suggestSpell';
 import { SpellListSuggest } from './src/suggestSpellList';
 import { FeatNameSuggest } from './src/suggestFeat';
+import { ItemNameSuggest } from './src/suggestItem';
+import { ItemListSuggest } from './src/suggestItemList';
 import { preloadAllFeatIds } from './src/featUtils';
+import { preloadAllItemIds } from './src/itemUtils';
 import { renderFeatList } from './src/featList';
 import { renderItemList } from './src/itemList';
 import { DndPrefixSuggest } from './src/suggestDndPrefix';
@@ -25,8 +28,12 @@ export default class Dnd5eSpellCards extends Plugin {
 		this.registerEditorSuggest(new FeatNameSuggest(this));
 		// Register directive suggestions for ```spelllist blocks
 		this.registerEditorSuggest(new SpellListSuggest(this));
+		// Register directive suggestions for ```dnd-itemlist blocks
+		this.registerEditorSuggest(new ItemListSuggest(this));
 		// Register suggestions when typing ```dnd for block suffixes
 		this.registerEditorSuggest(new DndPrefixSuggest(this));
+		// Register editor suggestions for ```dnd-item blocks
+		this.registerEditorSuggest(new ItemNameSuggest(this));
 		this.registerMarkdownCodeBlockProcessor('dnd-spell', async (source, el, ctx) => {
 			await renderSpell(source, el, ctx);
 		});
@@ -61,6 +68,7 @@ export default class Dnd5eSpellCards extends Plugin {
 				if (baseUrl) {
 					await preloadAllSpellNames(baseUrl);
 					await preloadAllFeatIds(baseUrl);
+					await preloadAllItemIds(baseUrl);
 					await initData();
 				}
 			} catch (e) {

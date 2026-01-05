@@ -10,6 +10,8 @@
 
 import { App, Notice, Plugin, MarkdownView } from "obsidian";
 import { STATIC_CLASSES, STATIC_SCHOOLS } from "./data/staticData";
+import { getCustomSpellEntries } from "./spellUtils";
+import { displayNameFromSlug, nameToSlug } from "./utils";
 import { BaseUrlPromptModal } from "./prompts";
 declare const app: App;
 
@@ -195,14 +197,45 @@ function extractNames(arr: unknown): string[] {
 
 /** Read classes.json from the plugin data folder */
 export async function getClassNames(): Promise<string[]> {
-	// Return hardcoded, locale-sorted class names
-	return STATIC_CLASSES.slice().sort((a, b) => a.localeCompare(b));
+	// Merge static classes with any classes referenced by custom spells
+	const base = STATIC_CLASSES.slice();
+	let customs: string[] = [];
+	try {
+		const entries = await getCustomSpellEntries();
+		const set = new Set<string>();
+		for (const e of entries) {
+			for (const c of e.classes || []) set.add(c);
+		}
+		customs = Array.from(set).map((s) => displayNameFromSlug(s));
+	} catch {
+		customs = [];
+	}
+	// Dedupe by slug, prefer nicely-cased display names
+	const bySlug = new Map<string, string>();
+	for (const n of base) bySlug.set(nameToSlug(n), n);
+	for (const n of customs) bySlug.set(nameToSlug(n), n);
+	return Array.from(bySlug.values()).sort((a, b) => a.localeCompare(b));
 }
 
 /** Read schools.json from the plugin data folder */
 export async function getSchoolNames(): Promise<string[]> {
-	// Return hardcoded, locale-sorted school names
-	return STATIC_SCHOOLS.slice().sort((a, b) => a.localeCompare(b));
+	// Merge static schools with any school referenced by custom spells
+	const base = STATIC_SCHOOLS.slice();
+	let customs: string[] = [];
+	try {
+		const entries = await getCustomSpellEntries();
+		const set = new Set<string>();
+		for (const e of entries) {
+			if (e.school) set.add(e.school);
+		}
+		customs = Array.from(set).map((s) => displayNameFromSlug(s));
+	} catch {
+		customs = [];
+	}
+	const bySlug = new Map<string, string>();
+	for (const n of base) bySlug.set(nameToSlug(n), n);
+	for (const n of customs) bySlug.set(nameToSlug(n), n);
+	return Array.from(bySlug.values()).sort((a, b) => a.localeCompare(b));
 }
 
 // In-memory caches used by suggesters for synchronous access

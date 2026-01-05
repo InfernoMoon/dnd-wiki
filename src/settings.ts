@@ -94,6 +94,39 @@ export class DndCardsSettingTab extends PluginSettingTab {
                 ].join('\n');
                 await vault.create(templatePath, templateContent);
               }
+
+              // Create sample custom feat files in the Feats folder
+              const featsFolder = `${root}/Feats`;
+              const featTemplatePath = `${featsFolder}/Custom Feat.md`;
+              const luckyPath = `${featsFolder}/Custom Lucky.md`;
+
+              if (!vault.getAbstractFileByPath(featTemplatePath)) {
+                const featTemplateContent = [
+                  '```',
+                  'prerequisite:',
+                  'description: ""',
+                  '```'
+                ].join('\n');
+                await vault.create(featTemplatePath, featTemplateContent);
+              }
+
+              if (!vault.getAbstractFileByPath(luckyPath)) {
+                const luckyContent = [
+                  '```',
+                  'prerequisite:',
+                  'description: "You have inexplicable luck that seems to kick in at just the right moment.',
+                  '',
+                  'You have 3 luck points. Whenever you make an attack roll, an ability check, or a saving throw, you can spend one luck point to roll an additional d20. You can choose to spend one of your luck points after you roll the die, but before the outcome is determined. You choose which of the d20s is used for the attack roll, ability check, or saving throw.',
+                  '',
+                  'You can also spend one luck point when an attack roll is made against you. Roll a d20 and then choose whether the attack uses the attacker\'s roll or yours.',
+                  '',
+                  'If more than one creature spends a luck point to influence the outcome of a roll, the points cancel each other out; no additional dice are rolled.',
+                  '',
+                  'You regain your expended luck points when you finish a long rest."',
+                  '```'
+                ].join('\n');
+                await vault.create(luckyPath, luckyContent);
+              }
               new Notice('You can now add your custom cards to the DnD-Cards folder!');
             } catch (err) {
               console.error('Failed creating DnD-Cards folders', err);

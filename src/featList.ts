@@ -1,7 +1,7 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { getBaseUrl } from './dataService';
 import { getKnownFeatIds } from './featUtils';
-import { getCachedFeat, setCachedFeat } from './feat';
+import { getCachedFeat, setCachedFeat, findCustomFeatById, buildCustomFeatHtmlStructured } from './feat';
 import { fetchPageContent, renderCollapsible, displayNameFromSlug } from './utils';
 
 export async function renderFeatList(_source: string, el: HTMLElement, _ctx?: MarkdownPostProcessorContext) {
@@ -65,6 +65,31 @@ export async function renderFeatList(_source: string, el: HTMLElement, _ctx?: Ma
     const cached = getCachedFeat(id);
     if (cached?.html) {
       renderCollapsible(host, cached.title, cached.html);
+      return;
+    }
+    // Try custom feat first, else fetch from base URL
+    const custom = await findCustomFeatById(id);
+    if (custom) {
+      const { file, title, content } = custom;
+      const uid = Math.random().toString(36).slice(2, 11);
+      const structured = buildCustomFeatHtmlStructured(content, title, uid);
+      renderCollapsible(host, title, structured.html);
+      try {
+        const app = (globalThis as unknown as { app?: import('obsidian').App }).app;
+        if (structured.descMarkdown && app) {
+          const mount = host.querySelector(`#${structured.descMountId}`);
+          if (mount instanceof HTMLElement) {
+            const { Component, MarkdownRenderer } = require('obsidian');
+            const component = new Component();
+            await MarkdownRenderer.render(app, structured.descMarkdown, mount, file.path, component);
+            setCachedFeat(id, { title, html: (mount.parentElement?.innerHTML) || structured.html });
+          }
+        } else {
+          setCachedFeat(id, { title, html: structured.html });
+        }
+      } catch {
+        setCachedFeat(id, { title, html: structured.html });
+      }
       return;
     }
     const res = await fetchPageContent(baseUrl, 'feat', id);

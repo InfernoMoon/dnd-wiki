@@ -1,4 +1,4 @@
-import { requestUrl } from 'obsidian';
+import { requestUrl, App, TFile, TFolder, TAbstractFile } from 'obsidian';
 import { nameToSlug, displayNameFromSlug } from './utils';
 
 // In-memory set of all known feat ids (normalized slugs)
@@ -23,6 +23,25 @@ export async function preloadAllFeatIds(baseUrl: string): Promise<void> {
         const id = nameToSlug(m[1]);
         if (id) featIdCache.add(id);
       }
+    }
+    // Also include any custom feats from the vault folder DnD-Cards/Feats
+    try {
+      const app = (globalThis as unknown as { app?: App }).app;
+      const vault = app?.vault;
+      const folderPath = 'DnD-Cards/Feats';
+      const folder = vault?.getAbstractFileByPath(folderPath);
+      if (folder instanceof TFolder) {
+        const children: TAbstractFile[] = folder.children;
+        for (const child of children) {
+          if (child instanceof TFile && child.extension?.toLowerCase() === 'md') {
+            const baseName: string = child.basename || child.name.replace(/\.md$/i, '');
+            const idSlug = nameToSlug(baseName);
+            if (idSlug) featIdCache.add(idSlug);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Unable to include custom feats during preload', err);
     }
   } catch (e) {
     console.warn('Failed to preload feat ids', e);

@@ -6,7 +6,7 @@
  * - Fetches spell pages and applies UA fallback
  * - Renders collapsible cards with sanitized content
  */
-import { requestUrl, App, TFile, TFolder, TAbstractFile } from "obsidian";
+import { requestUrl, App, TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from "obsidian";
 import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible } from "./utils";
 
 // In-memory cache of rendered spell content, keyed by normalized id
@@ -73,10 +73,37 @@ export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name
   const custom = await findCustomSpellById(id);
   if (custom) {
     const { file, title, content } = custom;
-    // Format custom spell content to standardized HTML layout
-    const html = buildCustomSpellHtml(content, title, file.path);
-    spellRenderCache.set(id, { titleText: title, contentHtml: html });
-    renderCollapsible(host, title, html);
+    // Build standardized HTML with a markdown mount for description
+    const uid = Math.random().toString(36).slice(2, 11);
+    const structured = buildCustomSpellHtmlStructured(content, title, uid);
+    renderCollapsible(host, title, structured.html);
+    // Render description markdown if present
+    try {
+      const app = (globalThis as unknown as { app?: App }).app;
+      if (structured.descMarkdown && app) {
+        const mount = host.querySelector(`#${structured.descMountId}`);
+        if (mount instanceof HTMLElement) {
+          const component = new Component();
+          await MarkdownRenderer.render(app, structured.descMarkdown, mount, file.path, component);
+          const contentDiv = mount.parentElement as HTMLElement | null;
+          if (contentDiv) {
+            spellRenderCache.set(id, { titleText: title, contentHtml: contentDiv.innerHTML });
+          }
+        }
+      } else {
+        // Cache the static HTML structure when no description markdown exists
+        const contentDiv = host.querySelector('div[id^="card-content-"]') as HTMLElement | null;
+        if (contentDiv) {
+          spellRenderCache.set(id, { titleText: title, contentHtml: contentDiv.innerHTML });
+        }
+      }
+    } catch {
+      // Best effort: cache plain HTML
+      const contentDiv = host.querySelector('div[id^="card-content-"]') as HTMLElement | null;
+      if (contentDiv) {
+        spellRenderCache.set(id, { titleText: title, contentHtml: contentDiv.innerHTML });
+      }
+    }
     return;
   }
   // If not known, check UA variant; otherwise report unknown without requesting
@@ -228,23 +255,64 @@ function formatSpellLists(s?: string): string {
 
 function parseCustomSpellMeta(raw: string): Record<string, string> {
   const meta: Record<string, string> = {};
-  for (const line of raw.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || !trimmed.includes(':')) continue;
+  const lines = raw.split(/\r?\n/);
+  let collectingKey: string | null = null;
+  let collectingBuf: string[] = [];
+  const finishCollect = () => {
+    if (collectingKey) {
+      meta[collectingKey] = collectingBuf.join('\n');
+    }
+    collectingKey = null;
+    collectingBuf = [];
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const trimmed = rawLine.trim();
+    if (!trimmed) continue;
+    // If we're collecting a quoted multi-line value, continue until we hit a closing quote
+    if (collectingKey) {
+      const endsWithQuote = /"\s*$/.test(trimmed);
+      if (endsWithQuote) {
+        const body = trimmed.replace(/"\s*$/, '');
+        collectingBuf.push(body);
+        finishCollect();
+      } else {
+        collectingBuf.push(trimmed);
+      }
+      continue;
+    }
+    // Standard key: value parsing
     const idx = trimmed.indexOf(':');
+    if (idx === -1) continue;
     const key = trimmed.slice(0, idx).toLowerCase().trim();
-    const value = trimmed.slice(idx + 1).trim();
+    let value = trimmed.slice(idx + 1).trim();
     // normalize common keys
     const k = key
       .replace(/\s+/g, '-')
       .replace(/^casting-time$/i, 'casting-time')
       .replace(/^spell-lists$/i, 'spell-lists');
-    meta[k] = value;
+    // If value starts with a quote, begin collecting multi-line value until closing quote
+    if (/^"/.test(value)) {
+      // Strip leading opening quote
+      value = value.replace(/^"/, '');
+      const endsSameLine = /"\s*$/.test(value);
+      if (endsSameLine) {
+        // Remove trailing quote on same line
+        meta[k] = value.replace(/"\s*$/, '');
+      } else {
+        collectingKey = k;
+        collectingBuf = [value];
+      }
+    } else {
+      meta[k] = value;
+    }
   }
+  // If file ended while still collecting, finalize with what we have
+  if (collectingKey) finishCollect();
   return meta;
 }
 
-function buildCustomSpellHtml(content: string, title: string, sourcePath: string): string {
+function buildCustomSpellHtmlStructured(content: string, title: string, uid: string): { html: string; descMarkdown: string | null; descMountId: string } {
   const meta = parseCustomSpellMeta(content);
   const levelOrdinal = toOrdinal(meta['level']);
   const school = meta['school'] ? capitalizeWords(meta['school']) : '';
@@ -253,7 +321,7 @@ function buildCustomSpellHtml(content: string, title: string, sourcePath: string
   const range = formatRange(meta['range']);
   const components = formatComponents(meta['components']);
   const duration = formatDuration(meta['duration']);
-  const description = meta['description'] ? escapeHtml(meta['description']) : '';
+  const descriptionRaw = meta['description'] || '';
   const spellLists = formatSpellLists(meta['spell-lists']);
 
   const parts: string[] = [];
@@ -271,12 +339,13 @@ function buildCustomSpellHtml(content: string, title: string, sourcePath: string
     parts.push(`<div><strong>Duration:</strong> ${duration}</div>`);
     parts.push(spacer);
   }
-  if (description) {
-    parts.push(`<div style="margin-top:0.5em;">${description}</div>`);
+  let descMountId = `desc-${uid}`;
+  if (descriptionRaw) {
+    parts.push(`<div id="${descMountId}" style="margin-top:0.5em;"></div>`);
     parts.push(spacer);
   }
   if (spellLists) parts.push(`<div style="margin-top:0.5em;"><strong><em>Spell Lists.</em></strong> ${spellLists}</div>`);
-  return parts.join('');
+  return { html: parts.join(''), descMarkdown: descriptionRaw || null, descMountId };
 }
 
 // ---------------------------

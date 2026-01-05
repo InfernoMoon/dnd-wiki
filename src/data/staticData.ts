@@ -25,3 +25,18 @@ export const STATIC_SCHOOLS: string[] = [
   "Necromancy",
   "Transmutation"
 ];
+
+/**
+ * Mapping of item rarity words to tab indices used by the Wondrous Items page.
+ * Keys are lowercase, spaces normalized with hyphens.
+ */
+export const STATIC_ITEM_RARITY_WORD_TO_INDEX: Record<string, number> = {
+  common: 0,
+  uncommon: 1,
+  rare: 2,
+  'very-rare': 3,
+  legendary: 4,
+  artifact: 5,
+  unique: 6,
+  other: 7,
+};

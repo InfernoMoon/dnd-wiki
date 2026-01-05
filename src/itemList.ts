@@ -1,31 +1,15 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { requestUrl } from 'obsidian';
 import { getBaseUrl } from './dataService';
-import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible } from './utils';
+import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible, extractTableNamesFromFirstCell } from './utils';
+import { STATIC_ITEM_RARITY_WORD_TO_INDEX } from './data/staticData';
 
-function extractNames(root: Document | Element): string[] {
-  // Only include items that have an anchor with an href in the table
-  const anchors = Array.from(root.querySelectorAll('table tr td a[href]')) as HTMLAnchorElement[];
-  return anchors
-    .map((a) => (a.textContent || '').trim())
-    .filter((t) => t.length > 0);
-}
+// Use shared extractor to match spell list behavior
 
 type LevelDirective = number | number[] | 'all' | null;
 
 // Mapping of textual rarity levels to tab indices (0-7)
-const LEVEL_WORD_TO_INDEX: Record<string, number> = {
-  'common': 0,
-  'uncommon': 1,
-  'rare': 2,
-  'very-rare': 3,
-  'legendary': 4,
-  'artifact': 5,
-  'unique': 6,
-  'other': 7,
-};
-
-const LEVEL_INDEX_TO_WORD = Object.entries(LEVEL_WORD_TO_INDEX)
+const LEVEL_INDEX_TO_WORD = Object.entries(STATIC_ITEM_RARITY_WORD_TO_INDEX)
   .reduce<Record<number, string>>((acc, [k, v]) => { acc[v] = k; return acc; }, {});
 
 // In-memory cache for item list results, keyed by filter combination
@@ -61,12 +45,22 @@ function parseLevelDirective(source: string): LevelDirective {
     const tokens = txt.split(',').map((s) => s.trim()).filter(Boolean);
     for (const tok of tokens) {
       if (/^\d+$/.test(tok)) {
+        /**
+         * itemList.ts
+         * Markdown code block processor for ```dnd-itemlist blocks.
+         * Fetches the Wondrous Items index page, applies filters (level/type/attuned),
+         * and renders matching items as collapsible cards. Results are cached by filter.
+         */
         const n = Number.parseInt(tok, 10);
         if (!Number.isNaN(n) && n >= 0 && n <= 7) out.push(n);
       } else {
         const mm = /^(\d+)\s*-\s*(\d+)$/.exec(tok);
         if (mm) {
           const a = Number.parseInt(mm[1], 10);
+        /**
+         * Extract non-empty names from the first cell of table rows.
+         * Delegates to shared utils to stay in sync with spell list behavior.
+         */
           const b = Number.parseInt(mm[2], 10);
           if (!Number.isNaN(a) && !Number.isNaN(b)) {
             const start = Math.max(0, Math.min(a, b));
@@ -76,7 +70,7 @@ function parseLevelDirective(source: string): LevelDirective {
         } else {
           // Try word mapping (normalize spaces to '-')
           const key = tok.replace(/\s+/g, '-').toLowerCase();
-          const idx = LEVEL_WORD_TO_INDEX[key];
+          const idx = STATIC_ITEM_RARITY_WORD_TO_INDEX[key];
           if (typeof idx === 'number') out.push(idx);
         }
       }
@@ -84,6 +78,9 @@ function parseLevelDirective(source: string): LevelDirective {
     return Array.from(new Set(out)).sort((x, y) => x - y);
   };
   const parts = expand(raw);
+        /**
+         * Compute a stable cache key for the combination of filters.
+         */
   return parts.length <= 1 ? (parts[0] ?? null) : parts;
 }
 
@@ -93,7 +90,7 @@ function applyLevelFilters(baseDoc: Document, names: string[], itemLevel?: numbe
     for (const lvl of itemLevels) {
       const tabEl = baseDoc.querySelector(`#wiki-tab-0-${lvl}`);
       if (!tabEl) continue;
-      const levelNames = extractNames(tabEl);
+      const levelNames = extractTableNamesFromFirstCell(tabEl);
       for (const n of levelNames) unionLevelSet.add(nameToSlug(n));
     }
     if (!unionLevelSet.size) {
@@ -101,12 +98,16 @@ function applyLevelFilters(baseDoc: Document, names: string[], itemLevel?: numbe
     }
     return { ok: true, names: names.filter((n) => unionLevelSet.has(nameToSlug(n))) };
   }
+        /**
+         * Parse `level:` directive into a numeric index or list of indices (0-7),
+         * or the string 'all', or null if absent/invalid.
+         */
   if (typeof itemLevel === 'number' && !Number.isNaN(itemLevel)) {
     const tabEl = baseDoc.querySelector(`#wiki-tab-0-${itemLevel}`);
     if (!tabEl) {
       return { ok: false, names: [], message: `No Wondrous Items found for level ${itemLevel}` };
     }
-    const levelNames = extractNames(tabEl);
+    const levelNames = extractTableNamesFromFirstCell(tabEl);
     const setLevel = new Set(levelNames.map((n) => nameToSlug(n)));
     return { ok: true, names: names.filter((n) => setLevel.has(nameToSlug(n))) };
   }
@@ -140,6 +141,9 @@ function parseTypeDirective(source: string): string[] | 'all' | null {
 
 function extractItems(root: Document | Element): Array<{ name: string; type: string; attuned: string }> {
   const rows = Array.from(root.querySelectorAll('table tr'));
+        /**
+         * Intersect current names with names present under the selected rarity tabs.
+         */
   const out: Array<{ name: string; type: string; attuned: string }> = [];
   for (const tr of rows) {
     const tds = Array.from(tr.querySelectorAll('td'));
@@ -159,6 +163,18 @@ function extractItems(root: Document | Element): Array<{ name: string; type: str
   return out;
 }
 
+// Parse `attuned:` directive into 'all' | true | false | null at module scope
+function parseAttunedDirective(sourceText: string): 'all' | boolean | null {
+  const lines = sourceText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const m = lines.map((l) => /^attuned:\s*(all|true|false|required|not-required)$/i.exec(l)).find(Boolean);
+  if (!m) return null;
+  const v = (m![1] || '').toLowerCase().trim();
+  if (v === 'all') return 'all';
+  if (v === 'true' || v === 'required') return true;
+  if (v === 'false' || v === 'not-required') return false;
+  return null;
+}
+
 export async function renderItemList(source: string, el: HTMLElement, _ctx?: MarkdownPostProcessorContext) {
   el.empty();
   const baseUrl = await getBaseUrl();
@@ -166,6 +182,9 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx?: Mar
     el.createEl('div', { text: 'Base URL is not configured.' });
     return;
   }
+        /**
+         * Convert a rarity index to a display name (Title-Case, hyphenated).
+         */
 
   // Parse directives up front (for cache key and heading)
   const levelDirective = parseLevelDirective(source);
@@ -173,12 +192,18 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx?: Mar
   const itemLevels = Array.isArray(levelDirective) ? levelDirective : undefined;
   const typeDirective = parseTypeDirective(source);
   const attunedDirective = parseAttunedDirective(source);
+        /**
+         * Build the H2 heading shown above the rendered list.
+         */
 
   // Try cache
   const cacheKey = buildCacheKey(levelDirective, typeDirective, attunedDirective);
   let names = itemListCache.get(cacheKey);
   if (names) {
     // Render from cache
+        /**
+         * Parse `type:` directive into lowercased list, 'all', or null.
+         */
     if (!names.length) {
       el.setText('No Wondrous Items found');
       return;
@@ -191,6 +216,9 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx?: Mar
     el.appendChild(h2);
     el.appendChild(container);
     const tasks = names.map(async (name) => {
+        /**
+         * Extract full item rows with name/type/attuned parsed from the table.
+         */
       const host = document.createElement('div');
       container.appendChild(host);
       const id = nameToSlug(name);
@@ -246,16 +274,6 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx?: Mar
   }
 
   // Apply attuned filter: attuned: all | true | false
-  function parseAttunedDirective(sourceText: string): 'all' | boolean | null {
-    const lines = sourceText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    const m = lines.map((l) => /^attuned:\s*(all|true|false|required|not-required)$/i.exec(l)).find(Boolean);
-    if (!m) return null;
-    const v = (m![1] || '').toLowerCase().trim();
-    if (v === 'all') return 'all';
-    if (v === 'true' || v === 'required') return true;
-    if (v === 'false' || v === 'not-required') return false;
-    return null;
-  }
   if (attunedDirective !== null && attunedDirective !== 'all' && items.length) {
     const attunedBySlug = new Map<string, boolean>();
     for (const it of items) {

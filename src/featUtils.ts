@@ -1,13 +1,29 @@
+/**
+ * featUtils.ts
+ * Utilities for feat metadata and ID management.
+ * - Preloads known feat IDs from the configured base URL and custom vault files
+ * - Provides helpers to access and format feat identifiers
+ */
 import { requestUrl, App, TFile, TFolder, TAbstractFile } from 'obsidian';
-import { nameToSlug, displayNameFromSlug } from './utils';
+import { nameToSlug } from './utils';
 
 // In-memory set of all known feat ids (normalized slugs)
 const featIdCache: Set<string> = new Set();
 
+/**
+ * Get all known feat IDs as sorted slugs.
+ * @returns Array of normalized feat slugs (sorted ascending).
+ */
 export function getKnownFeatIds(): string[] {
   return Array.from(featIdCache).sort((a, b) => a.localeCompare(b));
 }
 
+/**
+ * Preload feat IDs from the base URL and include custom feats from the vault.
+ * Parses the root page to collect links matching "/feat:<id>" and adds any
+ * files found under the "DnD-Cards/Feats" folder.
+ * @param baseUrl The configured base URL to fetch and parse.
+ */
 export async function preloadAllFeatIds(baseUrl: string): Promise<void> {
   const base = baseUrl.replace(/\/$/, '');
   try {
@@ -46,8 +62,4 @@ export async function preloadAllFeatIds(baseUrl: string): Promise<void> {
   } catch (e) {
     console.warn('Failed to preload feat ids', e);
   }
-}
-
-export function toFeatDisplayName(slug: string): string {
-  return displayNameFromSlug(slug);
 }

@@ -92,14 +92,14 @@ export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name
         }
       } else {
         // Cache the static HTML structure when no description markdown exists
-        const contentDiv = host.querySelector('div[id^="card-content-"]') as HTMLElement | null;
+        const contentDiv = host.querySelector('div[id^="card-content-"]');
         if (contentDiv) {
           spellRenderCache.set(id, { titleText: title, contentHtml: contentDiv.innerHTML });
         }
       }
     } catch {
       // Best effort: cache plain HTML
-      const contentDiv = host.querySelector('div[id^="card-content-"]') as HTMLElement | null;
+      const contentDiv = host.querySelector('div[id^="card-content-"]');
       if (contentDiv) {
         spellRenderCache.set(id, { titleText: title, contentHtml: contentDiv.innerHTML });
       }
@@ -265,8 +265,8 @@ function parseCustomSpellMeta(raw: string): Record<string, string> {
     collectingKey = null;
     collectingBuf = [];
   };
-  for (let i = 0; i < lines.length; i++) {
-    const rawLine = lines[i];
+  for (const element of lines) {
+    const rawLine = element;
     const trimmed = rawLine.trim();
     if (!trimmed) continue;
     // If we're collecting a quoted multi-line value, continue until we hit a closing quote
@@ -339,7 +339,7 @@ function buildCustomSpellHtmlStructured(content: string, title: string, uid: str
     parts.push(`<div><strong>Duration:</strong> ${duration}</div>`);
     parts.push(spacer);
   }
-  let descMountId = `desc-${uid}`;
+  const descMountId = `desc-${uid}`;
   if (descriptionRaw) {
     parts.push(`<div id="${descMountId}" style="margin-top:0.5em;"></div>`);
     parts.push(spacer);

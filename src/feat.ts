@@ -1,26 +1,62 @@
+/**
+ * feat.ts
+ * Markdown code block processor for ```dnd-feat blocks.
+ * Renders one or more feat cards. Tries custom vault feats first,
+ * then falls back to fetching from the configured Base URL.
+ * Keeps the entrypoint focused on parsing input and layout while
+ * delegating rendering details to helpers and the collapsible UI.
+ */
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { App, TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
+import { TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
 import { getBaseUrl } from './dataService';
-import { nameToSlug, fetchPageContent, renderCollapsible } from './utils';
+import { nameToSlug, fetchPageContent, renderCollapsible, escapeHtml, getObsidianApp, createUid, extractCardContentHtml } from './utils';
 
 // In-memory cache for fetched feat content by id/slug
 const featCache = new Map<string, { title: string; html: string }>();
 
+/**
+ * Get a cached feat render by ID.
+ * @param id Feat slug/ID to look up.
+ * @returns Cached title and HTML if present, otherwise null.
+ */
 export function getCachedFeat(id: string): { title: string; html: string } | null {
   return featCache.get(id) || null;
 }
 
+/**
+ * Store a rendered feat in the cache.
+ * @param id Feat slug/ID to cache under.
+ * @param data Object containing card title and HTML.
+ */
 export function setCachedFeat(id: string, data: { title: string; html: string }): void {
   featCache.set(id, data);
 }
 
+/**
+ * Append a collapsible feat card to a container.
+ * @param container Parent element to receive the card.
+ * @param title Card header title.
+ * @param html Pre-rendered inner HTML content.
+ */
 function renderFeatCard(container: HTMLElement, title: string, html: string) {
   const host = document.createElement('div');
   container.appendChild(host);
   renderCollapsible(host, title, html);
 }
 
-// Markdown code block processor for ```dnd-feat blocks.
+/**
+ * Render one or more feats inside a ```dnd-feat code block.
+ * - Splits the block content into lines (each a feat name)
+ * - Validates Base URL from settings
+ * - Creates a container and renders each feat as a collapsible card
+ * - Prefers custom vault items; otherwise fetches from Base URL
+ */
+/**
+ * Entry point for ```dnd-feat blocks; renders one or more feat cards.
+ * @param source Raw block text; each non-empty line is a feat name/ID.
+ * @param el Target element where cards will be appended.
+ * @param _ctx Obsidian processor context (unused).
+ */
 export async function renderFeat(source: string, el: HTMLElement, _ctx?: MarkdownPostProcessorContext) {
   el.empty();
   const baseUrl = await getBaseUrl();
@@ -40,56 +76,7 @@ export async function renderFeat(source: string, el: HTMLElement, _ctx?: Markdow
   el.appendChild(container);
 
   for (const featId of feats) {
-    let cached = featCache.get(featId) || null;
-    if (!cached) {
-      // Try custom feat first
-      const custom = await findCustomFeatById(featId);
-      if (custom) {
-        const { file, title, content } = custom;
-        const host = document.createElement('div');
-        container.appendChild(host);
-        const uid = Math.random().toString(36).slice(2, 11);
-        const structured = buildCustomFeatHtmlStructured(content, title, uid);
-        renderCollapsible(host, title, structured.html);
-        try {
-          const app = (globalThis as unknown as { app?: App }).app;
-          if (structured.descMarkdown && app) {
-            const mount = host.querySelector(`#${structured.descMountId}`);
-            if (mount instanceof HTMLElement) {
-              const component = new Component();
-              await MarkdownRenderer.render(app, structured.descMarkdown, mount, file.path, component);
-              const contentDiv = mount.parentElement as HTMLElement | null;
-              if (contentDiv) {
-                const html = contentDiv.innerHTML;
-                cached = { title, html };
-                featCache.set(featId, cached);
-              }
-            }
-          } else {
-            const contentDiv = host.querySelector('div[id^="card-content-"]') as HTMLElement | null;
-            if (contentDiv) {
-              const html = contentDiv.innerHTML;
-              cached = { title, html };
-              featCache.set(featId, cached);
-            }
-          }
-        } catch {
-          const contentDiv = host.querySelector('div[id^="card-content-"]') as HTMLElement | null;
-          if (contentDiv) {
-            const html = contentDiv.innerHTML;
-            cached = { title, html };
-            featCache.set(featId, cached);
-          }
-        }
-      } else {
-        // Fallback to wiki fetch
-        const fetched = await fetchPageContent(baseUrl, 'feat', featId);
-        if (fetched.ok) {
-          cached = { title: fetched.titleText || featId, html: fetched.contentHtml };
-          featCache.set(featId, cached);
-        }
-      }
-    }
+    const cached = await ensureFeatCached(featId, baseUrl);
     if (cached?.html) {
       renderFeatCard(container, cached.title, cached.html);
     } else {
@@ -104,9 +91,14 @@ export async function renderFeat(source: string, el: HTMLElement, _ctx?: Markdow
 // Custom Feat support
 // ---------------------------
 
+/**
+ * Locate a custom feat in the vault by slug/ID and return its file and content.
+ * @param id Slug/ID derived from the feat name.
+ * @returns File, display title, and raw markdown content or null.
+ */
 export async function findCustomFeatById(id: string): Promise<{ file: TFile; title: string; content: string } | null> {
   try {
-    const app = (globalThis as unknown as { app?: App }).app;
+    const app = getObsidianApp();
     const vault = app?.vault;
     const folderPath = 'DnD-Cards/Feats';
     const folder = vault?.getAbstractFileByPath(folderPath);
@@ -129,10 +121,19 @@ export async function findCustomFeatById(id: string): Promise<{ file: TFile; tit
   }
 }
 
-function escapeHtml(s: string): string {
-  return s.split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;');
-}
+/**
+ * Minimal HTML escaping for text fragments.
+ * @param s Raw text to escape.
+ * @returns Escaped string safe for HTML insertion.
+ */
+// moved to utils.ts
 
+/**
+ * Parse simple key:value metadata from custom feat markdown content.
+ * Supports quoted multi-line values.
+ * @param raw Full markdown content.
+ * @returns Map of normalized keys to values.
+ */
 function parseCustomFeatMeta(raw: string): Record<string, string> {
   const meta: Record<string, string> = {};
   const lines = raw.split(/\r?\n/);
@@ -161,7 +162,7 @@ function parseCustomFeatMeta(raw: string): Record<string, string> {
     if (idx === -1) continue;
     const key = trimmed.slice(0, idx).toLowerCase().trim().replace(/\s+/g, '-');
     let value = trimmed.slice(idx + 1).trim();
-    if (/^"/.test(value)) {
+    if (value.startsWith("\"")) {
       value = value.replace(/^"/, '');
       const endsSameLine = /"\s*$/.test(value);
       if (endsSameLine) meta[key] = value.replace(/"\s*$/, '');
@@ -177,6 +178,13 @@ function parseCustomFeatMeta(raw: string): Record<string, string> {
   return meta;
 }
 
+/**
+ * Build the structured HTML shell for a custom feat card.
+ * @param content Raw markdown content of the feat file.
+ * @param title Display title for the card.
+ * @param uid Unique identifier used to wire the description mount.
+ * @returns HTML shell plus optional description markdown and mount ID.
+ */
 export function buildCustomFeatHtmlStructured(content: string, title: string, uid: string): { html: string; descMarkdown: string | null; descMountId: string } {
   const meta = parseCustomFeatMeta(content);
   const prereq = meta['prerequisite'] ? escapeHtml(meta['prerequisite']) : '';
@@ -195,4 +203,89 @@ export function buildCustomFeatHtmlStructured(content: string, title: string, ui
     parts.push(spacer);
   }
   return { html: parts.join(''), descMarkdown: descRaw || null, descMountId };
+}
+
+// ---------------------------
+// Helper utilities to reduce complexity and warnings
+// ---------------------------
+
+/**
+ * Safely obtain the Obsidian App instance from global scope.
+ * @returns App instance or null if unavailable.
+ */
+// moved to utils.ts
+
+/**
+ * Create a unique identifier using crypto when available.
+ * Falls back to a timestamp-based seed.
+ * @returns Unique ID string.
+ */
+// moved to utils.ts
+
+/**
+ * Extract the inner HTML of the rendered card content.
+ * @param host Root element returned by renderCollapsible.
+ * @returns Inner HTML string or null if not found.
+ */
+// moved to utils.ts
+
+/**
+ * Render a custom feat card, mount its markdown description, and cache the HTML.
+ * @param featId Slug/ID used as cache key.
+ * @param custom File, display title, and raw content of the custom feat.
+ * @returns Cached title and HTML, or null on failure.
+ */
+async function renderCustomFeatToCache(
+  featId: string,
+  custom: { file: TFile; title: string; content: string }
+): Promise<{ title: string; html: string } | null> {
+  const uid = createUid();
+  const structured = buildCustomFeatHtmlStructured(custom.content, custom.title, uid);
+  const host = document.createElement('div');
+  renderCollapsible(host, custom.title, structured.html);
+  try {
+    const app = getObsidianApp();
+    if (structured.descMarkdown && app) {
+      const mount = host.querySelector(`#${structured.descMountId}`);
+      if (mount instanceof HTMLElement) {
+        const component = new Component();
+        await MarkdownRenderer.render(app, structured.descMarkdown, mount, custom.file.path, component);
+      }
+    }
+  } catch (e) {
+    console.warn('Custom feat markdown render failed', e);
+  }
+  const html = extractCardContentHtml(host);
+  if (html) {
+    const cached = { title: custom.title, html };
+    setCachedFeat(featId, cached);
+    return cached;
+  }
+  return null;
+}
+
+/**
+ * Ensure a feat is present in the cache by trying custom-first then fetching.
+ * @param featId Slug/ID of the feat.
+ * @param baseUrl Configured base URL used for fallback fetch.
+ * @returns Cached title and HTML or null if unavailable.
+ */
+async function ensureFeatCached(
+  featId: string,
+  baseUrl: string
+): Promise<{ title: string; html: string } | null> {
+  const existing = getCachedFeat(featId);
+  if (existing) return existing;
+  const custom = await findCustomFeatById(featId);
+  if (custom) {
+    const cached = await renderCustomFeatToCache(featId, custom);
+    if (cached) return cached;
+  }
+  const fetched = await fetchPageContent(baseUrl, 'feat', featId);
+  if (fetched.ok) {
+    const cached = { title: fetched.titleText || featId, html: fetched.contentHtml };
+    setCachedFeat(featId, cached);
+    return cached;
+  }
+  return null;
 }

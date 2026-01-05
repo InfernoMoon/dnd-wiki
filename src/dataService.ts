@@ -9,7 +9,7 @@
  */
 
 import { App, Notice, Plugin, MarkdownView } from "obsidian";
-import { STATIC_CLASSES, STATIC_SCHOOLS } from "./data/staticData";
+import { STATIC_CLASSES, STATIC_SCHOOLS, STATIC_ITEM_RARITY_WORD_TO_INDEX } from "./data/staticData";
 import { getCustomSpellEntries } from "./spellUtils";
 import { displayNameFromSlug, nameToSlug } from "./utils";
 import { BaseUrlPromptModal } from "./prompts";
@@ -247,6 +247,28 @@ export function getCachedClassNames(): string[] {
 /** Get cached school names (may be empty until initData runs) */
 export function getCachedSchoolNames(): string[] {
 	return cachedSchoolNames;
+}
+
+// ------------------------------
+// Item rarity (Wondrous Items)
+// ------------------------------
+
+/**
+ * Get display-friendly item rarity names in canonical order.
+ * Returns hyphenated Title Case (e.g., "Very-Rare").
+ */
+export function getItemRarityNames(): string[] {
+	const entries = Object.entries(STATIC_ITEM_RARITY_WORD_TO_INDEX);
+	const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+	entries.sort((a, b) => a[1] - b[1]);
+	return entries.map(([key]) => key.split('-').map(cap).join('-'));
+}
+
+/**
+ * Expose the static rarity word→index mapping for consumers that need indices.
+ */
+export function getItemRarityWordToIndex(): Record<string, number> {
+	return { ...STATIC_ITEM_RARITY_WORD_TO_INDEX };
 }
 
 // ------------------------------

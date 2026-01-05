@@ -1,3 +1,4 @@
+import type { App } from 'obsidian';
 /**
  * Convert a formatted name into a normalized slug.
  * - Removes "(UA)" markers
@@ -41,6 +42,13 @@ export function displayNameFromSlug(slug: string): string {
 	return titled.join(" ");
 }
 
+/**
+ * Minimal HTML escaping for text fragments.
+ */
+export function escapeHtml(s: string): string {
+	return s.split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;');
+}
+
 // Generic page fetcher for wiki-like pages (spell, feat, etc.)
 // Builds URL as `${baseUrlNoTrailing}/${kind}:${id}` and extracts title/body.
 // Also sanitizes anchors in the body by replacing <a> with <span> text nodes.
@@ -79,7 +87,7 @@ export async function fetchPageContent(
 
 // Shared collapsible renderer used by spells (and can be reused elsewhere)
 export function renderCollapsible(el: HTMLElement, title: string, html: string) {
-	const uid = Math.random().toString(36).slice(2, 11);
+	const uid = createUid();
 	const contentDivId = `card-content-${uid}`;
 	const arrowId = `card-arrow-${uid}`;
 	el.innerHTML = `
@@ -102,6 +110,53 @@ export function renderCollapsible(el: HTMLElement, title: string, html: string) 
 	});
 }
 
+/**
+ * Safely obtain the Obsidian App instance from global scope.
+ */
+export function getObsidianApp(): App | null {
+	return (globalThis as unknown as { app?: App }).app ?? null;
+}
+
+/**
+ * Create a unique identifier using crypto when available.
+ * Falls back to a timestamp-based seed.
+ */
+export function createUid(): string {
+	try {
+		const anyCrypto = (globalThis as unknown as { crypto?: Crypto }).crypto;
+		if (anyCrypto && 'randomUUID' in anyCrypto && typeof anyCrypto.randomUUID === 'function') {
+			return anyCrypto.randomUUID();
+		}
+		if (anyCrypto && 'getRandomValues' in anyCrypto && typeof anyCrypto.getRandomValues === 'function') {
+			const buf = new Uint8Array(16);
+			anyCrypto.getRandomValues(buf);
+			return Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+		}
+	} catch {
+		// fall through to non-crypto fallback
+	}
+	return `uid-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+/**
+ * Extract the inner HTML of a collapsible card content block.
+ */
+export function extractCardContentHtml(host: HTMLElement): string | null {
+	const contentDiv = host.querySelector('div[id^="card-content-"]');
+	return contentDiv?.innerHTML || null;
+}
+
+/**
+ * Extract non-empty names from the first table cell of each row.
+ * Used by both spell and item list processors to normalize name collection.
+ */
+export function extractTableNamesFromFirstCell(root: Document | Element): string[] {
+	const rows = Array.from(root.querySelectorAll('table tr'));
+	return rows
+		.map((tr) => tr.querySelector('td'))
+		.filter((td) => !!td && !!td.textContent && td.textContent.trim().length > 0)
+		.map((td) => (td?.textContent || '').trim());
+}
 // Fetch a page and extract title (.page-title) and body (#page-content)
 // Falls back to #wiki-content or document.body if needed
 export async function fetchTitleAndBody(url: string): Promise<{ title: string; html: string } | null> {

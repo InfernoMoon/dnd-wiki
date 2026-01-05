@@ -1,9 +1,23 @@
+/**
+ * featList.ts
+ * Renders a list of feats as collapsible cards.
+ * Uses cached renders where available, prefers custom vault feats,
+ * and falls back to fetching from the configured Base URL.
+ */
 import type { MarkdownPostProcessorContext } from 'obsidian';
+import { Component, MarkdownRenderer } from 'obsidian';
 import { getBaseUrl } from './dataService';
 import { getKnownFeatIds } from './featUtils';
 import { getCachedFeat, setCachedFeat, findCustomFeatById, buildCustomFeatHtmlStructured } from './feat';
 import { fetchPageContent, renderCollapsible, displayNameFromSlug } from './utils';
 
+/**
+ * Render all known feats in the environment into the provided element.
+ * If known IDs are not yet available, shows a retry message and polls for up to 30 seconds.
+ * @param _source The raw block text (unused for list rendering).
+ * @param el Target element to append rendered cards to.
+ * @param _ctx Obsidian processor context (unused).
+ */
 export async function renderFeatList(_source: string, el: HTMLElement, _ctx?: MarkdownPostProcessorContext) {
   el.empty();
   const baseUrl = await getBaseUrl();
@@ -14,6 +28,7 @@ export async function renderFeatList(_source: string, el: HTMLElement, _ctx?: Ma
 
   const ids = getKnownFeatIds();
   if (!ids.length) {
+    // Preloading may be deferred; present a retry message and poll until IDs appear.
     const msg = el.createEl('div', { text: 'No feats found (preload may not have completed). Retrying…' });
     const start = Date.now();
     const intervalId = globalThis.setInterval(async () => {
@@ -79,7 +94,6 @@ export async function renderFeatList(_source: string, el: HTMLElement, _ctx?: Ma
         if (structured.descMarkdown && app) {
           const mount = host.querySelector(`#${structured.descMountId}`);
           if (mount instanceof HTMLElement) {
-            const { Component, MarkdownRenderer } = require('obsidian');
             const component = new Component();
             await MarkdownRenderer.render(app, structured.descMarkdown, mount, file.path, component);
             setCachedFeat(id, { title, html: (mount.parentElement?.innerHTML) || structured.html });

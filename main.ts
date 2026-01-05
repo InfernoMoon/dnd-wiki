@@ -1,6 +1,6 @@
 import { Plugin } from 'obsidian';
 import { renderSpell } from './src/spell';
-import { renderSpellList } from './src/spelllist';
+import { renderSpellList } from './src/spellList';
 import { renderFeat } from './src/feat';
 import { renderItem } from './src/item';
 import { initBaseUrlWatcher, configurePluginRef, getBaseUrl, initData } from './src/dataService';

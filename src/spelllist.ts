@@ -7,7 +7,7 @@
 import { MarkdownPostProcessorContext, requestUrl } from "obsidian";
 import { getBaseUrl } from "./dataService";
 import { renderSingleSpell, getCustomSpellEntries } from "./spellUtils";
-import { nameToSlug, displayNameFromSlug } from "./utils";
+import { nameToSlug, displayNameFromSlug, extractTableNamesFromFirstCell } from "./utils";
 
 /**
  * Render a filtered list of spells based on directives provided in the block.
@@ -18,7 +18,6 @@ import { nameToSlug, displayNameFromSlug } from "./utils";
  * Fetches `/spells` and optional `/spells:<slug>` pages to intersect results.
  */
 type LevelDirective = number | number[] | "all" | null;
-type NamesDoc = Document | Element;
 
 // In-memory cache: key is combination of filters, value is list of spell names
 const spellListCache: Map<string, string[]> = new Map();
@@ -123,16 +122,8 @@ function parseDirectives(source: string): {
 	return { levelDirective, classDirective, schoolDirective, addSpells, removeSpells };
 }
 
-function extractNames(root: NamesDoc): string[] {
-	const rows = Array.from(root.querySelectorAll("table tr"));
-	return rows
-		.map((tr) => tr.querySelector("td"))
-		.filter((td) => td?.textContent?.trim().length)
-		.map((td) => (td?.textContent || "").trim());
-}
-
 function toNames(docs: (Document | null)[]): string[][] {
-	return docs.filter((d): d is Document => !!d).map((d) => extractNames(d));
+	return docs.filter((d): d is Document => !!d).map((d) => extractTableNamesFromFirstCell(d));
 }
 
 function unionNormalized(listOfNameArrays: string[][]): Set<string> {
@@ -185,7 +176,7 @@ function applyLevelFilters(baseDoc: Document, names: string[], spellLevel?: numb
 		for (const lvl of spellLevels) {
 			const tabEl = baseDoc.querySelector(`#wiki-tab-0-${lvl}`);
 			if (!tabEl) continue;
-			const levelNames = extractNames(tabEl);
+			const levelNames = extractTableNamesFromFirstCell(tabEl);
 			for (const n of levelNames) unionLevelSet.add(nameToSlug(n));
 		}
 		if (!unionLevelSet.size) {
@@ -198,7 +189,7 @@ function applyLevelFilters(baseDoc: Document, names: string[], spellLevel?: numb
 		if (!tabEl) {
 			return { ok: false, names: [], message: `No Spells found for level ${spellLevel}` };
 		}
-		const levelNames = extractNames(tabEl);
+		const levelNames = extractTableNamesFromFirstCell(tabEl);
 		const setLevel = new Set(levelNames.map((n) => nameToSlug(n)));
 		return { ok: true, names: names.filter((n) => setLevel.has(nameToSlug(n))) };
 	}
@@ -261,7 +252,7 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx?: Ma
 			});
 			if (!baseDoc) return;
 		}
-		let fetched = extractNames(baseDoc);
+		let fetched = extractTableNamesFromFirstCell(baseDoc);
 		fetched = applyClassSchoolFilters(fetched, classDocs, schoolDocs);
 		const levelResult = applyLevelFilters(baseDoc, fetched, spellLevel, spellLevels);
 		if (!levelResult.ok) {

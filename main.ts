@@ -2,6 +2,7 @@ import { Plugin } from 'obsidian';
 import { renderSpell } from './src/spell';
 import { renderSpellList } from './src/spellList';
 import { renderFeat } from './src/feat';
+import { renderItem } from './src/item';
 import { initBaseUrlWatcher, configurePluginRef, getBaseUrl, initData } from './src/dataService';
 import { preloadAllSpellNames, getKnownSpellIds } from './src/spellUtils';
 import { SpellNameSuggest } from './src/suggestSpell';
@@ -9,6 +10,7 @@ import { SpellListSuggest } from './src/suggestSpellList';
 import { FeatNameSuggest } from './src/suggestFeat';
 import { preloadAllFeatIds } from './src/featUtils';
 import { renderFeatList } from './src/featList';
+import { renderItemList } from './src/itemList';
 import { DndPrefixSuggest } from './src/suggestDndPrefix';
 import { DndCardsSettingTab } from './src/settings';
 
@@ -33,6 +35,11 @@ export default class Dnd5eSpellCards extends Plugin {
 			await renderFeat(source, el, ctx);
 		});
 
+		// Item block processor
+		this.registerMarkdownCodeBlockProcessor('dnd-item', async (source, el, ctx) => {
+			await renderItem(source, el, ctx);
+		});
+
 		// Feat list block processor (no filters)
 		this.registerMarkdownCodeBlockProcessor('dnd-featlist', async (source, el, ctx) => {
 			await renderFeatList(source, el, ctx);
@@ -40,6 +47,11 @@ export default class Dnd5eSpellCards extends Plugin {
 		// Register only the canonical spelllist block
 		this.registerMarkdownCodeBlockProcessor('dnd-spelllist', async (source, el, ctx) => {
 			await renderSpellList(source, el, ctx);
+		});
+
+		// Wondrous items list processor
+		this.registerMarkdownCodeBlockProcessor('dnd-itemlist', async (source, el, ctx) => {
+			await renderItemList(source, el, ctx);
 		});
 
 		// Kick off preload after initialization so Obsidian doesn't wait on it

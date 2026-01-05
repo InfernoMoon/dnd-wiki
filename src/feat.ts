@@ -122,13 +122,6 @@ export async function findCustomFeatById(id: string): Promise<{ file: TFile; tit
 }
 
 /**
- * Minimal HTML escaping for text fragments.
- * @param s Raw text to escape.
- * @returns Escaped string safe for HTML insertion.
- */
-// moved to utils.ts
-
-/**
  * Parse simple key:value metadata from custom feat markdown content.
  * Supports quoted multi-line values.
  * @param raw Full markdown content.
@@ -207,27 +200,6 @@ export function buildCustomFeatHtmlStructured(content: string, title: string, ui
 
 // ---------------------------
 // Helper utilities to reduce complexity and warnings
-// ---------------------------
-
-/**
- * Safely obtain the Obsidian App instance from global scope.
- * @returns App instance or null if unavailable.
- */
-// moved to utils.ts
-
-/**
- * Create a unique identifier using crypto when available.
- * Falls back to a timestamp-based seed.
- * @returns Unique ID string.
- */
-// moved to utils.ts
-
-/**
- * Extract the inner HTML of the rendered card content.
- * @param host Root element returned by renderCollapsible.
- * @returns Inner HTML string or null if not found.
- */
-// moved to utils.ts
 
 /**
  * Render a custom feat card, mount its markdown description, and cache the HTML.

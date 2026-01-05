@@ -405,7 +405,7 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx?: Mar
     // Apply level filters to remote items via DOM tabs
     const remoteNames = extractItems(doc).map(i => i.name);
     const levelResult = applyLevelFilters(doc, remoteNames, itemLevel, itemLevels);
-    let filteredNames = levelResult.ok ? levelResult.names : [];
+    const filteredNames = levelResult.ok ? levelResult.names : [];
     // Apply level filters to custom items by levelIdx
     let customEligible: string[] = [];
     if (Array.isArray(itemLevels) && itemLevels.length) {

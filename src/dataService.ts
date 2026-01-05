@@ -1,13 +1,3 @@
-/**
- * dataService.ts
- * Centralized data access for plugin configuration and cached directive values.
- *
- * Responsibilities:
- * - Manage plugin data folder and JSON read/write (settings, classes, schools).
- * - Prompt and persist Base URL used for content fetching.
- * - Preload and expose cached lists for `class:` and `school:` suggesters.
- */
-
 import { App, Notice, Plugin, MarkdownView } from "obsidian";
 import { STATIC_CLASSES, STATIC_SCHOOLS, STATIC_ITEM_RARITY_WORD_TO_INDEX } from "./data/staticData";
 import { getCustomSpellEntries } from "./spellUtils";
@@ -38,12 +28,6 @@ async function readSettings(): Promise<PluginSettingsJson> {
 async function writeSettings(data: PluginSettingsJson): Promise<void> {
 	await pluginRef?.saveData(data);
 }
-
-// ------------------------------
-// Plugin identity and paths
-// ------------------------------
-
-// No filesystem paths needed when using loadData/saveData
 
 // ------------------------------
 // Base URL management

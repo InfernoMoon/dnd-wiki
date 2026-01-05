@@ -33,7 +33,7 @@ export class DndCardsSettingTab extends PluginSettingTab {
     // Add button to create custom cards folder structure
     new Setting(containerEl)
       .setName('Add Custom Cards')
-      .setDesc('Create folder "DnD-Cards", to store your custom cards.')
+      .setDesc('Create folder "DnD-Cards", to store your custom cards. You might need to restart Obsidian to see your custom cards in suggestions.')
       .addButton((btn) => {
         btn.setButtonText('Add Custom Cards')
           .setCta()

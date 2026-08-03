@@ -1,5 +1,5 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
-import { getCachedItemTypes } from '../itemUtils';
+import { getCachedItemTypes } from '../items/itemUtils';
 
 const HARD_CODED_TYPES = [
   'Armor',

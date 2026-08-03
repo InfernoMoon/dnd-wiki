@@ -5,7 +5,6 @@
  * Keeps the entrypoint minimal and focused on parsing input and layout.
  */
 import { MarkdownPostProcessorContext } from "obsidian";
-import { getBaseUrl } from "./dataService";
 import { renderSingleSpell } from "./spellUtils";
 
 /**
@@ -14,7 +13,7 @@ import { renderSingleSpell } from "./spellUtils";
  * - Validates Base URL from settings
  * - Creates a container and renders each spell as a collapsible card
  */
-export async function renderSpell(source: string, el: HTMLElement, _ctx?: MarkdownPostProcessorContext) {
+export async function renderSpell(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
 
   const lines = source
@@ -27,7 +26,6 @@ export async function renderSpell(source: string, el: HTMLElement, _ctx?: Markdo
     return;
   }
 
-  const baseUrl = await getBaseUrl();
   if (!baseUrl) {
     el.createEl("div", { text: "Base URL is not configured." });
     return;
@@ -43,7 +41,7 @@ export async function renderSpell(source: string, el: HTMLElement, _ctx?: Markdo
     const host = document.createElement('div');
     host.style.marginBottom = '0.75em';
     container.appendChild(host);
-    await renderSingleSpell(host, baseUrl, name);
+    await renderSingleSpell(host, urlKey, baseUrl, name);
   });
   await Promise.all(tasks);
 }

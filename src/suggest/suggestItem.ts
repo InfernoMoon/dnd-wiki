@@ -1,5 +1,5 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
-import { getKnownItemIds } from '../itemUtils';
+import { getKnownItemIds } from '../items/itemUtils';
 import { displayNameFromSlug } from '../utils';
 
 export class ItemNameSuggest extends EditorSuggest<{ text: string }> {

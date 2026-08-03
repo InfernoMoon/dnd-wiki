@@ -1,8 +1,7 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { requestUrl, App, TFolder, TAbstractFile, TFile, MarkdownRenderer, Component } from 'obsidian';
-import { getBaseUrl } from './dataService';
-import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible, extractTableNamesFromFirstCell } from './utils';
-import { STATIC_ITEM_RARITY_WORD_TO_INDEX } from './data/staticData';
+import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible, extractTableNamesFromFirstCell } from '../utils';
+import { STATIC_ITEM_RARITY_WORD_TO_INDEX } from '../data/staticData';
 
 // Use shared extractor to match spell list behavior
 
@@ -322,9 +321,8 @@ function parseAttunedDirective(sourceText: string): 'all' | boolean | null {
   return null;
 }
 
-export async function renderItemList(source: string, el: HTMLElement, _ctx?: MarkdownPostProcessorContext) {
+export async function renderItemList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
-  const baseUrl = await getBaseUrl();
   if (!baseUrl) {
     el.createEl('div', { text: 'Base URL is not configured.' });
     return;

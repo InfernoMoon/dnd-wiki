@@ -6,10 +6,9 @@
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { Component, MarkdownRenderer } from 'obsidian';
-import { getBaseUrl } from './dataService';
-import { getKnownFeatIds } from './featUtils';
+import { getKnownFeatIds, getKnownFeatIdsForKey } from './featUtils';
 import { getCachedFeat, setCachedFeat, findCustomFeatById, buildCustomFeatHtmlStructured } from './feat';
-import { fetchPageContent, renderCollapsible, displayNameFromSlug } from './utils';
+import { fetchPageContent, renderCollapsible, displayNameFromSlug } from '../utils';
 
 /**
  * Render all known feats in the environment into the provided element.
@@ -18,15 +17,14 @@ import { fetchPageContent, renderCollapsible, displayNameFromSlug } from './util
  * @param el Target element to append rendered cards to.
  * @param _ctx Obsidian processor context (unused).
  */
-export async function renderFeatList(_source: string, el: HTMLElement, _ctx?: MarkdownPostProcessorContext) {
+export async function renderFeatList(_source: string, el: HTMLElement, _ctx: import('obsidian').MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
-  const baseUrl = await getBaseUrl();
   if (!baseUrl) {
     el.createEl('div', { text: 'Base URL is not configured.' });
     return;
   }
 
-  const ids = getKnownFeatIds();
+  const ids = getKnownFeatIdsForKey(urlKey);
   if (!ids.length) {
     // Preloading may be deferred; present a retry message and poll until IDs appear.
     const msg = el.createEl('div', { text: 'No feats found (preload may not have completed). Retrying…' });
@@ -42,7 +40,7 @@ export async function renderFeatList(_source: string, el: HTMLElement, _ctx?: Ma
         const tasks = current.map(async (id) => {
           const host = document.createElement('div');
           container.appendChild(host);
-          const cached = getCachedFeat(id);
+          const cached = getCachedFeat(urlKey, id);
           if (cached?.html) {
             renderCollapsible(host, cached.title, cached.html);
             return;
@@ -51,7 +49,7 @@ export async function renderFeatList(_source: string, el: HTMLElement, _ctx?: Ma
           if (res.ok) {
             const title = res.titleText || displayNameFromSlug(id);
             renderCollapsible(host, title, res.contentHtml);
-            setCachedFeat(id, { title, html: res.contentHtml });
+            setCachedFeat(urlKey, id, { title, html: res.contentHtml });
           } else {
             host.textContent = `Failed to load feat: ${displayNameFromSlug(id)}`;
           }
@@ -77,7 +75,7 @@ export async function renderFeatList(_source: string, el: HTMLElement, _ctx?: Ma
   const tasks = ids.map(async (id) => {
     const host = document.createElement('div');
     container.appendChild(host);
-    const cached = getCachedFeat(id);
+    const cached = getCachedFeat(urlKey, id);
     if (cached?.html) {
       renderCollapsible(host, cached.title, cached.html);
       return;
@@ -96,13 +94,13 @@ export async function renderFeatList(_source: string, el: HTMLElement, _ctx?: Ma
           if (mount instanceof HTMLElement) {
             const component = new Component();
             await MarkdownRenderer.render(app, structured.descMarkdown, mount, file.path, component);
-            setCachedFeat(id, { title, html: (mount.parentElement?.innerHTML) || structured.html });
+            setCachedFeat(urlKey, id, { title, html: (mount.parentElement?.innerHTML) || structured.html });
           }
         } else {
-          setCachedFeat(id, { title, html: structured.html });
+          setCachedFeat(urlKey, id, { title, html: structured.html });
         }
       } catch {
-        setCachedFeat(id, { title, html: structured.html });
+        setCachedFeat(urlKey, id, { title, html: structured.html });
       }
       return;
     }
@@ -110,7 +108,7 @@ export async function renderFeatList(_source: string, el: HTMLElement, _ctx?: Ma
     if (res.ok) {
       const title = res.titleText || displayNameFromSlug(id);
       renderCollapsible(host, title, res.contentHtml);
-      setCachedFeat(id, { title, html: res.contentHtml });
+      setCachedFeat(urlKey, id, { title, html: res.contentHtml });
     } else {
       host.textContent = `Failed to load feat: ${displayNameFromSlug(id)}`;
     }

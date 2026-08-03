@@ -1,5 +1,5 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
-import { getKnownFeatIds } from '../featUtils';
+import { getKnownFeatIds } from '../feats/featUtils';
 import { displayNameFromSlug } from '../utils';
 
 export class FeatNameSuggest extends EditorSuggest<{ text: string }> {

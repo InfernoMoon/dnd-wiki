@@ -1,5 +1,5 @@
 import { requestUrl, App, TFolder, TFile, TAbstractFile } from 'obsidian';
-import { nameToSlug } from './utils';
+import { nameToSlug } from '../utils';
 
 // In-memory set of all known wondrous item ids (normalized slugs)
 const itemIdCache: Set<string> = new Set();

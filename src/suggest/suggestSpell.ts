@@ -1,30 +1,32 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import { displayNameFromSlug } from '../utils';
-
-type GetSlugsFn = () => string[];
+import { getKnownSpellIdsForKey } from '../spells/spellUtils';
 
 export class SpellNameSuggest extends EditorSuggest<{ slug: string; display: string }> {
-  private readonly getSlugs: GetSlugsFn;
+  private currentUrlKey: string = '';
 
-  constructor(appPlugin: any, getSlugs: GetSlugsFn) {
+  constructor(appPlugin: any) {
     super(appPlugin.app);
-    this.getSlugs = getSlugs;
   }
 
   onTrigger(cursor: EditorPosition, editor: Editor, file: TFile | null) {
     try {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
-      // Detect if inside a ```dnd[key]-spell block by scanning upward
-      let inSpellBlock = false;
+      // Detect if inside a ```dnd[key]-spell block by scanning upward; capture the URL key
+      let foundBlock = false;
       for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
         const l = editor.getLine(i).trim();
         if (l.startsWith('```')) {
-          inSpellBlock = /^```\s*dnd[a-z0-9]*-spell\s*$/i.test(l);
+          const m = /^```\s*dnd([a-z0-9]*)-spell\s*$/i.exec(l);
+          if (m) {
+            this.currentUrlKey = m[1].toLowerCase();
+            foundBlock = true;
+          }
           break;
         }
       }
-      if (!inSpellBlock) return null;
+      if (!foundBlock) return null;
 
       const prefixMatch = /([A-Za-z][A-Za-z\-\s']*)$/.exec(line.slice(0, cursor.ch));
       const query = prefixMatch ? prefixMatch[1].trim() : '';
@@ -42,9 +44,10 @@ export class SpellNameSuggest extends EditorSuggest<{ slug: string; display: str
 
   getSuggestions(context: any): Array<{ slug: string; display: string }> {
     const q = (context.query || '').toLowerCase();
-    const slugs = this.getSlugs() || [];
-    const items = slugs.map(s => ({ slug: s, display: displayNameFromSlug(s) }));
-    return items.filter(it => it.display.toLowerCase().includes(q)).slice(0, 50);
+    // Use per-key spell list if a specific URL key was detected in onTrigger
+    const slugs = getKnownSpellIdsForKey(this.currentUrlKey);
+    const items = slugs.map((s: string) => ({ slug: s, display: displayNameFromSlug(s) }));
+    return items.filter((it: { display: string }) => it.display.toLowerCase().includes(q)).slice(0, 50);
   }
 
   renderSuggestion(item: { slug: string; display: string }, el: HTMLElement) {

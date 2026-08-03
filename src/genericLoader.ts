@@ -14,8 +14,8 @@ export interface LoaderConfig {
   /** Path to index page for table parsing (e.g., "/feats", "/spells") */
   indexPath: string;
   
-  /** Regex pattern to match in href attributes. Must have one capture group. (e.g., /^\/feat:([^\s"'>]+)$/i) */
-  linkPattern: RegExp;
+  /** Regex pattern to match in href attributes. Must have one capture group. (e.g., /^\/feat:([^\s"'>]+)$/i). Required when useLinkMethod is true. */
+  linkPattern?: RegExp;
   
   /** CSS selector for table rows (default: "table tr") */
   tableRowSelector?: string;
@@ -46,7 +46,7 @@ export interface LoaderConfig {
  * @param config Loader configuration
  * @returns Set of normalized IDs found
  */
-async function loadFromLinks(config: LoaderConfig): Promise<Set<string>> {
+export async function loadFromLinks(config: LoaderConfig): Promise<Set<string>> {
   const results = new Set<string>();
   const base = config.baseUrl.replace(/\/$/, '');
   
@@ -60,6 +60,7 @@ async function loadFromLinks(config: LoaderConfig): Promise<Set<string>> {
     
     for (const a of anchors) {
       const href = a.getAttribute('href') || '';
+      if (!config.linkPattern) continue;
       const m = config.linkPattern.exec(href);
       if (m && m[1]) {
         let name = m[1];
@@ -85,7 +86,7 @@ async function loadFromLinks(config: LoaderConfig): Promise<Set<string>> {
  * @param config Loader configuration
  * @returns Set of normalized IDs found
  */
-async function loadFromTable(config: LoaderConfig): Promise<Set<string>> {
+export async function loadFromTable(config: LoaderConfig): Promise<Set<string>> {
   const results = new Set<string>();
   const base = config.baseUrl.replace(/\/$/, '');
   const rowSelector = config.tableRowSelector || 'table tr';
@@ -131,45 +132,3 @@ async function loadFromTable(config: LoaderConfig): Promise<Set<string>> {
   return results;
 }
 
-/**
- * Generic loader that intelligently combines both scraping methods.
- * Loads data using link-based and/or table-based parsing depending on configuration.
- * Both methods are valid and still-current approaches for different wiki structures.
- * @param config Loader configuration
- * @returns Set of combined normalized IDs from all enabled sources
- */
-export async function loadData(config: LoaderConfig): Promise<Set<string>> {
-  const results = new Set<string>();
-  
-  // Determine which methods to use
-  const useLink = config.useLinkMethod !== false;
-  const useTable = config.useTableMethod !== false;
-  
-  // Auto-detect 2024 format if not explicitly set
-  const is2024 = config.is2024Format !== undefined ? config.is2024Format : config.baseUrl.includes('2024');
-  
-  // Load using appropriate methods
-  if (useLink && !is2024) {
-    const linkResults = await loadFromLinks(config);
-    for (const id of linkResults) {
-      results.add(id);
-    }
-  } else if (useTable && is2024) {
-    const tableResults = await loadFromTable(config);
-    for (const id of tableResults) {
-      results.add(id);
-    }
-  } else if (useLink && useTable) {
-    // Both methods enabled: try both and combine
-    const [linkResults, tableResults] = await Promise.all([
-      loadFromLinks(config),
-      loadFromTable(config)
-    ]);
-    
-    // Combine results from both methods
-    for (const id of linkResults) results.add(id);
-    for (const id of tableResults) results.add(id);
-  }
-  
-  return results;
-}

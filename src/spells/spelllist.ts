@@ -5,9 +5,8 @@
  * and renders matching spells using `renderSingleSpell`.
  */
 import { MarkdownPostProcessorContext, requestUrl } from "obsidian";
-import { getBaseUrl } from "./dataService";
-import { renderSingleSpell, getCustomSpellEntries } from "./spellUtils";
-import { nameToSlug, displayNameFromSlug, extractTableNamesFromFirstCell } from "./utils";
+import { renderSingleSpell, getCustomSpellEntries, seedSpellNamesForKey } from "./spellUtils";
+import { nameToSlug, displayNameFromSlug, extractTableNamesFromFirstCell } from "../utils";
 
 /**
  * Render a filtered list of spells based on directives provided in the block.
@@ -22,7 +21,7 @@ type LevelDirective = number | number[] | "all" | null;
 // In-memory cache: key is combination of filters, value is list of spell names
 const spellListCache: Map<string, string[]> = new Map();
 
-function buildCacheKey(levelDirective: LevelDirective, classSlugs?: string[], schoolSlugs?: string[]): string {
+function buildCacheKey(urlKey: string, levelDirective: LevelDirective, classSlugs?: string[], schoolSlugs?: string[]): string {
 	const levelKey = Array.isArray(levelDirective)
 		? `levels:${levelDirective.join(',')}`
 		: typeof levelDirective === 'number'
@@ -32,7 +31,7 @@ function buildCacheKey(levelDirective: LevelDirective, classSlugs?: string[], sc
 		: 'level:null';
 	const classKey = Array.isArray(classSlugs) && classSlugs.length ? `classes:${classSlugs.slice().sort().join(',')}` : 'classes:null';
 	const schoolKey = Array.isArray(schoolSlugs) && schoolSlugs.length ? `schools:${schoolSlugs.slice().sort().join(',')}` : 'schools:null';
-	return `${levelKey}|${classKey}|${schoolKey}`;
+	return `${urlKey}|${levelKey}|${classKey}|${schoolKey}`;
 }
 
 function parseDirectives(source: string): {
@@ -205,9 +204,8 @@ function buildHeading(spellLevel: number | undefined, spellLevels: number[] | un
 	return headingParts.length ? `Spells ${headingParts.join(" · ")}` : "All Spells";
 }
 
-export async function renderSpellList(source: string, el: HTMLElement, _ctx?: MarkdownPostProcessorContext) {
+export async function renderSpellList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
 	el.empty();
-	const baseUrl = await getBaseUrl();
 	if (!baseUrl) {
 		el.createEl("div", { text: "Base URL is not configured." });
 		return;
@@ -220,7 +218,7 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx?: Ma
 	const spellLevels = Array.isArray(levelDirective) ? levelDirective : undefined;
 
 	// Cache key for exact filter combination
-	const cacheKey = buildCacheKey(levelDirective, classSlugs, schoolSlugs);
+	const cacheKey = buildCacheKey(urlKey, levelDirective, classSlugs, schoolSlugs);
 	let names = spellListCache.get(cacheKey);
 	if (!names) {
 		let { baseDoc, classDocs, schoolDocs } = await fetchIndexAndFilters(baseUrl, classSlugs, schoolSlugs);
@@ -323,6 +321,9 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx?: Ma
 		return;
 	}
 
+	// Seed fetched names into the name cache so renderSingleSpell doesn't treat them as unknown
+	seedSpellNamesForKey(urlKey, names);
+
 	const heading = buildHeading(spellLevel, spellLevels, classSlugs, schoolSlugs);
 	const wrap = document.createElement("div");
 	const h2 = document.createElement("h2");
@@ -337,7 +338,7 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx?: Ma
 		const host = document.createElement("div");
 		host.style.marginBottom = "0.75em";
 		container.appendChild(host);
-		await renderSingleSpell(host, baseUrl, name);
+		await renderSingleSpell(host, urlKey, baseUrl, name);
 	});
 	await Promise.all(tasks);
 }

@@ -8,28 +8,34 @@
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
-import { getBaseUrl } from './dataService';
-import { nameToSlug, fetchPageContent, renderCollapsible, escapeHtml, getObsidianApp, createUid, extractCardContentHtml } from './utils';
+import { nameToSlug, fetchPageContent, renderCollapsible, escapeHtml, getObsidianApp, createUid, extractCardContentHtml } from '../utils';
 
-// In-memory cache for fetched feat content by id/slug
-const featCache = new Map<string, { title: string; html: string }>();
+// In-memory cache for fetched feat content: outer key = urlKey, inner key = feat id/slug
+const featCache = new Map<string, Map<string, { title: string; html: string }>>();
+
+function getCacheForKey(urlKey: string): Map<string, { title: string; html: string }> {
+  if (!featCache.has(urlKey)) featCache.set(urlKey, new Map());
+  return featCache.get(urlKey)!;
+}
 
 /**
- * Get a cached feat render by ID.
+ * Get a cached feat render by URL key and ID.
+ * @param urlKey The URL key the feat belongs to (e.g. "5e", "2024").
  * @param id Feat slug/ID to look up.
  * @returns Cached title and HTML if present, otherwise null.
  */
-export function getCachedFeat(id: string): { title: string; html: string } | null {
-  return featCache.get(id) || null;
+export function getCachedFeat(urlKey: string, id: string): { title: string; html: string } | null {
+  return getCacheForKey(urlKey).get(id) ?? null;
 }
 
 /**
  * Store a rendered feat in the cache.
+ * @param urlKey The URL key the feat belongs to.
  * @param id Feat slug/ID to cache under.
  * @param data Object containing card title and HTML.
  */
-export function setCachedFeat(id: string, data: { title: string; html: string }): void {
-  featCache.set(id, data);
+export function setCachedFeat(urlKey: string, id: string, data: { title: string; html: string }): void {
+  getCacheForKey(urlKey).set(id, data);
 }
 
 /**
@@ -57,9 +63,8 @@ function renderFeatCard(container: HTMLElement, title: string, html: string) {
  * @param el Target element where cards will be appended.
  * @param _ctx Obsidian processor context (unused).
  */
-export async function renderFeat(source: string, el: HTMLElement, _ctx?: MarkdownPostProcessorContext) {
+export async function renderFeat(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
-  const baseUrl = await getBaseUrl();
   if (!baseUrl) {
     el.createEl('div', { text: 'Base URL is not configured.' });
     return;
@@ -76,7 +81,7 @@ export async function renderFeat(source: string, el: HTMLElement, _ctx?: Markdow
   el.appendChild(container);
 
   for (const featId of feats) {
-    const cached = await ensureFeatCached(featId, baseUrl);
+    const cached = await ensureFeatCached(featId, urlKey, baseUrl);
     if (cached?.html) {
       renderFeatCard(container, cached.title, cached.html);
     } else {
@@ -209,6 +214,7 @@ export function buildCustomFeatHtmlStructured(content: string, title: string, ui
  */
 async function renderCustomFeatToCache(
   featId: string,
+  urlKey: string,
   custom: { file: TFile; title: string; content: string }
 ): Promise<{ title: string; html: string } | null> {
   const uid = createUid();
@@ -230,7 +236,7 @@ async function renderCustomFeatToCache(
   const html = extractCardContentHtml(host);
   if (html) {
     const cached = { title: custom.title, html };
-    setCachedFeat(featId, cached);
+    setCachedFeat(urlKey, featId, cached);
     return cached;
   }
   return null;
@@ -244,19 +250,20 @@ async function renderCustomFeatToCache(
  */
 async function ensureFeatCached(
   featId: string,
+  urlKey: string,
   baseUrl: string
 ): Promise<{ title: string; html: string } | null> {
-  const existing = getCachedFeat(featId);
+  const existing = getCachedFeat(urlKey, featId);
   if (existing) return existing;
   const custom = await findCustomFeatById(featId);
   if (custom) {
-    const cached = await renderCustomFeatToCache(featId, custom);
+    const cached = await renderCustomFeatToCache(featId, urlKey, custom);
     if (cached) return cached;
   }
   const fetched = await fetchPageContent(baseUrl, 'feat', featId);
   if (fetched.ok) {
     const cached = { title: fetched.titleText || featId, html: fetched.contentHtml };
-    setCachedFeat(featId, cached);
+    setCachedFeat(urlKey, featId, cached);
     return cached;
   }
   return null;

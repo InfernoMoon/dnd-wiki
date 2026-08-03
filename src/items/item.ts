@@ -6,8 +6,7 @@
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { App, TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
-import { getBaseUrl } from './dataService';
-import { nameToSlug, fetchPageContent, renderCollapsible, displayNameFromSlug } from './utils';
+import { nameToSlug, fetchPageContent, renderCollapsible, displayNameFromSlug } from '../utils';
 
 // Simple cache for fetched item content
 const itemCache = new Map<string, { title: string; html: string }>();
@@ -49,9 +48,8 @@ function renderItemCard(container: HTMLElement, title: string, html: string) {
  * @param el Target element where cards will be appended.
  * @param _ctx Obsidian processor context (unused).
  */
-export async function renderItem(source: string, el: HTMLElement, _ctx?: MarkdownPostProcessorContext) {
+export async function renderItem(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
-  const baseUrl = await getBaseUrl();
   if (!baseUrl) {
     el.createEl('div', { text: 'Base URL is not configured.' });
     return;

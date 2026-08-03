@@ -1,6 +1,6 @@
 import { App, Notice, Plugin, MarkdownView } from "obsidian";
 import { STATIC_CLASSES, STATIC_SCHOOLS, STATIC_ITEM_RARITY_WORD_TO_INDEX } from "./data/staticData";
-import { getCustomSpellEntries } from "./spellUtils";
+import { getCustomSpellEntries } from "./spells/spellUtils";
 import { displayNameFromSlug, nameToSlug } from "./utils";
 import { BaseUrlPromptModal } from "./prompts";
 declare const app: App;
@@ -34,11 +34,23 @@ async function writeSettings(data: PluginSettingsJson): Promise<void> {
 
 /**
  * Peek at stored base URLs without prompting.
- * @returns Object with keys mapping to base URLs (e.g., { "5e": "https://...", "2024": "https://..." })
+ * @returns Object with keys mapping to base URLs
  */
 export async function peekBaseUrls(): Promise<Record<string, string>> {
 	const settings = await readSettings();
-	return settings.baseurls ?? { '5e': '', '2024': '' };
+	return settings.baseurls ?? {};
+}
+
+/**
+ * Write default base URLs to disk on first install.
+ * Only runs if no baseurls have ever been saved. Never overwrites user data.
+ */
+export async function initializeDefaultUrls(): Promise<void> {
+	const settings = await readSettings();
+	if (!settings.baseurls) {
+		settings.baseurls = { '5e': 'http://dnd5e.wikidot.com', '2024': 'http://dnd2024.wikidot.com' };
+		await writeSettings(settings);
+	}
 }
 
 /**

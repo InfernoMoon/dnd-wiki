@@ -7,63 +7,87 @@
  * - Renders collapsible cards with sanitized content
  */
 import { requestUrl, App, TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from "obsidian";
-import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible } from "./utils";
+import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible } from "../utils";
+import { loadFromTable, LoaderConfig } from "../genericLoader";
 
-// In-memory cache of rendered spell content, keyed by normalized id
-const spellRenderCache: Map<string, { titleText: string; contentHtml: string }> = new Map();
-// In-memory set of all known spell names (normalized ids)
-const spellNameCache: Set<string> = new Set();
+// In-memory cache of rendered spell content: outer key = urlKey, inner key = normalized spell id
+const spellRenderCache: Map<string, Map<string, { titleText: string; contentHtml: string }>> = new Map();
+// In-memory set of all known spell names per URL key (normalized ids)
+const spellNameCache: Map<string, Set<string>> = new Map();
 
-/** Return all known spell IDs, sorted for suggesters */
-export function getKnownSpellIds(): string[] {
-  return Array.from(spellNameCache).sort((a, b) => a.localeCompare(b));
+function getNameCacheForKey(urlKey: string): Set<string> {
+  if (!spellNameCache.has(urlKey)) spellNameCache.set(urlKey, new Set());
+  return spellNameCache.get(urlKey)!;
 }
 
-/** Preload spell names from `/spells` index page and fill `spellNameCache` */
-export async function preloadAllSpellNames(baseUrl: string): Promise<void> {
-  const base = baseUrl.replace(/\/$/, "");
+function getRenderCacheForKey(urlKey: string): Map<string, { titleText: string; contentHtml: string }> {
+  if (!spellRenderCache.has(urlKey)) spellRenderCache.set(urlKey, new Map());
+  return spellRenderCache.get(urlKey)!;
+}
+
+/** Return known spell IDs for a specific URL key */
+export function getKnownSpellIdsForKey(urlKey: string): string[] {
+  return Array.from(spellNameCache.get(urlKey) ?? []).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Seed spell names into the cache for a URL key.
+ * Called by spelllist when it fetches names directly from the index,
+ * so renderSingleSpell doesn't treat those names as unknown.
+ */
+export function seedSpellNamesForKey(urlKey: string, names: string[]): void {
+  const cache = getNameCacheForKey(urlKey);
+  for (const n of names) {
+    const id = nameToSlug(n);
+    if (id) cache.add(id);
+  }
+}
+
+/** Preload spell names for a specific URL key from its `/spells` index page */
+export async function preloadAllSpellNames(urlKey: string, baseUrl: string): Promise<void> {
+  const cache = getNameCacheForKey(urlKey);
+
+  // Use generic table-based loader for the /spells index
+  const config: LoaderConfig = {
+    baseUrl,
+    indexPath: '/spells',
+    tableRowSelector: 'table tr',
+    tableCellSelector: 'td',
+    replacePatterns: [['(ua)', ''], ['(UA)', '']],
+    useLinkMethod: false,
+    useTableMethod: true,
+  };
+
+  const ids = await loadFromTable(config);
+  for (const id of ids) {
+    cache.add(id);
+  }
+
+  // Also include any custom spells from the vault folder DnD-Cards/Spells
   try {
-    const res = await requestUrl({ url: `${base}/spells`, method: 'GET' });
-    if (res.status < 200 || res.status >= 300) return;
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(res.text, 'text/html');
-    const rows = Array.from(doc.querySelectorAll('table tr'));
-    const names = rows
-      .map(tr => tr.querySelector('td'))
-      .filter(td => td?.textContent?.trim().length)
-      .map(td => (td?.textContent || '').trim())
-      // Remove (UA) markers
-      .map(n => n.split('(ua)').join('').split('(UA)').join('').trim());
-    for (const n of names) {
-      const id = nameToSlug(n);
-      if (id) spellNameCache.add(id);
-    }
-    // Also include any custom spells from the vault folder DnD-Cards/Spells
-    try {
-      const app = (globalThis as unknown as { app?: App }).app;
-      const vault = app?.vault;
-      const folderPath = 'DnD-Cards/Spells';
-      const folder = vault?.getAbstractFileByPath(folderPath);
-      if (folder instanceof TFolder) {
-        const children: TAbstractFile[] = folder.children;
-        for (const child of children) {
-          if (child instanceof TFile && child.extension?.toLowerCase() === 'md') {
-            const baseName: string = child.basename || child.name.replace(/\.md$/i, '');
-            const idSlug = nameToSlug(baseName);
-            if (idSlug) spellNameCache.add(idSlug);
-          }
+    const app = (globalThis as unknown as { app?: App }).app;
+    const vault = app?.vault;
+    const folderPath = 'DnD-Cards/Spells';
+    const folder = vault?.getAbstractFileByPath(folderPath);
+    if (folder instanceof TFolder) {
+      const children: TAbstractFile[] = folder.children;
+      for (const child of children) {
+        if (child instanceof TFile && child.extension?.toLowerCase() === 'md') {
+          const baseName: string = child.basename || child.name.replace(/\.md$/i, '');
+          const idSlug = nameToSlug(baseName);
+          if (idSlug) cache.add(idSlug);
         }
       }
-    } catch (err) {
-      console.warn('Unable to include custom spells during preload', err);
     }
-  } catch (e) {
-    console.error('Failed to preload spell names', e);
+  } catch (err) {
+    console.warn('Unable to include custom spells during preload', err);
   }
 }
 
 /** Render a single spell card with caching and UA-aware fallback */
-export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name: string) {
+export async function renderSingleSpell(host: HTMLElement, urlKey: string, baseUrl: string, name: string) {
+  const nameCache = getNameCacheForKey(urlKey);
+  const renderCache = getRenderCacheForKey(urlKey);
   const id = nameToSlug(name);
   if (!id) {
     host.createEl('div', { text: 'No spell name provided' });
@@ -73,11 +97,9 @@ export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name
   const custom = await findCustomSpellById(id);
   if (custom) {
     const { file, title, content } = custom;
-    // Build standardized HTML with a markdown mount for description
     const uid = Math.random().toString(36).slice(2, 11);
     const structured = buildCustomSpellHtmlStructured(content, title, uid);
     renderCollapsible(host, title, structured.html);
-    // Render description markdown if present
     try {
       const app = (globalThis as unknown as { app?: App }).app;
       if (structured.descMarkdown && app) {
@@ -87,30 +109,28 @@ export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name
           await MarkdownRenderer.render(app, structured.descMarkdown, mount, file.path, component);
           const contentDiv = mount.parentElement as HTMLElement | null;
           if (contentDiv) {
-            spellRenderCache.set(id, { titleText: title, contentHtml: contentDiv.innerHTML });
+            renderCache.set(id, { titleText: title, contentHtml: contentDiv.innerHTML });
           }
         }
       } else {
-        // Cache the static HTML structure when no description markdown exists
         const contentDiv = host.querySelector('div[id^="card-content-"]');
         if (contentDiv) {
-          spellRenderCache.set(id, { titleText: title, contentHtml: contentDiv.innerHTML });
+          renderCache.set(id, { titleText: title, contentHtml: contentDiv.innerHTML });
         }
       }
     } catch {
-      // Best effort: cache plain HTML
       const contentDiv = host.querySelector('div[id^="card-content-"]');
       if (contentDiv) {
-        spellRenderCache.set(id, { titleText: title, contentHtml: contentDiv.innerHTML });
+        renderCache.set(id, { titleText: title, contentHtml: contentDiv.innerHTML });
       }
     }
     return;
   }
   // If not known, check UA variant; otherwise report unknown without requesting
   let effectiveId = id;
-  if (!spellNameCache.has(id)) {
+  if (!nameCache.has(id)) {
     const uaId = `${id}-ua`;
-    if (spellNameCache.has(uaId)) {
+    if (nameCache.has(uaId)) {
       effectiveId = uaId;
     } else {
       renderCollapsible(
@@ -122,7 +142,7 @@ export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name
     }
   }
   // If already rendered and cached, reuse without refetching
-  const cached = spellRenderCache.get(effectiveId);
+  const cached = renderCache.get(effectiveId);
   if (cached) {
     renderCollapsible(host, cached.titleText, cached.contentHtml);
     return;
@@ -130,12 +150,11 @@ export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name
   try {
     const result = await fetchSpellPageWithFallback(baseUrl, effectiveId);
     if (!result.ok) {
-      // If not present in render cache, treat as unknown and show error
-      if (!spellRenderCache.has(effectiveId)) {
+      if (!renderCache.has(effectiveId)) {
         renderCollapsible(host, displayNameFromSlug(effectiveId) + ' (Error)', 'Error loading this spell');
         return;
       }
-      const cachedFallback = spellRenderCache.get(effectiveId);
+      const cachedFallback = renderCache.get(effectiveId);
       if (cachedFallback) {
         renderCollapsible(host, cachedFallback.titleText, cachedFallback.contentHtml);
       } else {
@@ -143,7 +162,7 @@ export async function renderSingleSpell(host: HTMLElement, baseUrl: string, name
       }
       return;
     }
-    spellRenderCache.set(effectiveId, { titleText: result.titleText, contentHtml: result.contentHtml });
+    renderCache.set(effectiveId, { titleText: result.titleText, contentHtml: result.contentHtml });
     renderCollapsible(host, result.titleText, result.contentHtml);
   } catch {
     renderCollapsible(host, displayNameFromSlug(effectiveId) + ' (Error)', 'Error getting this spell.');

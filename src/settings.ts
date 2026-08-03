@@ -12,6 +12,25 @@ function displayUrlEntries(container: HTMLElement, urls: Record<string, string>)
     
     let currentKeyValue = key;
     let currentUrlValue = url;
+    let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const autoSave = async () => {
+      const newKey = currentKeyValue.trim();
+      const newUrl = currentUrlValue.trim();
+      if (!newKey) return;
+      const currentUrls = await peekBaseUrls();
+      // Remove old key if renamed
+      if (newKey !== key && key in currentUrls) {
+        delete currentUrls[key];
+      }
+      currentUrls[newKey] = newUrl;
+      await setBaseUrls(currentUrls);
+    };
+
+    const scheduleAutoSave = () => {
+      if (saveTimeout) clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(autoSave, 600);
+    };
     
     const inputRow = entryDiv.createDiv();
     inputRow.style.display = 'flex';
@@ -21,46 +40,24 @@ function displayUrlEntries(container: HTMLElement, urls: Record<string, string>)
     new Setting(inputRow).addText((t) => {
       t.setValue(key)
         .setPlaceholder('e.g., 5e')
-        .onChange((v) => { currentKeyValue = v; });
+        .onChange((v) => { currentKeyValue = v; scheduleAutoSave(); });
       t.inputEl.style.width = '100px';
     });
     
     new Setting(inputRow).addText((t) => {
       t.setValue(url)
         .setPlaceholder('https://example.com')
-        .onChange((v) => { currentUrlValue = v; });
+        .onChange((v) => { currentUrlValue = v; scheduleAutoSave(); });
       t.inputEl.style.flex = '1';
     });
-    
-    const updateBtn = inputRow.createEl('button', { text: 'Save' });
-    updateBtn.style.marginRight = '8px';
-    updateBtn.onclick = async () => {
-      const currentUrls = await peekBaseUrls();
-      const newKey = currentKeyValue.trim();
-      const newUrl = currentUrlValue.trim();
-      
-      if (!newKey) {
-        new Notice('Key cannot be empty');
-        return;
-      }
-      
-      // Remove old key if renamed
-      if (newKey !== key && key in currentUrls) {
-        delete currentUrls[key];
-      }
-      
-      currentUrls[newKey] = newUrl;
-      await setBaseUrls(currentUrls);
-      new Notice(`Saved URL for key "${newKey}"`);
-    };
     
     const deleteBtn = inputRow.createEl('button', { text: 'Delete' });
     deleteBtn.style.color = '#d00';
     deleteBtn.onclick = async () => {
+      if (saveTimeout) clearTimeout(saveTimeout);
       const currentUrls = await peekBaseUrls();
       delete currentUrls[key];
       await setBaseUrls(currentUrls);
-      new Notice(`Deleted URL for key "${key}"`);
       const updated = await peekBaseUrls();
       displayUrlEntries(container, updated);
     };
@@ -94,16 +91,14 @@ export class DndCardsSettingTab extends PluginSettingTab {
 
     containerEl.createEl('h2', { text: 'DnD 5e Cards Settings' });
     
-    containerEl.createEl('h3', { text: 'Base URLs' });
-    containerEl.createEl('p', { text: 'Define multiple base URLs with custom keys. Examples: "5e" for 5e.tools, "2024" for 2024 revision.' });
+    containerEl.createEl('h3', { text: 'Source URLs' });
+    containerEl.createEl('p', { text: 'Define multiple Source URLs, like for 5e or 2024' });
     
     const urlsContainer = containerEl.createDiv('urls-container');
     
-    // Load and display URLs
+    // Load and display URLs — exactly what is saved, no automatic additions
     peekBaseUrls().then((urls) => {
-      // Ensure default keys exist
-      const merged = { '5e': '', '2024': '', ...urls };
-      displayUrlEntries(urlsContainer, merged);
+      displayUrlEntries(urlsContainer, urls);
     });
     
     containerEl.createEl('hr');

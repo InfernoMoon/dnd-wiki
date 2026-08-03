@@ -1,19 +1,19 @@
 import { Plugin } from 'obsidian';
-import { renderSpell } from './src/spell';
-import { renderSpellList } from './src/spellList';
-import { renderFeat } from './src/feat';
-import { renderItem } from './src/item';
-import { initBaseUrlWatcher, configurePluginRef, getBaseUrl, initData } from './src/dataService';
-import { preloadAllSpellNames, getKnownSpellIds } from './src/spellUtils';
+import { renderSpell } from './src/spells/spell';
+import { renderSpellList } from './src/spells/spelllist';
+import { renderFeat } from './src/feats/feat';
+import { renderItem } from './src/items/item';
+import { initBaseUrlWatcher, configurePluginRef, initData, peekBaseUrls, initializeDefaultUrls } from './src/dataService';
+import { preloadAllSpellNames } from './src/spells/spellUtils';
 import { SpellNameSuggest } from './src/suggest/suggestSpell';
 import { SpellListSuggest } from './src/suggest/suggestSpellList';
 import { FeatNameSuggest } from './src/suggest/suggestFeat';
 import { ItemNameSuggest } from './src/suggest/suggestItem';
 import { ItemListSuggest } from './src/suggest/suggestItemList';
-import { preloadAllFeatIds } from './src/featUtils';
-import { preloadAllItemIds } from './src/itemUtils';
-import { renderFeatList } from './src/featList';
-import { renderItemList } from './src/itemList';
+import { preloadAllFeatIds } from './src/feats/featUtils';
+import { preloadAllItemIds } from './src/items/itemUtils';
+import { renderFeatList } from './src/feats/featList';
+import { renderItemList } from './src/items/itemList';
 import { DndPrefixSuggest } from './src/suggestDndPrefix';
 import { DndCardsSettingTab } from './src/settings';
 
@@ -22,8 +22,10 @@ export default class Dnd5eSpellCards extends Plugin {
 	async onload() {
 		configurePluginRef(this);
 		initBaseUrlWatcher(this);
+		// Write default URLs to disk on first install (no-op if already saved)
+		await initializeDefaultUrls();
 		// Register editor suggestions for ```spell blocks using known spell ids
-		this.registerEditorSuggest(new SpellNameSuggest(this, () => getKnownSpellIds()));
+		this.registerEditorSuggest(new SpellNameSuggest(this));
 		// Register editor suggestions for ```feat blocks using known feat ids
 		this.registerEditorSuggest(new FeatNameSuggest(this));
 		// Register directive suggestions for ```spelllist blocks
@@ -36,45 +38,47 @@ export default class Dnd5eSpellCards extends Plugin {
 		this.registerEditorSuggest(dndPrefixSuggest);
 		// Register editor suggestions for ```dnd-item blocks
 		this.registerEditorSuggest(new ItemNameSuggest(this));
-		this.registerMarkdownCodeBlockProcessor('dnd-spell', async (source, el, ctx) => {
-			await renderSpell(source, el, ctx);
-		});
-		// Feat block processor
-		this.registerMarkdownCodeBlockProcessor('dnd-feat', async (source, el, ctx) => {
-			await renderFeat(source, el, ctx);
-		});
-
-		// Item block processor
-		this.registerMarkdownCodeBlockProcessor('dnd-item', async (source, el, ctx) => {
-			await renderItem(source, el, ctx);
-		});
-
-		// Feat list block processor (no filters)
-		this.registerMarkdownCodeBlockProcessor('dnd-featlist', async (source, el, ctx) => {
-			await renderFeatList(source, el, ctx);
-		});
-		// Register only the canonical spelllist block
-		this.registerMarkdownCodeBlockProcessor('dnd-spelllist', async (source, el, ctx) => {
-			await renderSpellList(source, el, ctx);
-		});
-
-		// Wondrous items list processor
-		this.registerMarkdownCodeBlockProcessor('dnd-itemlist', async (source, el, ctx) => {
-			await renderItemList(source, el, ctx);
+		// Block processors — registered dynamically per URL key in onLayoutReady below
+		// Feat block processor — register for each configured URL key
+		this.app.workspace.onLayoutReady(async () => {
+			const urls = await peekBaseUrls();
+			for (const [urlKey, baseUrl] of Object.entries(urls)) {
+				if (!baseUrl) continue;
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-spell`, async (source, el, ctx) => {
+					await renderSpell(source, el, ctx, urlKey, baseUrl);
+				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-spelllist`, async (source, el, ctx) => {
+					await renderSpellList(source, el, ctx, urlKey, baseUrl);
+				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-feat`, async (source, el, ctx) => {
+					await renderFeat(source, el, ctx, urlKey, baseUrl);
+				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-featlist`, async (source, el, ctx) => {
+					await renderFeatList(source, el, ctx, urlKey, baseUrl);
+				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-item`, async (source, el, ctx) => {
+					await renderItem(source, el, ctx, urlKey, baseUrl);
+				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-itemlist`, async (source, el, ctx) => {
+					await renderItemList(source, el, ctx, urlKey, baseUrl);
+				});
+			}
 		});
 
 		// Kick off preload after initialization so Obsidian doesn't wait on it
 		this.app.workspace.onLayoutReady(async () => {
 			try {
-				const baseUrl = await getBaseUrl();
-				if (baseUrl) {
-					await preloadAllSpellNames(baseUrl);
-					await preloadAllFeatIds(baseUrl);
-					await preloadAllItemIds(baseUrl);
-					await initData();
+				const urls = await peekBaseUrls();
+				// Preload spells, feats, and items for every configured URL key
+				for (const [urlKey, url] of Object.entries(urls)) {
+					if (!url) continue;
+					await preloadAllSpellNames(urlKey, url);
+					await preloadAllFeatIds(urlKey, url);
+					await preloadAllItemIds(url);
 				}
+				await initData();
 			} catch (e) {
-				console.warn('Failed to preload spell names', e);
+				console.warn('Failed to preload data', e);
 			}
 		});
 

@@ -8,23 +8,17 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { Component, MarkdownRenderer } from 'obsidian';
 import { getKnownFeatIdsForKey } from './featUtils';
 import { getCachedFeat, setCachedFeat, findCustomFeatById, buildCustomFeatHtmlStructured } from './feat';
-import { fetchPageContent, renderCollapsible, displayNameFromSlug } from '../utils';
+import { fetchPageContent, renderCollapsible, displayNameFromSlug, parseSearchDirective } from '../utils';
 
-/**
- * Render all known feats in the environment into the provided element.
- * If known IDs are not yet available, shows a retry message and polls for up to 30 seconds.
- * @param _source The raw block text (unused for list rendering).
- * @param el Target element to append rendered cards to.
- * @param _ctx Obsidian processor context (unused).
- */
-export async function renderFeatList(_source: string, el: HTMLElement, _ctx: import('obsidian').MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
+export async function renderFeatList(source: string, el: HTMLElement, _ctx: import('obsidian').MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
   if (!baseUrl) {
     el.createEl('div', { text: 'Base URL is not configured.' });
     return;
   }
+  const searchText = parseSearchDirective(source);
 
-  const ids = getKnownFeatIdsForKey(urlKey);
+  let ids = getKnownFeatIdsForKey(urlKey);
   if (!ids.length) {
     // Preloading may be deferred; present a retry message and poll until IDs appear.
     const msg = el.createEl('div', { text: 'No feats found (preload may not have completed). Retrying…' });
@@ -72,9 +66,11 @@ export async function renderFeatList(_source: string, el: HTMLElement, _ctx: imp
   const container = document.createElement('div');
   el.appendChild(container);
 
-  const tasks = ids.map(async (id) => {
+  const tasks = ids
+    .map(async (id) => {
     const host = document.createElement('div');
     container.appendChild(host);
+    await (async () => {
     const cached = getCachedFeat(urlKey, id);
     if (cached?.html) {
       renderCollapsible(host, cached.title, cached.html);
@@ -111,6 +107,10 @@ export async function renderFeatList(_source: string, el: HTMLElement, _ctx: imp
       setCachedFeat(urlKey, id, { title, html: res.contentHtml });
     } else {
       host.textContent = `Failed to load feat: ${displayNameFromSlug(id)}`;
+    }
+    })();
+    if (searchText && !host.textContent?.toLowerCase().includes(searchText)) {
+      host.style.display = 'none';
     }
   });
   await Promise.all(tasks);

@@ -71,7 +71,7 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
   getSuggestions(context: { query: string }): Array<{ text: string }> {
     const q = (context.query || '').toLowerCase();
     if (!this.currentKey) {
-      const directives = ['level:', 'class:', 'school:', 'addspells:', 'removespells:'];
+      const directives = ['level:', 'class:', 'school:', 'addspells:', 'removespells:', 'search:'];
       return directives
         .filter(d => d.startsWith(q) || q.length === 0)
         .map(d => ({ text: d }));

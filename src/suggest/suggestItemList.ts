@@ -78,7 +78,7 @@ export class ItemListSuggest extends EditorSuggest<{ text: string }> {
   getSuggestions(context: { query: string }): Array<{ text: string }> {
     const q = (context.query || '').toLowerCase();
     if (!this.currentKey) {
-      const directives = ['level:', 'type:', 'attuned:'];
+      const directives = ['level:', 'type:', 'attuned:', 'search:'];
       return directives
         .filter(d => d.startsWith(q) || q.length === 0)
         .map(d => ({ text: d }));

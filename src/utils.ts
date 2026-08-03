@@ -151,6 +151,29 @@ export function extractCardContentHtml(host: HTMLElement): string | null {
 }
 
 /**
+ * Parse a `search:` directive from a code block source string.
+ * @returns The lowercased search text, or empty string if not present.
+ */
+export function parseSearchDirective(source: string): string {
+	const m = /^search:\s*(.+)$/im.exec(source);
+	return m ? m[1].trim().toLowerCase() : '';
+}
+
+/**
+ * Test whether a name or cached HTML matches a search string.
+ * Checks the display name and optionally strips HTML tags from cached content.
+ */
+export function matchesSearch(name: string, search: string, cachedHtml?: string): boolean {
+	if (!search) return true;
+	if (name.toLowerCase().includes(search)) return true;
+	if (cachedHtml) {
+		const text = cachedHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').toLowerCase();
+		if (text.includes(search)) return true;
+	}
+	return false;
+}
+
+/**
  * Extract non-empty names from the first table cell of each row.
  * Used by both spell and item list processors to normalize name collection.
  */

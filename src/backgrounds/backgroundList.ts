@@ -6,16 +6,17 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { Component, MarkdownRenderer } from 'obsidian';
 import { getKnownBackgroundIdsForKey } from './backgroundUtils';
 import { getCachedBackground, setCachedBackground, findCustomBackgroundById, buildCustomBackgroundHtmlStructured, cleanBackgroundTitle } from './background';
-import { fetchPageContent, renderCollapsible, displayNameFromSlug } from '../utils';
+import { fetchPageContent, renderCollapsible, displayNameFromSlug, parseSearchDirective } from '../utils';
 
-export async function renderBackgroundList(_source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
+export async function renderBackgroundList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
   if (!baseUrl) {
     el.createEl('div', { text: 'Base URL is not configured.' });
     return;
   }
+  const searchText = parseSearchDirective(source);
 
-  const ids = getKnownBackgroundIdsForKey(urlKey);
+  let ids = getKnownBackgroundIdsForKey(urlKey);
   if (!ids.length) {
     const msg = el.createEl('div', { text: 'No backgrounds found (preload may not have completed). Retrying…' });
     const start = Date.now();
@@ -57,9 +58,11 @@ export async function renderBackgroundList(_source: string, el: HTMLElement, _ct
   const container = document.createElement('div');
   el.appendChild(container);
 
-  const tasks = ids.map(async (id) => {
+  const tasks = ids
+    .map(async (id) => {
     const host = document.createElement('div');
     container.appendChild(host);
+    await (async () => {
     const cached = getCachedBackground(urlKey, id);
     if (cached?.html) { renderCollapsible(host, cached.title, cached.html); return; }
     const custom = await findCustomBackgroundById(id);
@@ -92,6 +95,10 @@ export async function renderBackgroundList(_source: string, el: HTMLElement, _ct
       setCachedBackground(urlKey, id, { title, html: res.contentHtml });
     } else {
       host.textContent = `Failed to load background: ${displayNameFromSlug(id)}`;
+    }
+    })();
+    if (searchText && !host.textContent?.toLowerCase().includes(searchText)) {
+      host.style.display = 'none';
     }
   });
   await Promise.all(tasks);

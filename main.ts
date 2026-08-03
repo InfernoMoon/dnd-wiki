@@ -11,6 +11,8 @@ import { FeatNameSuggest } from './src/suggest/suggestFeat';
 import { ItemNameSuggest } from './src/suggest/suggestItem';
 import { ItemListSuggest } from './src/suggest/suggestItemList';
 import { BackgroundNameSuggest } from './src/suggest/suggestBackground';
+import { FeatListSuggest } from './src/suggest/suggestFeatList';
+import { BackgroundListSuggest } from './src/suggest/suggestBackgroundList';
 import { preloadAllFeatIds } from './src/feats/featUtils';
 import { preloadAllItemIds } from './src/items/itemUtils';
 import { preloadAllBackgroundIds } from './src/backgrounds/backgroundUtils';
@@ -43,6 +45,8 @@ export default class Dnd5eSpellCards extends Plugin {
 		// Register editor suggestions for ```dnd-item blocks
 		this.registerEditorSuggest(new ItemNameSuggest(this));
 		this.registerEditorSuggest(new BackgroundNameSuggest(this));
+		this.registerEditorSuggest(new FeatListSuggest(this));
+		this.registerEditorSuggest(new BackgroundListSuggest(this));
 		// Block processors — registered dynamically per URL key in onLayoutReady below
 		// Feat block processor — register for each configured URL key
 		this.app.workspace.onLayoutReady(async () => {

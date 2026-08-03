@@ -1,6 +1,6 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { requestUrl, App, TFolder, TAbstractFile, TFile, MarkdownRenderer, Component } from 'obsidian';
-import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible, extractTableNamesFromFirstCell } from '../utils';
+import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible, extractTableNamesFromFirstCell, parseSearchDirective } from '../utils';
 import { STATIC_ITEM_RARITY_WORD_TO_INDEX } from '../data/staticData';
 
 // Use shared extractor to match spell list behavior
@@ -459,6 +459,9 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
     return;
   }
 
+  // Apply search filter
+  const searchText = parseSearchDirective(source);
+
   const container = document.createElement('div');
   const heading = buildHeading(itemLevel, itemLevels);
   const h2 = document.createElement('h2');
@@ -471,6 +474,7 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
     const host = document.createElement('div');
     container.appendChild(host);
     const id = nameToSlug(name);
+    await (async () => {
     // Try custom first
     const custom = await findCustomItemById(id);
     if (custom) {
@@ -502,6 +506,10 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
       renderCollapsible(host, title, res.contentHtml);
     } else {
       host.textContent = `Failed to load item: ${displayNameFromSlug(id)}`;
+    }
+    })();
+    if (searchText && !host.textContent?.toLowerCase().includes(searchText)) {
+      host.style.display = 'none';
     }
   });
   await Promise.all(tasks);

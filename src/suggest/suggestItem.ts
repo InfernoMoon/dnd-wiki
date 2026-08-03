@@ -1,17 +1,24 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
-import { getKnownItemIds } from '../items/itemUtils';
+import { getKnownItemIdsForKey } from '../items/itemUtils';
 import { displayNameFromSlug } from '../utils';
 
 export class ItemNameSuggest extends EditorSuggest<{ text: string }> {
+  private currentUrlKey: string = '';
+
   constructor(appPlugin: { app: import('obsidian').App }) {
     super(appPlugin.app);
   }
 
-  private isInItemBlock(cursor: EditorPosition, editor: Editor): boolean {
+  private detectItemBlock(cursor: EditorPosition, editor: Editor): boolean {
     for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
       const l = editor.getLine(i).trim();
       if (l.startsWith('```')) {
-        return /^(?:```\s*dnd[a-z0-9]*-item\s*)$/i.test(l);
+        const m = /^(?:```\s*dnd([a-z0-9]*)-item\s*)$/i.exec(l);
+        if (m) {
+          this.currentUrlKey = m[1].toLowerCase();
+          return true;
+        }
+        return false;
       }
     }
     return false;
@@ -21,7 +28,7 @@ export class ItemNameSuggest extends EditorSuggest<{ text: string }> {
     try {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
-      if (!this.isInItemBlock(cursor, editor)) return null;
+      if (!this.detectItemBlock(cursor, editor)) return null;
       const uptoCursor = line.slice(0, cursor.ch);
       const lastComma = uptoCursor.lastIndexOf(',');
       const startCh = lastComma >= 0 ? lastComma + 1 : 0;
@@ -38,7 +45,7 @@ export class ItemNameSuggest extends EditorSuggest<{ text: string }> {
 
   getSuggestions(context: { query: string }): Array<{ text: string }> {
     const q = (context.query || '').toLowerCase();
-    const ids = getKnownItemIds();
+    const ids = getKnownItemIdsForKey(this.currentUrlKey);
     const items = ids.map((s) => ({ text: displayNameFromSlug(s) }));
     return items.filter(it => it.text.toLowerCase().includes(q)).slice(0, 50);
   }

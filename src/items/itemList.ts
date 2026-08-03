@@ -14,7 +14,7 @@ const LEVEL_INDEX_TO_WORD = Object.entries(STATIC_ITEM_RARITY_WORD_TO_INDEX)
 // In-memory cache for item list results, keyed by filter combination
 const itemListCache: Map<string, string[]> = new Map();
 
-function buildCacheKey(levelDirective: LevelDirective, typeDirective: string[] | 'all' | null, attunedDirective: 'all' | boolean | null): string {
+function buildCacheKey(urlKey: string, levelDirective: LevelDirective, typeDirective: string[] | 'all' | null, attunedDirective: 'all' | boolean | null): string {
   const levelKey = Array.isArray(levelDirective)
     ? `levels:${levelDirective.join(',')}`
     : typeof levelDirective === 'number'
@@ -28,7 +28,7 @@ function buildCacheKey(levelDirective: LevelDirective, typeDirective: string[] |
     ? 'types:all'
     : 'types:null';
   const attunedKey = attunedDirective === 'all' ? 'attuned:all' : attunedDirective === true ? 'attuned:true' : attunedDirective === false ? 'attuned:false' : 'attuned:null';
-  return `${levelKey}|${typeKey}|${attunedKey}`;
+  return `${urlKey}|${levelKey}|${typeKey}|${attunedKey}`;
 }
 
 function parseLevelDirective(source: string): LevelDirective {
@@ -342,7 +342,7 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
          */
 
   // Try cache
-  const cacheKey = buildCacheKey(levelDirective, typeDirective, attunedDirective);
+  const cacheKey = buildCacheKey(urlKey, levelDirective, typeDirective, attunedDirective);
   let names = itemListCache.get(cacheKey);
   if (names) {
     // Render from cache
@@ -367,7 +367,8 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
       const host = document.createElement('div');
       container.appendChild(host);
       const id = nameToSlug(name);
-      const res = await fetchPageContent(baseUrl, 'wondrous-items', id);
+      const itemPageType = baseUrl.includes('2024') ? 'magic-item' : 'wondrous-items';
+      const res = await fetchPageContent(baseUrl, itemPageType, id);
       if (res.ok) {
         const title = res.titleText || displayNameFromSlug(id);
         renderCollapsible(host, title, res.contentHtml);
@@ -384,8 +385,9 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
   let items: Array<{ name: string; type: string; attuned: string }> = [];
   let customItems: Array<{ name: string; type: string; attuned: string; levelIdx: number | null }> = [];
   let doc: Document | null = null;
+  const indexPath = baseUrl.includes('2024') ? '/magic-item:all' : '/wondrous-items';
   try {
-    const res = await requestUrl({ url: `${base}/wondrous-items`, method: 'GET' });
+    const res = await requestUrl({ url: `${base}${indexPath}`, method: 'GET' });
     if (res.status >= 200 && res.status < 300) {
       const parser = new DOMParser();
       doc = parser.parseFromString(res.text, 'text/html');
@@ -493,7 +495,8 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
       return;
     }
     // Fallback to remote item
-    const res = await fetchPageContent(baseUrl, 'wondrous-items', id);
+    const itemPageType2 = baseUrl.includes('2024') ? 'magic-item' : 'wondrous-items';
+    const res = await fetchPageContent(baseUrl, itemPageType2, id);
     if (res.ok) {
       const title = res.titleText || displayNameFromSlug(id);
       renderCollapsible(host, title, res.contentHtml);

@@ -8,25 +8,26 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { App, TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
 import { nameToSlug, fetchPageContent, renderCollapsible, displayNameFromSlug } from '../utils';
 
-// Simple cache for fetched item content
-const itemCache = new Map<string, { title: string; html: string }>();
+// Cache for fetched item content: outer key = urlKey, inner key = item id
+const itemCache = new Map<string, Map<string, { title: string; html: string }>>();
 
-/**
- * Get a cached item render by ID.
- * @param id Item slug/ID to look up.
- * @returns Cached title and HTML if present, otherwise null.
- */
-export function getCachedItem(id: string): { title: string; html: string } | null {
-  return itemCache.get(id) || null;
+function getItemCacheForKey(urlKey: string): Map<string, { title: string; html: string }> {
+  if (!itemCache.has(urlKey)) itemCache.set(urlKey, new Map());
+  return itemCache.get(urlKey)!;
 }
 
 /**
- * Store a rendered item in the cache.
- * @param id Item slug/ID to cache under.
- * @param data Object containing card title and HTML.
+ * Get a cached item render by URL key and ID.
  */
-export function setCachedItem(id: string, data: { title: string; html: string }): void {
-  itemCache.set(id, data);
+export function getCachedItem(urlKey: string, id: string): { title: string; html: string } | null {
+  return getItemCacheForKey(urlKey).get(id) ?? null;
+}
+
+/**
+ * Store a rendered item in the cache under the correct URL key.
+ */
+export function setCachedItem(urlKey: string, id: string, data: { title: string; html: string }): void {
+  getItemCacheForKey(urlKey).set(id, data);
 }
 
 /**
@@ -86,7 +87,7 @@ export async function renderItem(source: string, el: HTMLElement, _ctx: Markdown
               await MarkdownRenderer.render(app, structured.descMarkdown, mount, file.path, component);
               const contentDiv = mount.parentElement as HTMLElement | null;
               if (contentDiv) {
-                setCachedItem(id, { title, html: contentDiv.innerHTML });
+                setCachedItem(urlKey, id, { title, html: contentDiv.innerHTML });
               }
             }
           }
@@ -94,27 +95,28 @@ export async function renderItem(source: string, el: HTMLElement, _ctx: Markdown
           // Best effort cache
           const contentDiv = host.querySelector('div[id^="card-content-"]');
           if (contentDiv) {
-            setCachedItem(id, { title, html: contentDiv.innerHTML });
+            setCachedItem(urlKey, id, { title, html: contentDiv.innerHTML });
           }
         }
         continue;
       } else {
         const contentDiv = host.querySelector('div[id^="card-content-"]');
         if (contentDiv) {
-          setCachedItem(id, { title, html: contentDiv.innerHTML });
+          setCachedItem(urlKey, id, { title, html: contentDiv.innerHTML });
         }
         continue;
       }
     }
 
     // Fallback to remote item
-    let cached = itemCache.get(id) || null;
+    const itemPageType = baseUrl.includes('2024') ? 'magic-item' : 'wondrous-items';
+    let cached = getCachedItem(urlKey, id);
     if (!cached) {
-      const res = await fetchPageContent(baseUrl, 'wondrous-items', id);
+      const res = await fetchPageContent(baseUrl, itemPageType, id);
       if (res.ok) {
         const title = res.titleText || displayNameFromSlug(id);
         cached = { title, html: res.contentHtml };
-        itemCache.set(id, cached);
+        setCachedItem(urlKey, id, cached);
       }
     }
     if (cached?.html) {

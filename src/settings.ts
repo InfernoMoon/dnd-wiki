@@ -93,6 +93,7 @@ export class DndCardsSettingTab extends PluginSettingTab {
     
     containerEl.createEl('h3', { text: 'Source URLs' });
     containerEl.createEl('p', { text: 'Define multiple Source URLs, like for 5e or 2024' });
+    containerEl.createEl('p', { text: 'Obsidian might need to be restarted after adding or removing URLs.' });
     
     const urlsContainer = containerEl.createDiv('urls-container');
     

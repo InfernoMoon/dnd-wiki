@@ -15,15 +15,21 @@ const HARD_CODED_TYPES = [
 
 export class ItemListSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;
+  private currentUrlKey: string = '';
   constructor(appPlugin: { app: import('obsidian').App }) {
     super(appPlugin.app);
   }
-  // Detect if cursor is inside a dnd[key]-itemlist code block
-  private isInItemListBlock(cursor: EditorPosition, editor: Editor): boolean {
+  // Detect if cursor is inside a dnd[key]-itemlist code block; captures the URL key
+  private detectItemListBlock(cursor: EditorPosition, editor: Editor): boolean {
     for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
       const l = editor.getLine(i).trim();
       if (l.startsWith('```')) {
-        return /^(?:```\s*dnd[a-z0-9]*-itemlist\s*)$/i.test(l);
+        const m = /^(?:```\s*dnd([a-z0-9]*)-itemlist\s*)$/i.exec(l);
+        if (m) {
+          this.currentUrlKey = m[1].toLowerCase();
+          return true;
+        }
+        return false;
       }
     }
     return false;
@@ -33,7 +39,7 @@ export class ItemListSuggest extends EditorSuggest<{ text: string }> {
     try {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
-      if (!this.isInItemListBlock(cursor, editor)) return null;
+      if (!this.detectItemListBlock(cursor, editor)) return null;
 
       const uptoCursor = line.slice(0, cursor.ch);
       const colonIdx = uptoCursor.indexOf(':');

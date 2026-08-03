@@ -12,19 +12,6 @@ import { loadFromLinks, loadFromTable, LoaderConfig } from '../genericLoader';
 const featIdCache: Map<string, Set<string>> = new Map();
 
 /**
- * Get all known feat IDs across all URL keys as sorted slugs.
- * Used by the suggester to show all possible feats.
- * @returns Array of normalized feat slugs (sorted ascending).
- */
-export function getKnownFeatIds(): string[] {
-  const all = new Set<string>();
-  for (const ids of featIdCache.values()) {
-    for (const id of ids) all.add(id);
-  }
-  return Array.from(all).sort((a, b) => a.localeCompare(b));
-}
-
-/**
  * Get known feat IDs for a specific URL key.
  * @param urlKey The URL key (e.g. "5e", "2024").
  * @returns Array of normalized feat slugs for that key (sorted ascending).

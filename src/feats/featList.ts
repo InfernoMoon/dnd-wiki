@@ -6,7 +6,7 @@
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { Component, MarkdownRenderer } from 'obsidian';
-import { getKnownFeatIds, getKnownFeatIdsForKey } from './featUtils';
+import { getKnownFeatIdsForKey } from './featUtils';
 import { getCachedFeat, setCachedFeat, findCustomFeatById, buildCustomFeatHtmlStructured } from './feat';
 import { fetchPageContent, renderCollapsible, displayNameFromSlug } from '../utils';
 
@@ -30,7 +30,7 @@ export async function renderFeatList(_source: string, el: HTMLElement, _ctx: imp
     const msg = el.createEl('div', { text: 'No feats found (preload may not have completed). Retrying…' });
     const start = Date.now();
     const intervalId = globalThis.setInterval(async () => {
-      const current = getKnownFeatIds();
+      const current = getKnownFeatIdsForKey(urlKey);
       if (current.length) {
         globalThis.clearInterval(intervalId);
         // Clear previous content and proceed to render

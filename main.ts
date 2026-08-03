@@ -74,7 +74,7 @@ export default class Dnd5eSpellCards extends Plugin {
 					if (!url) continue;
 					await preloadAllSpellNames(urlKey, url);
 					await preloadAllFeatIds(urlKey, url);
-					await preloadAllItemIds(url);
+					await preloadAllItemIds(urlKey, url);
 				}
 				await initData();
 			} catch (e) {

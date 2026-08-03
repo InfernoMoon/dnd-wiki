@@ -37,6 +37,9 @@ export interface LoaderConfig {
   
   /** Whether baseUrl contains "2024" to auto-select method (default: auto-detect from baseUrl) */
   is2024Format?: boolean;
+
+  /** Optional callback invoked for each table row after name extraction and filtering. Receives the row element and the extracted (cleaned) name. */
+  rowProcessor?: (row: Element, name: string) => void;
 }
 
 /**
@@ -100,30 +103,28 @@ export async function loadFromTable(config: LoaderConfig): Promise<Set<string>> 
     const doc = parser.parseFromString(res.text, 'text/html');
     const rows = Array.from(doc.querySelectorAll(rowSelector));
     
-    let names = rows
-      .map(tr => tr.querySelector(cellSelector))
-      .filter(td => td?.textContent?.trim().length)
-      .map(td => (td?.textContent || '').trim());
-    
-    // Apply replace patterns
-    if (config.replacePatterns) {
-      names = names.map(n => {
-        let result = n;
-        for (const [search, replace] of config.replacePatterns!) {
-          result = result.split(search).join(replace);
+    for (const row of rows) {
+      const cell = row.querySelector(cellSelector);
+      if (!cell?.textContent?.trim()) continue;
+
+      let name = cell.textContent.trim();
+
+      // Apply replace patterns
+      if (config.replacePatterns) {
+        for (const [search, replace] of config.replacePatterns) {
+          name = name.split(search).join(replace);
         }
-        return result.trim();
-      });
-    }
-    
-    // Apply custom filter
-    if (config.filterFn) {
-      names = names.filter(n => config.filterFn!(n));
-    }
-    
-    for (const n of names) {
-      const id = nameToSlug(n);
-      if (id) results.add(id);
+        name = name.trim();
+      }
+
+      // Apply custom filter
+      if (config.filterFn && !config.filterFn(name)) continue;
+
+      const id = nameToSlug(name);
+      if (id) {
+        results.add(id);
+        if (config.rowProcessor) config.rowProcessor(row, name);
+      }
     }
   } catch (e) {
     console.warn(`Failed to load data via table-based method from ${base}${config.indexPath}`, e);

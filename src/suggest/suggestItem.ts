@@ -13,7 +13,7 @@ export class ItemNameSuggest extends EditorSuggest<{ text: string }> {
     for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
       const l = editor.getLine(i).trim();
       if (l.startsWith('```')) {
-        const m = /^(?:```\s*dnd([a-z0-9]*)-item\s*)$/i.exec(l);
+        const m = /^(?:```\s*dnd([a-z0-9]*)-magicitem\s*)$/i.exec(l);
         if (m) {
           this.currentUrlKey = m[1].toLowerCase();
           return true;

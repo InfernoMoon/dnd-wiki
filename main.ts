@@ -56,10 +56,10 @@ export default class Dnd5eSpellCards extends Plugin {
 				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-featlist`, async (source, el, ctx) => {
 					await renderFeatList(source, el, ctx, urlKey, baseUrl);
 				});
-				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-item`, async (source, el, ctx) => {
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-magicitem`, async (source, el, ctx) => {
 					await renderItem(source, el, ctx, urlKey, baseUrl);
 				});
-				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-itemlist`, async (source, el, ctx) => {
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-magicitemlist`, async (source, el, ctx) => {
 					await renderItemList(source, el, ctx, urlKey, baseUrl);
 				});
 			}

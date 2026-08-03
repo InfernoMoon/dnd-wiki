@@ -19,12 +19,12 @@ export class ItemListSuggest extends EditorSuggest<{ text: string }> {
   constructor(appPlugin: { app: import('obsidian').App }) {
     super(appPlugin.app);
   }
-  // Detect if cursor is inside a dnd[key]-itemlist code block; captures the URL key
+  // Detect if cursor is inside a dnd[key]-magicitemlist code block; captures the URL key
   private detectItemListBlock(cursor: EditorPosition, editor: Editor): boolean {
     for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
       const l = editor.getLine(i).trim();
       if (l.startsWith('```')) {
-        const m = /^(?:```\s*dnd([a-z0-9]*)-itemlist\s*)$/i.exec(l);
+        const m = /^(?:```\s*dnd([a-z0-9]*)-magicitemlist\s*)$/i.exec(l);
         if (m) {
           this.currentUrlKey = m[1].toLowerCase();
           return true;

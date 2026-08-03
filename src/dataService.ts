@@ -8,6 +8,7 @@ declare const app: App;
 /** Settings file structure */
 interface PluginSettingsJson {
 	baseurl?: string;
+	baseurls?: Record<string, string>;
 }
 
 // Use Obsidian's official plugin data APIs via plugin.loadData/saveData
@@ -29,6 +30,42 @@ async function writeSettings(data: PluginSettingsJson): Promise<void> {
 	await pluginRef?.saveData(data);
 }
 
+// ---- Multiple Base URLs support ----
+
+/**
+ * Peek at stored base URLs without prompting.
+ * @returns Object with keys mapping to base URLs (e.g., { "5e": "https://...", "2024": "https://..." })
+ */
+export async function peekBaseUrls(): Promise<Record<string, string>> {
+	const settings = await readSettings();
+	return settings.baseurls ?? { '5e': '', '2024': '' };
+}
+
+/**
+ * Save multiple base URLs.
+ * @param urls Object with keys mapping to base URLs
+ */
+export async function setBaseUrls(urls: Record<string, string>): Promise<void> {
+	const current = await readSettings();
+	current.baseurls = urls;
+	await writeSettings(current);
+}
+
+/**
+ * Get the first non-empty base URL from stored URLs.
+ * Fallback for when code doesn't specify which URL to use.
+ * @returns First non-empty URL, or null if none available
+ */
+export async function getFirstBaseUrl(): Promise<string | null> {
+	const urls = await peekBaseUrls();
+	for (const url of Object.values(urls)) {
+		if (url && url.trim()) {
+			return url.trim();
+		}
+	}
+	return null;
+}
+
 // ------------------------------
 // Base URL management
 // ------------------------------
@@ -46,7 +83,8 @@ export function initBaseUrlWatcher(plugin: Plugin) {
 /**
  * Resolve the Base URL used for fetching content.
  * - Returns cached value if present
- * - Reads from settings.json if available
+ * - Reads from new baseurls if available
+ * - Falls back to old baseurl for backward compatibility
  * - Prompts the user to enter a URL when missing and persists it
  */
 export async function getBaseUrl(): Promise<string | null> {
@@ -55,7 +93,15 @@ export async function getBaseUrl(): Promise<string | null> {
 		return cachedBaseUrl;
 	}
 
-	// 2) Read settings via plugin API
+	// 2) Try new baseurls system first
+	const urls = await peekBaseUrls();
+	const firstUrl = Object.values(urls).find(u => u && u.trim());
+	if (firstUrl) {
+		cachedBaseUrl = firstUrl.trim();
+		return cachedBaseUrl;
+	}
+
+	// 3) Fall back to old baseurl for backward compatibility
 	const current = await readSettings();
 	if (current.baseurl) {
 		cachedBaseUrl = current.baseurl;

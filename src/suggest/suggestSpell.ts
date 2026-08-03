@@ -1,5 +1,5 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
-import { displayNameFromSlug } from './utils';
+import { displayNameFromSlug } from '../utils';
 
 type GetSlugsFn = () => string[];
 
@@ -15,12 +15,12 @@ export class SpellNameSuggest extends EditorSuggest<{ slug: string; display: str
     try {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
-      // Detect if inside a ```dnd-spell block by scanning upward
+      // Detect if inside a ```dnd[key]-spell block by scanning upward
       let inSpellBlock = false;
       for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
         const l = editor.getLine(i).trim();
         if (l.startsWith('```')) {
-          inSpellBlock = /^```\s*dnd-spell\s*$/i.test(l);
+          inSpellBlock = /^```\s*dnd[a-z0-9]*-spell\s*$/i.test(l);
           break;
         }
       }
@@ -44,8 +44,7 @@ export class SpellNameSuggest extends EditorSuggest<{ slug: string; display: str
     const q = (context.query || '').toLowerCase();
     const slugs = this.getSlugs() || [];
     const items = slugs.map(s => ({ slug: s, display: displayNameFromSlug(s) }));
-    const results = items.filter(it => it.display.toLowerCase().includes(q)).slice(0, 50);
-    return results;
+    return items.filter(it => it.display.toLowerCase().includes(q)).slice(0, 50);
   }
 
   renderSuggestion(item: { slug: string; display: string }, el: HTMLElement) {
@@ -56,9 +55,7 @@ export class SpellNameSuggest extends EditorSuggest<{ slug: string; display: str
     if (!this.context) return;
     const { editor, start, end } = this.context as any;
     if (!editor) return;
-    // Insert the display name into the editor
     editor.replaceRange(item.display, start, end);
-    // Move cursor to just after the inserted text
     editor.setCursor({ line: end.line, ch: start.ch + item.display.length });
     this.close();
   }

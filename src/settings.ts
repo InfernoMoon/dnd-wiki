@@ -1,5 +1,87 @@
-import { App, Plugin, PluginSettingTab, Setting, TextComponent, Notice } from 'obsidian';
-import { peekBaseUrl, setBaseUrl } from './dataService';
+import { App, Plugin, PluginSettingTab, Setting, Notice } from 'obsidian';
+import { peekBaseUrls, setBaseUrls } from './dataService';
+
+function displayUrlEntries(container: HTMLElement, urls: Record<string, string>): void {
+  container.empty();
+  
+  for (const [key, url] of Object.entries(urls)) {
+    const entryDiv = container.createDiv('url-entry');
+    entryDiv.style.marginBottom = '12px';
+    entryDiv.style.borderLeft = '2px solid #999';
+    entryDiv.style.paddingLeft = '12px';
+    
+    let currentKeyValue = key;
+    let currentUrlValue = url;
+    
+    const inputRow = entryDiv.createDiv();
+    inputRow.style.display = 'flex';
+    inputRow.style.gap = '8px';
+    inputRow.style.alignItems = 'center';
+    
+    new Setting(inputRow).addText((t) => {
+      t.setValue(key)
+        .setPlaceholder('e.g., 5e')
+        .onChange((v) => { currentKeyValue = v; });
+      t.inputEl.style.width = '100px';
+    });
+    
+    new Setting(inputRow).addText((t) => {
+      t.setValue(url)
+        .setPlaceholder('https://example.com')
+        .onChange((v) => { currentUrlValue = v; });
+      t.inputEl.style.flex = '1';
+    });
+    
+    const updateBtn = inputRow.createEl('button', { text: 'Save' });
+    updateBtn.style.marginRight = '8px';
+    updateBtn.onclick = async () => {
+      const currentUrls = await peekBaseUrls();
+      const newKey = currentKeyValue.trim();
+      const newUrl = currentUrlValue.trim();
+      
+      if (!newKey) {
+        new Notice('Key cannot be empty');
+        return;
+      }
+      
+      // Remove old key if renamed
+      if (newKey !== key && key in currentUrls) {
+        delete currentUrls[key];
+      }
+      
+      currentUrls[newKey] = newUrl;
+      await setBaseUrls(currentUrls);
+      new Notice(`Saved URL for key "${newKey}"`);
+    };
+    
+    const deleteBtn = inputRow.createEl('button', { text: 'Delete' });
+    deleteBtn.style.color = '#d00';
+    deleteBtn.onclick = async () => {
+      const currentUrls = await peekBaseUrls();
+      delete currentUrls[key];
+      await setBaseUrls(currentUrls);
+      new Notice(`Deleted URL for key "${key}"`);
+      const updated = await peekBaseUrls();
+      displayUrlEntries(container, updated);
+    };
+  }
+  
+  // Add new entry button
+  const addBtn = container.createEl('button', { text: '+ Add URL' });
+  addBtn.style.marginTop = '12px';
+  addBtn.onclick = async () => {
+    const currentUrls = await peekBaseUrls();
+    // Generate a unique key
+    let newKey = 'custom';
+    let counter = 1;
+    while (newKey in currentUrls) {
+      newKey = `custom${counter++}`;
+    }
+    currentUrls[newKey] = '';
+    await setBaseUrls(currentUrls);
+    displayUrlEntries(container, currentUrls);
+  };
+}
 
 export class DndCardsSettingTab extends PluginSettingTab {
   constructor(app: App, plugin: Plugin) {
@@ -11,24 +93,21 @@ export class DndCardsSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     containerEl.createEl('h2', { text: 'DnD 5e Cards Settings' });
-    let baseInput: TextComponent | null = null;
-    new Setting(containerEl)
-      .setName('Base URL')
-      .setDesc('The root URL used to fetch DnD Data.')
-      .addText((text) => {
-        baseInput = text;
-        text.setPlaceholder('https://example.com')
-          .setValue('')
-          .onChange(async (value) => {
-            await setBaseUrl(value.trim());
-          });
-      });
-    // Populate without prompting
-    peekBaseUrl().then((current) => {
-      if (current && baseInput) {
-        baseInput.setValue(current);
-      }
+    
+    containerEl.createEl('h3', { text: 'Base URLs' });
+    containerEl.createEl('p', { text: 'Define multiple base URLs with custom keys. Examples: "5e" for 5e.tools, "2024" for 2024 revision.' });
+    
+    const urlsContainer = containerEl.createDiv('urls-container');
+    
+    // Load and display URLs
+    peekBaseUrls().then((urls) => {
+      // Ensure default keys exist
+      const merged = { '5e': '', '2024': '', ...urls };
+      displayUrlEntries(urlsContainer, merged);
     });
+    
+    containerEl.createEl('hr');
+
 
     // Add button to create custom cards folder structure
     new Setting(containerEl)

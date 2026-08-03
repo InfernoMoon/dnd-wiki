@@ -5,11 +5,11 @@ import { renderFeat } from './src/feat';
 import { renderItem } from './src/item';
 import { initBaseUrlWatcher, configurePluginRef, getBaseUrl, initData } from './src/dataService';
 import { preloadAllSpellNames, getKnownSpellIds } from './src/spellUtils';
-import { SpellNameSuggest } from './src/suggestSpell';
-import { SpellListSuggest } from './src/suggestSpellList';
-import { FeatNameSuggest } from './src/suggestFeat';
-import { ItemNameSuggest } from './src/suggestItem';
-import { ItemListSuggest } from './src/suggestItemList';
+import { SpellNameSuggest } from './src/suggest/suggestSpell';
+import { SpellListSuggest } from './src/suggest/suggestSpellList';
+import { FeatNameSuggest } from './src/suggest/suggestFeat';
+import { ItemNameSuggest } from './src/suggest/suggestItem';
+import { ItemListSuggest } from './src/suggest/suggestItemList';
 import { preloadAllFeatIds } from './src/featUtils';
 import { preloadAllItemIds } from './src/itemUtils';
 import { renderFeatList } from './src/featList';
@@ -31,7 +31,9 @@ export default class Dnd5eSpellCards extends Plugin {
 		// Register directive suggestions for ```dnd-itemlist blocks
 		this.registerEditorSuggest(new ItemListSuggest(this));
 		// Register suggestions when typing ```dnd for block suffixes
-		this.registerEditorSuggest(new DndPrefixSuggest(this));
+		const dndPrefixSuggest = new DndPrefixSuggest(this);
+		dndPrefixSuggest.refreshUrlKeys();
+		this.registerEditorSuggest(dndPrefixSuggest);
 		// Register editor suggestions for ```dnd-item blocks
 		this.registerEditorSuggest(new ItemNameSuggest(this));
 		this.registerMarkdownCodeBlockProcessor('dnd-spell', async (source, el, ctx) => {

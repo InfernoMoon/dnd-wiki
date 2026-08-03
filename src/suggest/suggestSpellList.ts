@@ -1,40 +1,29 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
-import { getCachedItemTypes } from './itemUtils';
+import { getCachedClassNames, getCachedSchoolNames } from '../dataService';
+import { getKnownSpellIds } from '../spellUtils';
+import { displayNameFromSlug } from '../utils';
 
-// Hardcoded type options for itemlist filtering
-const HARD_CODED_TYPES = [
-  'Armor',
-  'Potion',
-  'Ring',
-  'Rod',
-  'Scroll',
-  'Staff',
-  'Wand',
-  'Weapon',
-  'Wondrous Item',
-];
-
-export class ItemListSuggest extends EditorSuggest<{ text: string }> {
+export class SpellListSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;
   constructor(appPlugin: { app: import('obsidian').App }) {
     super(appPlugin.app);
   }
-  // Detect if cursor is inside a dnd-itemlist code block
-  private isInItemListBlock(cursor: EditorPosition, editor: Editor): boolean {
+  // Detect if cursor is inside a dnd[key]-spelllist code block
+  private isInSpellListBlock(cursor: EditorPosition, editor: Editor): boolean {
     for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
       const l = editor.getLine(i).trim();
       if (l.startsWith('```')) {
-        return /^(?:```\s*dnd-itemlist\s*)$/i.test(l);
+        return /^(?:```\s*dnd[a-z0-9]*-spelllist\s*)$/i.test(l);
       }
     }
     return false;
   }
 
-  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null) {
+  onTrigger(cursor: EditorPosition, editor: Editor, file: TFile | null) {
     try {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
-      if (!this.isInItemListBlock(cursor, editor)) return null;
+      if (!this.isInSpellListBlock(cursor, editor)) return null;
 
       const uptoCursor = line.slice(0, cursor.ch);
       const colonIdx = uptoCursor.indexOf(':');
@@ -53,7 +42,8 @@ export class ItemListSuggest extends EditorSuggest<{ text: string }> {
       this.currentKey = key;
       let startCh = colonIdx + 1;
       while (startCh < uptoCursor.length && /\s/.test(uptoCursor[startCh])) startCh++;
-      if (key === 'type') {
+      // For class/school/addspells/removespell, operate on last fragment after comma
+      if (key === 'class' || key === 'school' || key === 'addspells' || key === 'removespells') {
         const uptoValue = uptoCursor.slice(startCh);
         const lastCommaIdx = uptoValue.lastIndexOf(',');
         if (lastCommaIdx !== -1) {
@@ -74,28 +64,32 @@ export class ItemListSuggest extends EditorSuggest<{ text: string }> {
 
   getSuggestions(context: { query: string }): Array<{ text: string }> {
     const q = (context.query || '').toLowerCase();
-    // If querying for directive keyword (no colon typed yet), suggest with colon suffix
     if (!this.currentKey) {
-      const directives = ['level:', 'type:', 'attuned:'];
+      const directives = ['level:', 'class:', 'school:', 'addspells:', 'removespells:'];
       return directives
         .filter(d => d.startsWith(q) || q.length === 0)
         .map(d => ({ text: d }));
     }
     if (this.currentKey === 'level') {
-      const levels = ['All','Common','Uncommon','Rare','Very-Rare','Legendary','Artifact','Unique','Other'];
-      return levels.filter(n => n.toLowerCase().startsWith(q)).map(n => ({ text: n }));
+      const levels = ['all','0','1','2','3','4','5','6','7','8','9'];
+      return levels.filter(n => n.startsWith(q)).map(n => ({ text: n }));
     }
-    if (this.currentKey === 'type') {
-      const dynamicTypes = getCachedItemTypes();
-      const allTypes = Array.from(new Set([...HARD_CODED_TYPES, ...dynamicTypes]));
-      return allTypes
-        .filter(t => t.toLowerCase().includes(q))
-        .slice(0, 50)
-        .map(t => ({ text: t }));
+    if (this.currentKey === 'class') {
+      const options = getCachedClassNames();
+      return options.filter(n => n.toLowerCase().includes(q)).slice(0, 50).map(n => ({ text: n }));
     }
-    if (this.currentKey === 'attuned') {
-      const opts = ['All', 'Required', 'Not-Required'];
-      return opts.filter(o => o.toLowerCase().startsWith(q)).map(o => ({ text: o }));
+    if (this.currentKey === 'school') {
+      const options = getCachedSchoolNames();
+      return options.filter(n => n.toLowerCase().includes(q)).slice(0, 50).map(n => ({ text: n }));
+    }
+    if (this.currentKey === 'addspells' || this.currentKey === 'removespells') {
+      try {
+        const ids: string[] = getKnownSpellIds();
+        const items = ids.map((s) => ({ text: displayNameFromSlug(s) }));
+        return items.filter(it => it.text.toLowerCase().includes(q)).slice(0, 50);
+      } catch {
+        return [];
+      }
     }
     return [];
   }

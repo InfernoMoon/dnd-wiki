@@ -1,4 +1,5 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
+import { peekBaseUrls } from './dataService';
 
 const BLOCK_SUFFIXES = ['-spell', '-spelllist', '-feat', '-featlist', '-item', '-itemlist'];
 
@@ -7,29 +8,25 @@ export class DndPrefixSuggest extends EditorSuggest<{ text: string }> {
     super(appPlugin.app);
   }
 
-  private isAtDndPrefix(cursor: EditorPosition, editor: Editor): { startCh: number } | null {
+  private isAtDndPrefix(cursor: EditorPosition, editor: Editor): { startCh: number; fragment: string } | null {
     const line = editor.getLine(cursor.line);
     const uptoCursor = line.slice(0, cursor.ch);
-    // Match starting ```dnd and optionally a partial suffix fragment
-    const re = /```\s*dnd(?:-[a-z]+)?$/i;
+    // Match: ```dnd followed by optional urlkey fragment and optional suffix fragment
+    const re = /```\s*dnd([a-z0-9]*)(-[a-z]*)?$/i;
     const m = re.exec(uptoCursor);
     if (!m) return null;
-    const startCh = uptoCursor.lastIndexOf('dnd') + 'dnd'.length;
-    return { startCh };
+    const startCh = uptoCursor.search(/dnd/i) + 'dnd'.length;
+    const fragment = (m[1] || '') + (m[2] || '');
+    return { startCh, fragment };
   }
 
   onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null) {
     try {
       const pos = this.isAtDndPrefix(cursor, editor);
       if (!pos) return null;
-      const line = editor.getLine(cursor.line);
-      const uptoCursor = line.slice(0, cursor.ch);
-      const reFrag = /```\s*dnd(-[a-z]+)?$/i;
-      const fragmentMatch = reFrag.exec(uptoCursor);
-      const fragment = (fragmentMatch?.[1] || '').toLowerCase();
       const start = { line: cursor.line, ch: pos.startCh };
       const end = { line: cursor.line, ch: cursor.ch };
-      return { start, end, query: fragment } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+      return { start, end, query: pos.fragment } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
     } catch {
       return null;
     }
@@ -37,10 +34,35 @@ export class DndPrefixSuggest extends EditorSuggest<{ text: string }> {
 
   getSuggestions(context: { query: string }): Array<{ text: string }> {
     const q = (context.query || '').toLowerCase();
-    return BLOCK_SUFFIXES
-      .filter((s) => s.toLowerCase().includes(q))
-      .map((s) => ({ text: s }))
+
+    // If query contains a '-', the user has typed a key already — suggest suffixes
+    const dashIdx = q.indexOf('-');
+    if (dashIdx !== -1) {
+      const suffixFragment = q.slice(dashIdx); // includes the '-'
+      return BLOCK_SUFFIXES
+        .filter((s) => s.toLowerCase().startsWith(suffixFragment))
+        .map((s) => ({ text: q.slice(0, dashIdx) + s }))
+        .slice(0, 20);
+    }
+
+    // Otherwise suggest URL keys from stored config
+    const result: Array<{ text: string }> = [];
+    peekBaseUrls().then((urls) => {
+      // This is async but getSuggestions is sync — we cache and re-trigger if needed
+    });
+    const cachedKeys = this._cachedUrlKeys;
+    return cachedKeys
+      .filter((k) => k.toLowerCase().startsWith(q))
+      .map((k) => ({ text: k }))
       .slice(0, 20);
+  }
+
+  // Cache of URL keys for sync access in getSuggestions
+  private _cachedUrlKeys: string[] = ['5e', '2024'];
+
+  async refreshUrlKeys(): Promise<void> {
+    const urls = await peekBaseUrls();
+    this._cachedUrlKeys = Object.keys(urls).filter(k => k.trim());
   }
 
   renderSuggestion(item: { text: string }, el: HTMLElement) {

@@ -73,6 +73,10 @@ export async function fetchPageContent(
 		const missing = titleText.toLowerCase().includes('the page does not') || !titleEl || !contentEl;
 		if (missing) return { ok: false, titleText: '', contentHtml: '' };
 		const contentClone = contentEl.cloneNode(true) as HTMLElement;
+		// Remove floatright sidebars (infoboxes, images, etc.)
+		for (const el of Array.from(contentClone.querySelectorAll('div.floatright'))) {
+			el.remove();
+		}
 		const links = contentClone.querySelectorAll('a');
 		for (const a of Array.from(links)) {
 			const span = doc.createElement('span');

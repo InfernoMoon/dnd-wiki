@@ -10,10 +10,14 @@ import { SpellListSuggest } from './src/suggest/suggestSpellList';
 import { FeatNameSuggest } from './src/suggest/suggestFeat';
 import { ItemNameSuggest } from './src/suggest/suggestItem';
 import { ItemListSuggest } from './src/suggest/suggestItemList';
+import { BackgroundNameSuggest } from './src/suggest/suggestBackground';
 import { preloadAllFeatIds } from './src/feats/featUtils';
 import { preloadAllItemIds } from './src/items/itemUtils';
+import { preloadAllBackgroundIds } from './src/backgrounds/backgroundUtils';
 import { renderFeatList } from './src/feats/featList';
 import { renderItemList } from './src/items/itemList';
+import { renderBackground } from './src/backgrounds/background';
+import { renderBackgroundList } from './src/backgrounds/backgroundList';
 import { DndPrefixSuggest } from './src/suggestDndPrefix';
 import { DndCardsSettingTab } from './src/settings';
 
@@ -38,6 +42,7 @@ export default class Dnd5eSpellCards extends Plugin {
 		this.registerEditorSuggest(dndPrefixSuggest);
 		// Register editor suggestions for ```dnd-item blocks
 		this.registerEditorSuggest(new ItemNameSuggest(this));
+		this.registerEditorSuggest(new BackgroundNameSuggest(this));
 		// Block processors — registered dynamically per URL key in onLayoutReady below
 		// Feat block processor — register for each configured URL key
 		this.app.workspace.onLayoutReady(async () => {
@@ -62,6 +67,12 @@ export default class Dnd5eSpellCards extends Plugin {
 				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-magicitemlist`, async (source, el, ctx) => {
 					await renderItemList(source, el, ctx, urlKey, baseUrl);
 				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-background`, async (source, el, ctx) => {
+					await renderBackground(source, el, ctx, urlKey, baseUrl);
+				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-backgroundlist`, async (source, el, ctx) => {
+					await renderBackgroundList(source, el, ctx, urlKey, baseUrl);
+				});
 			}
 		});
 
@@ -75,6 +86,7 @@ export default class Dnd5eSpellCards extends Plugin {
 					await preloadAllSpellNames(urlKey, url);
 					await preloadAllFeatIds(urlKey, url);
 					await preloadAllItemIds(urlKey, url);
+					await preloadAllBackgroundIds(urlKey, url);
 				}
 				await initData();
 			} catch (e) {

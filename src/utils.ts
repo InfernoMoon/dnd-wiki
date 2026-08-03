@@ -59,8 +59,11 @@ export async function fetchPageContent(
 	kind: string,
 	id: string
 ): Promise<{ ok: boolean; titleText: string; contentHtml: string }> {
-	const base = baseUrl.replace(/\/$/, '');
-	const url = `${base}/${kind}:${id}`;
+	return fetchPageAtUrl(`${baseUrl.replace(/\/$/, '')}/${kind}:${id}`);
+}
+
+/** Fetch a page by a direct URL (no kind:id format). Used for classes etc. */
+export async function fetchPageAtUrl(url: string): Promise<{ ok: boolean; titleText: string; contentHtml: string }> {
 	try {
 		const res = await requestUrl({ url, method: 'GET' });
 		if (res.status < 200 || res.status >= 300) return { ok: false, titleText: '', contentHtml: '' };

@@ -1,7 +1,7 @@
 /**
  * subclass.ts
- * Markdown code block processor for ```dnd-subclass blocks.
- * Parses `class:` and `subclass:` directives and fetches /{class}:{subclass}.
+ * Markdown code block processor for ```dnd-classinfo blocks.
+ * Parses `class:` and one-or-more `subinfo:` directives and fetches /{class}:{subinfo}.
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { nameToSlug, fetchPageAtUrl, renderCollapsible, displayNameFromSlug } from '../utils';
@@ -20,32 +20,52 @@ export async function renderSubclass(source: string, el: HTMLElement, _ctx: Mark
   if (!baseUrl) { el.createEl('div', { text: 'Base URL is not configured.' }); return; }
 
   const classMatch = /^class:\s*(.+)$/im.exec(source);
-  const subclassMatch = /^subclass:\s*(.+)$/im.exec(source);
+  const subinfoMatches = Array.from(source.matchAll(/^subinfo:\s*(.+)$/gim));
 
   if (!classMatch) { el.createEl('div', { text: 'Provide a `class:` directive.' }); return; }
-  if (!subclassMatch) { el.createEl('div', { text: 'Provide a `subclass:` directive.' }); return; }
+  if (!subinfoMatches.length) { el.createEl('div', { text: 'Provide one or more `subinfo:` directives.' }); return; }
 
   const classSlug = nameToSlug(classMatch[1].trim());
-  const subclassSlug = nameToSlug(subclassMatch[1].trim());
+  const classDirectiveOffset = classMatch.index ?? Number.MAX_SAFE_INTEGER;
+  const rawSubinfos = subinfoMatches
+    .filter(m => (m.index ?? Number.MAX_SAFE_INTEGER) > classDirectiveOffset)
+    .map(m => (m[1] || '').trim())
+    .filter(Boolean);
 
-  if (!classSlug || !subclassSlug) { el.createEl('div', { text: 'Invalid class or subclass name.' }); return; }
+  if (!classSlug) { el.createEl('div', { text: 'Invalid class name.' }); return; }
+  if (!rawSubinfos.length) { el.createEl('div', { text: 'Place `subinfo:` lines after `class:`.' }); return; }
 
-  const cacheKey = `${classSlug}:${subclassSlug}`;
-  const cache = getCacheForKey(urlKey);
-  const cached = cache.get(cacheKey);
-  if (cached) { renderCollapsible(el, cached.title, cached.html); return; }
+  const subinfoSlugs = rawSubinfos
+    .map(v => nameToSlug(v))
+    .filter(Boolean);
+
+  if (!subinfoSlugs.length) { el.createEl('div', { text: 'Invalid subinfo name(s).' }); return; }
+
+  // If multiple subinfo lines are provided, render only the last one.
+  const subinfoSlug = subinfoSlugs[subinfoSlugs.length - 1];
 
   const base = baseUrl.replace(/\/$/, '');
-  const url = `${base}/${classSlug}:${subclassSlug}`;
+  const cache = getCacheForKey(urlKey);
+  const host = document.createElement('div');
+  el.appendChild(host);
+
+  const cacheKey = `${classSlug}:${subinfoSlug}`;
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    renderCollapsible(host, cached.title, cached.html);
+    await preloadSubclassIds(urlKey, baseUrl, classSlug, subinfoSlug);
+    return;
+  }
+
+  const url = `${base}/${classSlug}:${subinfoSlug}`;
   const res = await fetchPageAtUrl(url);
 
   if (res.ok) {
-    const title = res.titleText || `${displayNameFromSlug(classSlug)}: ${displayNameFromSlug(subclassSlug)}`;
+    const title = res.titleText || `${displayNameFromSlug(classSlug)}: ${displayNameFromSlug(subinfoSlug)}`;
     cache.set(cacheKey, { title, html: res.contentHtml });
-    renderCollapsible(el, title, res.contentHtml);
-    // Seed subclass IDs for this class while we have the class page cached
-    await preloadSubclassIds(urlKey, baseUrl, classSlug);
+    renderCollapsible(host, title, res.contentHtml);
+    await preloadSubclassIds(urlKey, baseUrl, classSlug, subinfoSlug);
   } else {
-    el.createEl('div', { text: `Failed to load subclass: ${displayNameFromSlug(classSlug)} / ${displayNameFromSlug(subclassSlug)}` });
+    host.textContent = `Failed to load subclass: ${displayNameFromSlug(classSlug)} / ${displayNameFromSlug(subinfoSlug)}`;
   }
 }

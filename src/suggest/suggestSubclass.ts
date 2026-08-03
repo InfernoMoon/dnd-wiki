@@ -1,6 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import { getCachedClassNames } from '../dataService';
-import { getKnownSubclassNamesForClass, preloadSubclassIds } from '../classes/subclassUtils';
+import { getKnownSubclassNamesForParent, preloadSubclassIds } from '../classes/subclassUtils';
 import { nameToSlug } from '../utils';
 
 export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
@@ -16,7 +16,7 @@ export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
     for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
       const l = editor.getLine(i).trim();
       if (l.startsWith('```')) {
-        const m = /^(?:```\s*dnd([a-z0-9]*)-subclass\s*)$/i.exec(l);
+        const m = /^(?:```\s*dnd([a-z0-9]*)-classinfo\s*)$/i.exec(l);
         if (m) { this.currentUrlKey = m[1].toLowerCase(); return true; }
         return false;
       }
@@ -33,6 +33,25 @@ export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
       if (m) return nameToSlug(m[1].trim());
     }
     return '';
+  }
+
+  /**
+   * Collect previously written subinfo values above the current cursor line.
+   * Used to recursively suggest from the most recent subinfo page.
+   */
+  private getPreviousSubinfosFromBlock(cursor: EditorPosition, editor: Editor): string[] {
+    const values: string[] = [];
+    for (let i = cursor.line - 1; i >= Math.max(0, cursor.line - 50); i--) {
+      const l = editor.getLine(i).trim();
+      if (l.startsWith('```')) break;
+      const m = /^subinfo:\s*(.+)$/i.exec(l);
+      if (m) {
+        const slug = nameToSlug(m[1].trim());
+        if (slug) values.push(slug);
+      }
+    }
+    values.reverse();
+    return values;
   }
 
   onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null) {
@@ -59,20 +78,25 @@ export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
     const q = (context.query || '').toLowerCase();
 
     if (!this.currentKey) {
-      return ['class:', 'subclass:'].filter(d => d.startsWith(q) || q.length === 0).map(d => ({ text: d }));
+      const editor = (context as any).editor as Editor;
+      const classSlug = editor ? this.getClassFromBlock((context as any).start, editor) : '';
+      const directives = classSlug ? ['class:', 'subinfo:'] : ['class:'];
+      return directives.filter(d => d.startsWith(q) || q.length === 0).map(d => ({ text: d }));
     }
 
     if (this.currentKey === 'class') {
       return getCachedClassNames().filter(n => n.toLowerCase().includes(q)).slice(0, 50).map(n => ({ text: n }));
     }
 
-    if (this.currentKey === 'subclass') {
+    if (this.currentKey === 'subinfo') {
       const editor = (context as any).editor as Editor;
       const classSlug = editor ? this.getClassFromBlock((context as any).start, editor) : '';
       if (classSlug && this.currentBaseUrl) {
+        const prevSubinfos = editor ? this.getPreviousSubinfosFromBlock((context as any).start, editor) : [];
+        const parentSubinfo = prevSubinfos.length ? prevSubinfos[prevSubinfos.length - 1] : undefined;
         // Trigger preload if not yet cached (async, will populate on next keystroke)
-        preloadSubclassIds(this.currentUrlKey, this.currentBaseUrl, classSlug);
-        return getKnownSubclassNamesForClass(this.currentUrlKey, classSlug)
+        preloadSubclassIds(this.currentUrlKey, this.currentBaseUrl, classSlug, parentSubinfo);
+        return getKnownSubclassNamesForParent(this.currentUrlKey, classSlug, parentSubinfo)
           .filter(n => n.toLowerCase().includes(q))
           .slice(0, 50)
           .map(n => ({ text: n }));

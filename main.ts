@@ -104,7 +104,7 @@ export default class Dnd5eSpellCards extends Plugin {
 				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-class`, async (source, el, ctx) => {
 					await renderClass(source, el, ctx, urlKey, baseUrl);
 				});
-				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-subclass`, async (source, el, ctx) => {
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-classinfo`, async (source, el, ctx) => {
 					await renderSubclass(source, el, ctx, urlKey, baseUrl);
 				});
 			}

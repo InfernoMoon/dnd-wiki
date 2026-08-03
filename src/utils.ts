@@ -151,12 +151,28 @@ export function extractCardContentHtml(host: HTMLElement): string | null {
 }
 
 /**
- * Parse a `search:` directive from a code block source string.
- * @returns The lowercased search text, or empty string if not present.
+ * Parse all `search:` directives from a code block source string.
+ * Multiple occurrences are treated as OR — a match against any term includes the item.
+ * @returns Array of lowercased search terms (empty array if none present).
  */
-export function parseSearchDirective(source: string): string {
-	const m = /^search:\s*(.+)$/im.exec(source);
-	return m ? m[1].trim().toLowerCase() : '';
+export function parseSearchDirective(source: string): string[] {
+	const results: string[] = [];
+	const re = /^search:\s*(.+)$/gim;
+	let m: RegExpExecArray | null;
+	while ((m = re.exec(source)) !== null) {
+		const term = m[1].trim().toLowerCase();
+		if (term) results.push(term);
+	}
+	return results;
+}
+
+/**
+ * Parse the `searchMode:` directive. Returns 'and' or 'or' (default 'or').
+ */
+export function parseSearchModeDirective(source: string): 'and' | 'or' {
+	const m = /^searchMode:\s*(.+)$/im.exec(source);
+	if (m && m[1].trim().toLowerCase() === 'and') return 'and';
+	return 'or';
 }
 
 /**

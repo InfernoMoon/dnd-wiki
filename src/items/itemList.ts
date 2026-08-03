@@ -1,7 +1,8 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { requestUrl, App, TFolder, TAbstractFile, TFile, MarkdownRenderer, Component } from 'obsidian';
-import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible, extractTableNamesFromFirstCell, parseSearchDirective } from '../utils';
+import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible, extractTableNamesFromFirstCell, parseSearchDirective, parseSearchModeDirective } from '../utils';
 import { STATIC_ITEM_RARITY_WORD_TO_INDEX } from '../data/staticData';
+import { getCachedItem, setCachedItem } from './item';
 
 // Use shared extractor to match spell list behavior
 
@@ -337,6 +338,8 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
   const itemLevels = Array.isArray(levelDirective) ? levelDirective : undefined;
   const typeDirective = parseTypeDirective(source);
   const attunedDirective = parseAttunedDirective(source);
+  const searches = parseSearchDirective(source);
+  const searchMode = parseSearchModeDirective(source);
         /**
          * Build the H2 heading shown above the rendered list.
          */
@@ -368,12 +371,25 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
       container.appendChild(host);
       const id = nameToSlug(name);
       const itemPageType = baseUrl.includes('2024') ? 'magic-item' : 'wondrous-items';
-      const res = await fetchPageContent(baseUrl, itemPageType, id);
-      if (res.ok) {
-        const title = res.titleText || displayNameFromSlug(id);
-        renderCollapsible(host, title, res.contentHtml);
+      const cachedItem = getCachedItem(urlKey, id);
+      if (cachedItem) {
+        renderCollapsible(host, cachedItem.title, cachedItem.html);
       } else {
-        host.textContent = `Failed to load item: ${displayNameFromSlug(id)}`;
+        const res = await fetchPageContent(baseUrl, itemPageType, id);
+        if (res.ok) {
+          const title = res.titleText || displayNameFromSlug(id);
+          setCachedItem(urlKey, id, { title, html: res.contentHtml });
+          renderCollapsible(host, title, res.contentHtml);
+        } else {
+          host.textContent = `Failed to load item: ${displayNameFromSlug(id)}`;
+        }
+      }
+      if (searches.length > 0) {
+        const text = host.textContent?.toLowerCase() || '';
+        const match = searchMode === 'and'
+          ? searches.every(s => text.includes(s))
+          : searches.some(s => text.includes(s));
+        if (!match) host.style.display = 'none';
       }
     });
     await Promise.all(tasks);
@@ -459,8 +475,7 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
     return;
   }
 
-  // Apply search filter
-  const searchText = parseSearchDirective(source);
+  // Apply search filter (already parsed above)
 
   const container = document.createElement('div');
   const heading = buildHeading(itemLevel, itemLevels);
@@ -500,16 +515,26 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
     }
     // Fallback to remote item
     const itemPageType2 = baseUrl.includes('2024') ? 'magic-item' : 'wondrous-items';
-    const res = await fetchPageContent(baseUrl, itemPageType2, id);
-    if (res.ok) {
-      const title = res.titleText || displayNameFromSlug(id);
-      renderCollapsible(host, title, res.contentHtml);
+    const cachedItem2 = getCachedItem(urlKey, id);
+    if (cachedItem2) {
+      renderCollapsible(host, cachedItem2.title, cachedItem2.html);
     } else {
-      host.textContent = `Failed to load item: ${displayNameFromSlug(id)}`;
+      const res = await fetchPageContent(baseUrl, itemPageType2, id);
+      if (res.ok) {
+        const title = res.titleText || displayNameFromSlug(id);
+        setCachedItem(urlKey, id, { title, html: res.contentHtml });
+        renderCollapsible(host, title, res.contentHtml);
+      } else {
+        host.textContent = `Failed to load item: ${displayNameFromSlug(id)}`;
+      }
     }
     })();
-    if (searchText && !host.textContent?.toLowerCase().includes(searchText)) {
-      host.style.display = 'none';
+    if (searches.length > 0) {
+      const text = host.textContent?.toLowerCase() || '';
+      const match = searchMode === 'and'
+        ? searches.every(s => text.includes(s))
+        : searches.some(s => text.includes(s));
+      if (!match) host.style.display = 'none';
     }
   });
   await Promise.all(tasks);

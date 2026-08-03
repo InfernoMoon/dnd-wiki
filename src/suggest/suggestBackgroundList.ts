@@ -1,6 +1,8 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 
 export class BackgroundListSuggest extends EditorSuggest<{ text: string }> {
+  private currentKey: string | null = null;
+
   constructor(appPlugin: { app: import('obsidian').App }) {
     super(appPlugin.app);
   }
@@ -20,11 +22,23 @@ export class BackgroundListSuggest extends EditorSuggest<{ text: string }> {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
       if (!this.isInBackgroundListBlock(cursor, editor)) return null;
-      const fragment = line.slice(0, cursor.ch).trim();
+      const uptoCursor = line.slice(0, cursor.ch);
+      const colonIdx = uptoCursor.indexOf(':');
+      if (colonIdx === -1) {
+        this.currentKey = null;
+        return {
+          start: { line: cursor.line, ch: 0 },
+          end: { line: cursor.line, ch: cursor.ch },
+          query: uptoCursor.trim(),
+        } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+      }
+      this.currentKey = uptoCursor.slice(0, colonIdx).trim().toLowerCase();
+      let startCh = colonIdx + 1;
+      while (startCh < uptoCursor.length && /\s/.test(uptoCursor[startCh])) startCh++;
       return {
-        start: { line: cursor.line, ch: 0 },
+        start: { line: cursor.line, ch: startCh },
         end: { line: cursor.line, ch: cursor.ch },
-        query: fragment,
+        query: uptoCursor.slice(startCh).trim(),
       } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
     } catch {
       return null;
@@ -33,7 +47,10 @@ export class BackgroundListSuggest extends EditorSuggest<{ text: string }> {
 
   getSuggestions(context: { query: string }): Array<{ text: string }> {
     const q = (context.query || '').toLowerCase();
-    const directives = ['search:'];
+    if (this.currentKey === 'searchmode') {
+      return ['Or', 'And'].filter(o => o.toLowerCase().startsWith(q)).map(o => ({ text: o }));
+    }
+    const directives = ['search:', 'searchMode:'];
     return directives.filter(d => d.startsWith(q) || q.length === 0).map(d => ({ text: d }));
   }
 

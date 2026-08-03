@@ -6,7 +6,7 @@
  */
 import { MarkdownPostProcessorContext, requestUrl } from "obsidian";
 import { renderSingleSpell, getCustomSpellEntries, seedSpellNamesForKey } from "./spellUtils";
-import { nameToSlug, displayNameFromSlug, extractTableNamesFromFirstCell, parseSearchDirective } from "../utils";
+import { nameToSlug, displayNameFromSlug, extractTableNamesFromFirstCell, parseSearchDirective, parseSearchModeDirective } from "../utils";
 
 /**
  * Render a filtered list of spells based on directives provided in the block.
@@ -317,7 +317,8 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx: Mar
 		names = names.filter((n) => !removeSet.has(nameToSlug(n)));
 	}
 	// Apply search filter
-	const searchText = parseSearchDirective(source);
+	const searches = parseSearchDirective(source);
+	const searchMode = parseSearchModeDirective(source);
 	if (!names.length) {
 		el.setText("No Spell Names found");
 		return;
@@ -341,8 +342,12 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx: Mar
 		host.style.marginBottom = "0.75em";
 		container.appendChild(host);
 		await renderSingleSpell(host, urlKey, baseUrl, name);
-		if (searchText && !host.textContent?.toLowerCase().includes(searchText)) {
-			host.style.display = 'none';
+		if (searches.length > 0) {
+			const text = host.textContent?.toLowerCase() || '';
+			const match = searchMode === 'and'
+				? searches.every(s => text.includes(s))
+				: searches.some(s => text.includes(s));
+			if (!match) host.style.display = 'none';
 		}
 	});
 	await Promise.all(tasks);

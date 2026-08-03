@@ -71,7 +71,7 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
   getSuggestions(context: { query: string }): Array<{ text: string }> {
     const q = (context.query || '').toLowerCase();
     if (!this.currentKey) {
-      const directives = ['level:', 'class:', 'school:', 'addspells:', 'removespells:', 'search:'];
+      const directives = ['level:', 'class:', 'school:', 'addspells:', 'removespells:', 'search:', 'searchMode:'];
       return directives
         .filter(d => d.startsWith(q) || q.length === 0)
         .map(d => ({ text: d }));
@@ -87,6 +87,9 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
     if (this.currentKey === 'school') {
       const options = getCachedSchoolNames();
       return options.filter(n => n.toLowerCase().includes(q)).slice(0, 50).map(n => ({ text: n }));
+    }
+    if (this.currentKey === 'searchmode') {
+      return ['Or', 'And'].filter(o => o.toLowerCase().startsWith(q)).map(o => ({ text: o }));
     }
     if (this.currentKey === 'addspells' || this.currentKey === 'removespells') {
       try {

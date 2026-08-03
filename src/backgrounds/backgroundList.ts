@@ -6,7 +6,7 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { Component, MarkdownRenderer } from 'obsidian';
 import { getKnownBackgroundIdsForKey } from './backgroundUtils';
 import { getCachedBackground, setCachedBackground, findCustomBackgroundById, buildCustomBackgroundHtmlStructured, cleanBackgroundTitle } from './background';
-import { fetchPageContent, renderCollapsible, displayNameFromSlug, parseSearchDirective } from '../utils';
+import { fetchPageContent, renderCollapsible, displayNameFromSlug, parseSearchDirective, parseSearchModeDirective } from '../utils';
 
 export async function renderBackgroundList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
@@ -14,7 +14,8 @@ export async function renderBackgroundList(source: string, el: HTMLElement, _ctx
     el.createEl('div', { text: 'Base URL is not configured.' });
     return;
   }
-  const searchText = parseSearchDirective(source);
+  const searches = parseSearchDirective(source);
+  const searchMode = parseSearchModeDirective(source);
 
   let ids = getKnownBackgroundIdsForKey(urlKey);
   if (!ids.length) {
@@ -97,8 +98,12 @@ export async function renderBackgroundList(source: string, el: HTMLElement, _ctx
       host.textContent = `Failed to load background: ${displayNameFromSlug(id)}`;
     }
     })();
-    if (searchText && !host.textContent?.toLowerCase().includes(searchText)) {
-      host.style.display = 'none';
+    if (searches.length > 0) {
+      const text = host.textContent?.toLowerCase() || '';
+      const match = searchMode === 'and'
+        ? searches.every(s => text.includes(s))
+        : searches.some(s => text.includes(s));
+      if (!match) host.style.display = 'none';
     }
   });
   await Promise.all(tasks);

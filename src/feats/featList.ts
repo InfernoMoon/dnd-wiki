@@ -8,7 +8,7 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { Component, MarkdownRenderer } from 'obsidian';
 import { getKnownFeatIdsForKey } from './featUtils';
 import { getCachedFeat, setCachedFeat, findCustomFeatById, buildCustomFeatHtmlStructured } from './feat';
-import { fetchPageContent, renderCollapsible, displayNameFromSlug, parseSearchDirective } from '../utils';
+import { fetchPageContent, renderCollapsible, displayNameFromSlug, parseSearchDirective, parseSearchModeDirective } from '../utils';
 
 export async function renderFeatList(source: string, el: HTMLElement, _ctx: import('obsidian').MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
@@ -16,7 +16,8 @@ export async function renderFeatList(source: string, el: HTMLElement, _ctx: impo
     el.createEl('div', { text: 'Base URL is not configured.' });
     return;
   }
-  const searchText = parseSearchDirective(source);
+  const searches = parseSearchDirective(source);
+  const searchMode = parseSearchModeDirective(source);
 
   let ids = getKnownFeatIdsForKey(urlKey);
   if (!ids.length) {
@@ -109,8 +110,12 @@ export async function renderFeatList(source: string, el: HTMLElement, _ctx: impo
       host.textContent = `Failed to load feat: ${displayNameFromSlug(id)}`;
     }
     })();
-    if (searchText && !host.textContent?.toLowerCase().includes(searchText)) {
-      host.style.display = 'none';
+    if (searches.length > 0) {
+      const text = host.textContent?.toLowerCase() || '';
+      const match = searchMode === 'and'
+        ? searches.every(s => text.includes(s))
+        : searches.some(s => text.includes(s));
+      if (!match) host.style.display = 'none';
     }
   });
   await Promise.all(tasks);

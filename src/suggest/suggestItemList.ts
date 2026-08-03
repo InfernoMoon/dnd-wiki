@@ -78,7 +78,7 @@ export class ItemListSuggest extends EditorSuggest<{ text: string }> {
   getSuggestions(context: { query: string }): Array<{ text: string }> {
     const q = (context.query || '').toLowerCase();
     if (!this.currentKey) {
-      const directives = ['level:', 'type:', 'attuned:', 'search:'];
+      const directives = ['level:', 'type:', 'attuned:', 'search:', 'searchMode:'];
       return directives
         .filter(d => d.startsWith(q) || q.length === 0)
         .map(d => ({ text: d }));
@@ -91,6 +91,9 @@ export class ItemListSuggest extends EditorSuggest<{ text: string }> {
       const dynamicTypes = getCachedItemTypes();
       const allTypes = Array.from(new Set([...HARD_CODED_TYPES, ...dynamicTypes]));
       return allTypes.filter(t => t.toLowerCase().includes(q)).slice(0, 50).map(t => ({ text: t }));
+    }
+    if (this.currentKey === 'searchmode') {
+      return ['Or', 'And'].filter(o => o.toLowerCase().startsWith(q)).map(o => ({ text: o }));
     }
     if (this.currentKey === 'attuned') {
       const opts = ['All', 'Required', 'Not-Required'];

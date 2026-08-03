@@ -16,6 +16,7 @@ import { BackgroundListSuggest } from './src/suggest/suggestBackgroundList';
 import { LineageNameSuggest } from './src/suggest/suggestLineage';
 import { LineageListSuggest } from './src/suggest/suggestLineageList';
 import { ClassNameSuggest } from './src/suggest/suggestClass';
+import { SubclassNameSuggest } from './src/suggest/suggestSubclass';
 import { preloadAllFeatIds } from './src/feats/featUtils';
 import { preloadAllItemIds } from './src/items/itemUtils';
 import { preloadAllBackgroundIds } from './src/backgrounds/backgroundUtils';
@@ -27,6 +28,7 @@ import { renderBackgroundList } from './src/backgrounds/backgroundList';
 import { renderLineage } from './src/lineages/lineage';
 import { renderLineageList } from './src/lineages/lineageList';
 import { renderClass } from './src/classes/class';
+import { renderSubclass } from './src/classes/subclass';
 import { DndPrefixSuggest } from './src/suggestDndPrefix';
 import { DndCardsSettingTab } from './src/settings';
 
@@ -59,6 +61,10 @@ export default class Dnd5eSpellCards extends Plugin {
 		const classNameSuggest = new ClassNameSuggest(this);
 		classNameSuggest.refreshClassNames();
 		this.registerEditorSuggest(classNameSuggest);
+		// Subclass suggester — receives a lookup fn to resolve urlKey -> baseUrl at suggestion time
+		let urlsSnapshot: Record<string, string> = {};
+		peekBaseUrls().then(u => { urlsSnapshot = u; });
+		this.registerEditorSuggest(new SubclassNameSuggest(this, (urlKey) => urlsSnapshot[urlKey] || ''));
 		// Block processors — registered dynamically per URL key in onLayoutReady below
 		// Feat block processor — register for each configured URL key
 		this.app.workspace.onLayoutReady(async () => {
@@ -97,6 +103,9 @@ export default class Dnd5eSpellCards extends Plugin {
 				});
 				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-class`, async (source, el, ctx) => {
 					await renderClass(source, el, ctx, urlKey, baseUrl);
+				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-subclass`, async (source, el, ctx) => {
+					await renderSubclass(source, el, ctx, urlKey, baseUrl);
 				});
 			}
 		});

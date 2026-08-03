@@ -13,13 +13,18 @@ import { ItemListSuggest } from './src/suggest/suggestItemList';
 import { BackgroundNameSuggest } from './src/suggest/suggestBackground';
 import { FeatListSuggest } from './src/suggest/suggestFeatList';
 import { BackgroundListSuggest } from './src/suggest/suggestBackgroundList';
+import { LineageNameSuggest } from './src/suggest/suggestLineage';
+import { LineageListSuggest } from './src/suggest/suggestLineageList';
 import { preloadAllFeatIds } from './src/feats/featUtils';
 import { preloadAllItemIds } from './src/items/itemUtils';
 import { preloadAllBackgroundIds } from './src/backgrounds/backgroundUtils';
+import { preloadAllLineageIds } from './src/lineages/lineageUtils';
 import { renderFeatList } from './src/feats/featList';
 import { renderItemList } from './src/items/itemList';
 import { renderBackground } from './src/backgrounds/background';
 import { renderBackgroundList } from './src/backgrounds/backgroundList';
+import { renderLineage } from './src/lineages/lineage';
+import { renderLineageList } from './src/lineages/lineageList';
 import { DndPrefixSuggest } from './src/suggestDndPrefix';
 import { DndCardsSettingTab } from './src/settings';
 
@@ -47,6 +52,8 @@ export default class Dnd5eSpellCards extends Plugin {
 		this.registerEditorSuggest(new BackgroundNameSuggest(this));
 		this.registerEditorSuggest(new FeatListSuggest(this));
 		this.registerEditorSuggest(new BackgroundListSuggest(this));
+		this.registerEditorSuggest(new LineageNameSuggest(this));
+		this.registerEditorSuggest(new LineageListSuggest(this));
 		// Block processors — registered dynamically per URL key in onLayoutReady below
 		// Feat block processor — register for each configured URL key
 		this.app.workspace.onLayoutReady(async () => {
@@ -77,6 +84,12 @@ export default class Dnd5eSpellCards extends Plugin {
 				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-backgroundlist`, async (source, el, ctx) => {
 					await renderBackgroundList(source, el, ctx, urlKey, baseUrl);
 				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-lineage`, async (source, el, ctx) => {
+					await renderLineage(source, el, ctx, urlKey, baseUrl);
+				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-lineagelist`, async (source, el, ctx) => {
+					await renderLineageList(source, el, ctx, urlKey, baseUrl);
+				});
 			}
 		});
 
@@ -91,6 +104,7 @@ export default class Dnd5eSpellCards extends Plugin {
 					await preloadAllFeatIds(urlKey, url);
 					await preloadAllItemIds(urlKey, url);
 					await preloadAllBackgroundIds(urlKey, url);
+					await preloadAllLineageIds(urlKey, url);
 				}
 				await initData();
 			} catch (e) {

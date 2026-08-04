@@ -1,7 +1,8 @@
 /**
  * subclass.ts
  * Markdown code block processor for ```dnd-classinfo blocks.
- * Parses `class:` and one-or-more `subinfo:` directives and fetches /{class}:{subinfo}.
+ * Parses `class:`, one-or-more `subinfo:` directives, and optional repeated `section:` directives.
+ * Fetches /{class}:{subinfo} and optionally renders only matching header sections.
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { nameToSlug, fetchPageAtUrl, renderCollapsible, displayNameFromSlug } from '../utils';
@@ -15,12 +16,90 @@ function getCacheForKey(urlKey: string): Map<string, { title: string; html: stri
   return subclassRenderCache.get(urlKey)!;
 }
 
+function normalizeHeaderText(value: string): string {
+  return value.replace(/\s+/g, '').trim().toLowerCase();
+}
+
+function extractSectionsFromHtml(contentHtml: string, sectionQueries: string[]): Array<{ title: string; html: string }> {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div id="section-root">${contentHtml}</div>`, 'text/html');
+  const root = doc.querySelector('#section-root');
+  if (!root) return [];
+
+  const headers = Array.from(root.querySelectorAll('h1,h2,h3,h4,h5,h6')) as HTMLElement[];
+  if (!headers.length) return [];
+
+  const results: Array<{ title: string; html: string }> = [];
+  for (const query of sectionQueries) {
+    const normalizedQuery = normalizeHeaderText(query);
+    if (!normalizedQuery) continue;
+
+    const headerIndex = headers.findIndex((h) => normalizeHeaderText(h.textContent || '') === normalizedQuery);
+    if (headerIndex === -1) continue;
+
+    const header = headers[headerIndex];
+    const currentTag = header.tagName.toUpperCase();
+    let nextSameLevelHeader: HTMLElement | null = null;
+    for (let i = headerIndex + 1; i < headers.length; i++) {
+      if (headers[i].tagName.toUpperCase() === currentTag) {
+        nextSameLevelHeader = headers[i];
+        break;
+      }
+    }
+
+    const range = doc.createRange();
+    range.setStartAfter(header);
+    if (nextSameLevelHeader) {
+      range.setEndBefore(nextSameLevelHeader);
+    } else if (root.lastChild) {
+      range.setEndAfter(root.lastChild);
+    } else {
+      range.setEndAfter(header);
+    }
+
+    const frag = range.cloneContents();
+    const wrapper = doc.createElement('div');
+    wrapper.appendChild(frag);
+
+    const sectionTitle = (header.textContent || '').trim() || query.trim();
+    results.push({ title: sectionTitle, html: wrapper.innerHTML });
+  }
+
+  return results;
+}
+
+function renderWithSections(
+  host: HTMLElement,
+  fallbackTitle: string,
+  contentHtml: string,
+  sectionQueries: string[],
+  missingSectionsMessagePrefix: string
+): void {
+  if (!sectionQueries.length) {
+    renderCollapsible(host, fallbackTitle, contentHtml);
+    return;
+  }
+
+  const sections = extractSectionsFromHtml(contentHtml, sectionQueries);
+  if (!sections.length) {
+    host.textContent = `${missingSectionsMessagePrefix}: ${sectionQueries.join(', ')}`;
+    return;
+  }
+
+  for (const section of sections) {
+    const sectionHost = document.createElement('div');
+    host.appendChild(sectionHost);
+    renderCollapsible(sectionHost, section.title, section.html);
+  }
+}
+
 export async function renderSubclass(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
   if (!baseUrl) { el.createEl('div', { text: 'Base URL is not configured.' }); return; }
 
   const classMatch = /^class:\s*(.+)$/im.exec(source);
   const subinfoMatches = Array.from(source.matchAll(/^subinfo:\s*(.+)$/gim));
+  const sectionMatches = Array.from(source.matchAll(/^section:\s*(.+)$/gim));
 
   if (!classMatch) { el.createEl('div', { text: 'Provide a `class:` directive.' }); return; }
   if (!subinfoMatches.length) { el.createEl('div', { text: 'Provide one or more `subinfo:` directives.' }); return; }
@@ -28,6 +107,10 @@ export async function renderSubclass(source: string, el: HTMLElement, _ctx: Mark
   const classSlug = nameToSlug(classMatch[1].trim());
   const classDirectiveOffset = classMatch.index ?? Number.MAX_SAFE_INTEGER;
   const rawSubinfos = subinfoMatches
+    .filter(m => (m.index ?? Number.MAX_SAFE_INTEGER) > classDirectiveOffset)
+    .map(m => (m[1] || '').trim())
+    .filter(Boolean);
+  const sectionQueries = sectionMatches
     .filter(m => (m.index ?? Number.MAX_SAFE_INTEGER) > classDirectiveOffset)
     .map(m => (m[1] || '').trim())
     .filter(Boolean);
@@ -52,7 +135,13 @@ export async function renderSubclass(source: string, el: HTMLElement, _ctx: Mark
   const cacheKey = `${classSlug}:${subinfoSlug}`;
   const cached = cache.get(cacheKey);
   if (cached) {
-    renderCollapsible(host, cached.title, cached.html);
+    renderWithSections(
+      host,
+      cached.title,
+      cached.html,
+      sectionQueries,
+      `No matching sections found in ${displayNameFromSlug(classSlug)} / ${displayNameFromSlug(subinfoSlug)}`
+    );
     await preloadSubclassIds(urlKey, baseUrl, classSlug, subinfoSlug);
     return;
   }
@@ -63,7 +152,13 @@ export async function renderSubclass(source: string, el: HTMLElement, _ctx: Mark
   if (res.ok) {
     const title = res.titleText || `${displayNameFromSlug(classSlug)}: ${displayNameFromSlug(subinfoSlug)}`;
     cache.set(cacheKey, { title, html: res.contentHtml });
-    renderCollapsible(host, title, res.contentHtml);
+    renderWithSections(
+      host,
+      title,
+      res.contentHtml,
+      sectionQueries,
+      `No matching sections found in ${displayNameFromSlug(classSlug)} / ${displayNameFromSlug(subinfoSlug)}`
+    );
     await preloadSubclassIds(urlKey, baseUrl, classSlug, subinfoSlug);
   } else {
     host.textContent = `Failed to load subclass: ${displayNameFromSlug(classSlug)} / ${displayNameFromSlug(subinfoSlug)}`;

@@ -89,7 +89,7 @@ export class DndCardsSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl('h2', { text: 'DnD 5e Cards Settings' });
+    containerEl.createEl('h2', { text: 'DnD Wiki Settings' });
     
     containerEl.createEl('h3', { text: 'Source URLs' });
     containerEl.createEl('p', { text: 'Define multiple Source URLs, like for 5e or 2024' });

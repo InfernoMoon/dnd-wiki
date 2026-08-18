@@ -5,8 +5,9 @@
  * Fetches /{class}:{subinfo} and optionally renders only matching header sections.
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { nameToSlug, fetchPageAtUrl, renderCollapsible, displayNameFromSlug } from '../utils';
+import { nameToSlug, fetchPageAtUrl, displayNameFromSlug } from '../utils';
 import { preloadSubclassIds } from './subclassUtils';
+import { parseSectionDirectives, renderWithSections } from '../sectionRenderer';
 
 // Cache: outer key = urlKey, inner key = "classSlug:subclassSlug"
 const subclassRenderCache = new Map<string, Map<string, { title: string; html: string }>>();
@@ -16,90 +17,12 @@ function getCacheForKey(urlKey: string): Map<string, { title: string; html: stri
   return subclassRenderCache.get(urlKey)!;
 }
 
-function normalizeHeaderText(value: string): string {
-  return value.replace(/\s+/g, '').trim().toLowerCase();
-}
-
-function extractSectionsFromHtml(contentHtml: string, sectionQueries: string[]): Array<{ title: string; html: string }> {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(`<div id="section-root">${contentHtml}</div>`, 'text/html');
-  const root = doc.querySelector('#section-root');
-  if (!root) return [];
-
-  const headers = Array.from(root.querySelectorAll('h1,h2,h3,h4,h5,h6')) as HTMLElement[];
-  if (!headers.length) return [];
-
-  const results: Array<{ title: string; html: string }> = [];
-  for (const query of sectionQueries) {
-    const normalizedQuery = normalizeHeaderText(query);
-    if (!normalizedQuery) continue;
-
-    const headerIndex = headers.findIndex((h) => normalizeHeaderText(h.textContent || '') === normalizedQuery);
-    if (headerIndex === -1) continue;
-
-    const header = headers[headerIndex];
-    const currentTag = header.tagName.toUpperCase();
-    let nextSameLevelHeader: HTMLElement | null = null;
-    for (let i = headerIndex + 1; i < headers.length; i++) {
-      if (headers[i].tagName.toUpperCase() === currentTag) {
-        nextSameLevelHeader = headers[i];
-        break;
-      }
-    }
-
-    const range = doc.createRange();
-    range.setStartAfter(header);
-    if (nextSameLevelHeader) {
-      range.setEndBefore(nextSameLevelHeader);
-    } else if (root.lastChild) {
-      range.setEndAfter(root.lastChild);
-    } else {
-      range.setEndAfter(header);
-    }
-
-    const frag = range.cloneContents();
-    const wrapper = doc.createElement('div');
-    wrapper.appendChild(frag);
-
-    const sectionTitle = (header.textContent || '').trim() || query.trim();
-    results.push({ title: sectionTitle, html: wrapper.innerHTML });
-  }
-
-  return results;
-}
-
-function renderWithSections(
-  host: HTMLElement,
-  fallbackTitle: string,
-  contentHtml: string,
-  sectionQueries: string[],
-  missingSectionsMessagePrefix: string
-): void {
-  if (!sectionQueries.length) {
-    renderCollapsible(host, fallbackTitle, contentHtml);
-    return;
-  }
-
-  const sections = extractSectionsFromHtml(contentHtml, sectionQueries);
-  if (!sections.length) {
-    host.textContent = `${missingSectionsMessagePrefix}: ${sectionQueries.join(', ')}`;
-    return;
-  }
-
-  for (const section of sections) {
-    const sectionHost = document.createElement('div');
-    host.appendChild(sectionHost);
-    renderCollapsible(sectionHost, section.title, section.html);
-  }
-}
-
 export async function renderSubclass(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
   if (!baseUrl) { el.createEl('div', { text: 'Base URL is not configured.' }); return; }
 
   const classMatch = /^class:\s*(.+)$/im.exec(source);
   const subinfoMatches = Array.from(source.matchAll(/^subinfo:\s*(.+)$/gim));
-  const sectionMatches = Array.from(source.matchAll(/^section:\s*(.+)$/gim));
 
   if (!classMatch) { el.createEl('div', { text: 'Provide a `class:` directive.' }); return; }
   if (!subinfoMatches.length) { el.createEl('div', { text: 'Provide one or more `subinfo:` directives.' }); return; }
@@ -110,10 +33,7 @@ export async function renderSubclass(source: string, el: HTMLElement, _ctx: Mark
     .filter(m => (m.index ?? Number.MAX_SAFE_INTEGER) > classDirectiveOffset)
     .map(m => (m[1] || '').trim())
     .filter(Boolean);
-  const sectionQueries = sectionMatches
-    .filter(m => (m.index ?? Number.MAX_SAFE_INTEGER) > classDirectiveOffset)
-    .map(m => (m[1] || '').trim())
-    .filter(Boolean);
+  const sectionDirectives = parseSectionDirectives(source, classDirectiveOffset);
 
   if (!classSlug) { el.createEl('div', { text: 'Invalid class name.' }); return; }
   if (!rawSubinfos.length) { el.createEl('div', { text: 'Place `subinfo:` lines after `class:`.' }); return; }
@@ -139,7 +59,7 @@ export async function renderSubclass(source: string, el: HTMLElement, _ctx: Mark
       host,
       cached.title,
       cached.html,
-      sectionQueries,
+      sectionDirectives,
       `No matching sections found in ${displayNameFromSlug(classSlug)} / ${displayNameFromSlug(subinfoSlug)}`
     );
     await preloadSubclassIds(urlKey, baseUrl, classSlug, subinfoSlug);
@@ -156,7 +76,7 @@ export async function renderSubclass(source: string, el: HTMLElement, _ctx: Mark
       host,
       title,
       res.contentHtml,
-      sectionQueries,
+      sectionDirectives,
       `No matching sections found in ${displayNameFromSlug(classSlug)} / ${displayNameFromSlug(subinfoSlug)}`
     );
     await preloadSubclassIds(urlKey, baseUrl, classSlug, subinfoSlug);

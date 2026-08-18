@@ -1,6 +1,6 @@
 {
-  "id": "dnd-5e-cards",
-  "name": "DND 5e Spell Cards",
+  "id": "dnd-wiki",
+  "name": "DnD Wiki",
   "version": "1.0.0",
   "minAppVersion": "1.15.0",
   "description": "Fetch DND 5e Spells from a configurable URL and display neatly",

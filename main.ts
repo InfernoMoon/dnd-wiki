@@ -31,9 +31,11 @@ import { renderClass } from './src/classes/class';
 import { renderSubclass } from './src/classes/subclass';
 import { DndPrefixSuggest } from './src/suggestDndPrefix';
 import { DndCardsSettingTab } from './src/settings';
+import { renderCustom } from './src/custom/custom';
+import { CustomSuggest } from './src/suggest/suggestCustom';
 
 
-export default class Dnd5eSpellCards extends Plugin {
+export default class DndWiki extends Plugin {
 	async onload() {
 		configurePluginRef(this);
 		initBaseUrlWatcher(this);
@@ -65,6 +67,7 @@ export default class Dnd5eSpellCards extends Plugin {
 		let urlsSnapshot: Record<string, string> = {};
 		peekBaseUrls().then(u => { urlsSnapshot = u; });
 		this.registerEditorSuggest(new SubclassNameSuggest(this, (urlKey) => urlsSnapshot[urlKey] || ''));
+		this.registerEditorSuggest(new CustomSuggest(this));
 		// Block processors — registered dynamically per URL key in onLayoutReady below
 		// Feat block processor — register for each configured URL key
 		this.app.workspace.onLayoutReady(async () => {
@@ -106,6 +109,9 @@ export default class Dnd5eSpellCards extends Plugin {
 				});
 				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-classinfo`, async (source, el, ctx) => {
 					await renderSubclass(source, el, ctx, urlKey, baseUrl);
+				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-custom`, async (source, el, ctx) => {
+					await renderCustom(source, el, ctx, urlKey, baseUrl);
 				});
 			}
 		});

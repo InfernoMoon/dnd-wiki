@@ -126,33 +126,33 @@ export async function getBaseUrl(): Promise<string | null> {
 			new BaseUrlPromptModal(app, async (value: string) => {
 				if (!value) {
 					const n = new Notice(
-						"DnD 5e Cards: No URL provided; plugin may not work."
+						"DnD Wiki: No URL provided; plugin may not work."
 					);
 					(
-						globalThis as unknown as { __dnd5eCardsNotices?: unknown[] }
-					).__dnd5eCardsNotices =
+						globalThis as unknown as { __dndWikiNotices?: unknown[] }
+					).__dndWikiNotices =
 						(
 							globalThis as unknown as {
-								__dnd5eCardsNotices?: unknown[];
+								__dndWikiNotices?: unknown[];
 							}
-						).__dnd5eCardsNotices || [];
+						).__dndWikiNotices || [];
 					(
-						globalThis as unknown as { __dnd5eCardsNotices: unknown[] }
-					).__dnd5eCardsNotices.push(n);
+						globalThis as unknown as { __dndWikiNotices: unknown[] }
+					).__dndWikiNotices.push(n);
 					resolve(null);
 					return;
 				}
 				const updated: PluginSettingsJson = { ...current, baseurl: value };
 				await writeSettings(updated);
-				const n2 = new Notice("DnD 5e Cards: Base URL saved.");
+				const n2 = new Notice("DnD Wiki: Base URL saved.");
 				(
-					globalThis as unknown as { __dnd5eCardsNotices?: unknown[] }
-				).__dnd5eCardsNotices =
-					(globalThis as unknown as { __dnd5eCardsNotices?: unknown[] })
-						.__dnd5eCardsNotices || [];
+					globalThis as unknown as { __dndWikiNotices?: unknown[] }
+				).__dndWikiNotices =
+					(globalThis as unknown as { __dndWikiNotices?: unknown[] })
+						.__dndWikiNotices || [];
 				(
-					globalThis as unknown as { __dnd5eCardsNotices: unknown[] }
-				).__dnd5eCardsNotices.push(n2);
+					globalThis as unknown as { __dndWikiNotices: unknown[] }
+				).__dndWikiNotices.push(n2);
 				cachedBaseUrl = value;
 				// Best-effort: refresh the active Markdown view after a short delay
 				setTimeout(() => {
@@ -187,15 +187,15 @@ export async function getBaseUrl(): Promise<string | null> {
 	}
 	// 5) If still missing, warn and return empty string-equivalent
 	if (!result) {
-		const warn = new Notice("DnD 5e Cards: Base URL not set; please configure it.");
+		const warn = new Notice("DnD Wiki: Base URL not set; please configure it.");
 		(
-			globalThis as unknown as { __dnd5eCardsNotices?: unknown[] }
-		).__dnd5eCardsNotices =
-			(globalThis as unknown as { __dnd5eCardsNotices?: unknown[] })
-				.__dnd5eCardsNotices || [];
+			globalThis as unknown as { __dndWikiNotices?: unknown[] }
+		).__dndWikiNotices =
+			(globalThis as unknown as { __dndWikiNotices?: unknown[] })
+				.__dndWikiNotices || [];
 		(
-			globalThis as unknown as { __dnd5eCardsNotices: unknown[] }
-		).__dnd5eCardsNotices.push(warn);
+			globalThis as unknown as { __dndWikiNotices: unknown[] }
+		).__dndWikiNotices.push(warn);
 		return "";
 	}
 	return result;

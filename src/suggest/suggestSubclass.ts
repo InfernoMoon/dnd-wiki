@@ -80,8 +80,12 @@ export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
     if (!this.currentKey) {
       const editor = (context as any).editor as Editor;
       const classSlug = editor ? this.getClassFromBlock((context as any).start, editor) : '';
-      const directives = classSlug ? ['class:', 'subinfo:', 'section:'] : ['class:'];
-      return directives.filter(d => d.startsWith(q) || q.length === 0).map(d => ({ text: d }));
+      const directives = classSlug
+        ? ['class:', 'subinfo:', 'section:', 'sectionFrom:']
+        : ['class:'];
+      return directives
+        .filter(d => d.toLowerCase().startsWith(q) || q.length === 0)
+        .map(d => ({ text: d }));
     }
 
     if (this.currentKey === 'class') {
@@ -103,7 +107,7 @@ export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
       }
     }
 
-    if (this.currentKey === 'section') {
+    if (this.currentKey === 'section' || this.currentKey === 'sectionfrom') {
       return [];
     }
     return [];

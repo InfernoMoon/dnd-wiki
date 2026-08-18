@@ -1,5 +1,5 @@
 {
-	"name": "dnd-5e-spell-cards",
+	"name": "dnd-wiki",
 	"version": "0.1.0",
 	"description": "Fetch DND 5e Spells from a configurable URL and display neatly",
 	"main": "main.js",
@@ -10,7 +10,7 @@
 	},
 	"keywords": [],
 	"author": "Inferno Moon",
-	"license": "MIT",
+	"license": "0BSD",
 	"devDependencies": {
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "5.29.0",

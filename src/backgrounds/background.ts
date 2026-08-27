@@ -163,8 +163,7 @@ async function renderCustomBackgroundToCache(
 ): Promise<{ title: string; html: string } | null> {
   const uid = createUid();
   const structured = buildCustomBackgroundHtmlStructured(custom.content, custom.title, uid);
-  const fragment = document.createDocumentFragment();
-  const host = fragment.createDiv();
+  const host = createDiv();
   renderCollapsible(host, custom.title, structured.html);
   try {
     const app = getObsidianApp();

@@ -1,7 +1,7 @@
 {
 	"name": "dnd-wiki",
 	"version": "0.1.0",
-	"description": "Fetch DND 5e Spells from a configurable URL and display neatly",
+	"description": "Turn D&D wiki content into interactive reference cards and filtered lists in Obsidian.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

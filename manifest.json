@@ -3,7 +3,7 @@
   "name": "DnD Wiki",
   "version": "1.0.0",
   "minAppVersion": "1.15.0",
-  "description": "Fetch DND 5e Spells from a configurable URL and display neatly",
+  "description": "Turn D&D wiki content into interactive reference cards and filtered lists in Obsidian.",
   "author": "Inferno Moon",
   "authorUrl": "",
   "isDesktopOnly": false

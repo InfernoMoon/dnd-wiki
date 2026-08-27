@@ -296,8 +296,6 @@ See the official [Wizards of the Coast Fan Content Policy](https://company.wizar
 
 This project is mostly for fun. I created it to make writing my DM and player notes in Obsidian easier and to reference DnD rules directly from those notes.
 
-Most of the code was written with AI assistance, so the code quality may be uneven in places. This is not intended to be a serious production-grade project, but it is fully usable, and I am not currently aware of any bugs.
-
 DnD Wiki depends on the structure of external wikis. If those wikis change, some features may stop working. I intend to fix issues when they arise, but I cannot make any promises.
 
 Thanks for checking it out! :)

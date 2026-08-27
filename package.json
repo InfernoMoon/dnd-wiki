@@ -1,7 +1,7 @@
 {
 	"name": "dnd-wiki",
 	"version": "0.1.0",
-	"description": "Turn D&D wiki content into interactive reference cards and filtered lists in Obsidian.",
+	"description": "Turn D&D wiki content into interactive reference cards and filtered lists.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

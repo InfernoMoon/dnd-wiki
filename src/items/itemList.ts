@@ -421,10 +421,12 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
     let customEligible: string[] = [];
     if (Array.isArray(itemLevels) && itemLevels.length) {
       const setLvls = new Set(itemLevels);
-      customEligible = customItems.flatMap((ci) => {
-        const { levelIdx } = ci;
-        return levelIdx !== null && setLvls.has(levelIdx) ? [ci.name] : [];
-      });
+      for (const customItem of customItems) {
+        const { levelIdx } = customItem;
+        if (levelIdx !== null && setLvls.has(levelIdx)) {
+          customEligible.push(customItem.name);
+        }
+      }
     } else if (typeof itemLevel === 'number' && !Number.isNaN(itemLevel)) {
       customEligible = customItems.filter(ci => ci.levelIdx === itemLevel).map(ci => ci.name);
     } else {

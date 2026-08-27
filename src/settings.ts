@@ -86,10 +86,6 @@ export class DndCardsSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName('DnD Wiki Settings')
-      .setHeading();
-    
-    new Setting(containerEl)
       .setName('Source URLs')
       .setHeading();
     containerEl.createEl('p', { text: 'Define multiple Source URLs, like for 5e or 2024' });

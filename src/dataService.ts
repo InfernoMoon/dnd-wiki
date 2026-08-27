@@ -160,10 +160,12 @@ export async function getBaseUrl(): Promise<string | null> {
 			};
 			new BaseUrlPromptModal(app, handleSubmit).open();
 		}));
-		void task.finally(() => {
+		const clearBaseUrlTask = (): void => {
 			// Clear the task so subsequent calls can re-prompt if needed
 			baseUrlTask = undefined;
-		}).catch((error: unknown) => {
+		};
+		void task.then(clearBaseUrlTask, (error: unknown) => {
+			clearBaseUrlTask();
 			console.warn('DnD Wiki: Base URL prompt failed', error);
 		});
 	}

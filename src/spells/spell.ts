@@ -33,12 +33,12 @@ export async function renderSpell(source: string, el: HTMLElement, _ctx: Markdow
 
   // Container for multiple cards
   const containerId = `spell-multi-${Math.random().toString(36).slice(2, 11)}`;
-  const container = document.createElement("div");
+  const container = el.createDiv();
   container.id = containerId;
   el.appendChild(container);
 
   const tasks = lines.map(async (name) => {
-    const host = document.createElement('div');
+    const host = container.createDiv();
     host.classList.add('dnd-wiki-card-spacer');
     container.appendChild(host);
     await renderSingleSpell(host, urlKey, baseUrl, name);

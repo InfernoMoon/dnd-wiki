@@ -99,7 +99,10 @@ export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
         const prevSubinfos = editor ? this.getPreviousSubinfosFromBlock((context as any).start, editor) : [];
         const parentSubinfo = prevSubinfos.length ? prevSubinfos[prevSubinfos.length - 1] : undefined;
         // Trigger preload if not yet cached (async, will populate on next keystroke)
-        preloadSubclassIds(this.currentUrlKey, this.currentBaseUrl, classSlug, parentSubinfo);
+        void preloadSubclassIds(this.currentUrlKey, this.currentBaseUrl, classSlug, parentSubinfo)
+          .catch((error) => {
+            console.warn('DnD Wiki: Failed to preload subclass suggestions', error);
+          });
         return getKnownSubclassNamesForParent(this.currentUrlKey, classSlug, parentSubinfo)
           .filter(n => n.toLowerCase().includes(q))
           .slice(0, 50)

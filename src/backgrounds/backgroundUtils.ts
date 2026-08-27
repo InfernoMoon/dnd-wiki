@@ -4,8 +4,8 @@
  * - Preloads known background IDs from the configured base URL and custom vault files
  * - Provides helpers to access and format background identifiers
  */
-import { App, TFile, TFolder, TAbstractFile } from 'obsidian';
-import { nameToSlug } from '../utils';
+import { TFile, TFolder, TAbstractFile } from 'obsidian';
+import { getObsidianApp, nameToSlug } from '../utils';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../genericLoader';
 
 // In-memory set of known background ids per URL key (normalized slugs)
@@ -50,7 +50,7 @@ export async function preloadAllBackgroundIds(urlKey: string, baseUrl: string): 
 
   // Also include any custom backgrounds from the vault folder DnD-Cards/Backgrounds
   try {
-    const app = (globalThis as unknown as { app?: App }).app;
+    const app = getObsidianApp();
     const vault = app?.vault;
     const folderPath = 'DnD-Cards/Backgrounds';
     const folder = vault?.getAbstractFileByPath(folderPath);

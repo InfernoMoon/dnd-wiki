@@ -1,6 +1,6 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { requestUrl, App, TFolder, TAbstractFile, TFile, MarkdownRenderer, Component } from 'obsidian';
-import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible, extractTableNamesFromFirstCell, parseSearchDirective, parseSearchModeDirective } from '../utils';
+import { requestUrl, TFolder, TAbstractFile, TFile, MarkdownRenderer, Component } from 'obsidian';
+import { getObsidianApp, nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible, extractTableNamesFromFirstCell, parseSearchDirective, parseSearchModeDirective } from '../utils';
 import { STATIC_ITEM_RARITY_WORD_TO_INDEX } from '../data/staticData';
 import { getCachedItem, setCachedItem } from './item';
 
@@ -260,7 +260,7 @@ function buildCustomItemHtmlStructured(content: string, title: string, uid: stri
 
 async function findCustomItemById(id: string): Promise<{ file: TFile; title: string; content: string } | null> {
   try {
-    const app = (globalThis as unknown as { app?: App }).app;
+    const app = getObsidianApp();
     const vault = app?.vault;
     const folderPath = 'DnD-Cards/Items';
     const folder = vault?.getAbstractFileByPath(folderPath);
@@ -286,7 +286,7 @@ async function findCustomItemById(id: string): Promise<{ file: TFile; title: str
 async function extractCustomItems(): Promise<Array<{ name: string; type: string; attuned: string; levelIdx: number | null }>> {
   const out: Array<{ name: string; type: string; attuned: string; levelIdx: number | null }> = [];
   try {
-    const app = (globalThis as unknown as { app?: App }).app;
+    const app = getObsidianApp();
     const vault = app?.vault;
     const folderPath = 'DnD-Cards/Items';
     const folder = vault?.getAbstractFileByPath(folderPath);
@@ -356,19 +356,14 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
       el.setText('No Wondrous Items found');
       return;
     }
-    const container = document.createElement('div');
     const heading = buildHeading(itemLevel, itemLevels);
-    const h2 = document.createElement('h2');
-    h2.classList.add('dnd-wiki-list-heading');
-    h2.textContent = heading;
-    el.appendChild(h2);
-    el.appendChild(container);
+    el.createEl('h2', { cls: 'dnd-wiki-list-heading', text: heading });
+    const container = el.createDiv();
     const tasks = names.map(async (name) => {
         /**
          * Extract full item rows with name/type/attuned parsed from the table.
          */
-      const host = document.createElement('div');
-      container.appendChild(host);
+      const host = container.createDiv();
       const id = nameToSlug(name);
       const itemPageType = baseUrl.includes('2024') ? 'magic-item' : 'wondrous-items';
       const cachedItem = getCachedItem(urlKey, id);
@@ -477,17 +472,12 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
 
   // Apply search filter (already parsed above)
 
-  const container = document.createElement('div');
   const heading = buildHeading(itemLevel, itemLevels);
-  const h2 = document.createElement('h2');
-  h2.classList.add('dnd-wiki-list-heading');
-  h2.textContent = heading;
-  el.appendChild(h2);
-  el.appendChild(container);
+  el.createEl('h2', { cls: 'dnd-wiki-list-heading', text: heading });
+  const container = el.createDiv();
 
   const tasks = names.map(async (name) => {
-    const host = document.createElement('div');
-    container.appendChild(host);
+    const host = container.createDiv();
     const id = nameToSlug(name);
     await (async () => {
     // Try custom first
@@ -499,7 +489,7 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
       renderCollapsible(host, title, structured.html);
       if (structured.descMarkdown) {
         try {
-          const app = (globalThis as unknown as { app?: App }).app;
+          const app = getObsidianApp();
           if (app) {
             const mount = host.querySelector(`#${structured.descMountId}`);
             if (mount instanceof HTMLElement) {

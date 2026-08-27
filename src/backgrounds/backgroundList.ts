@@ -6,7 +6,7 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { Component, MarkdownRenderer } from 'obsidian';
 import { getKnownBackgroundIdsForKey } from './backgroundUtils';
 import { getCachedBackground, setCachedBackground, findCustomBackgroundById, buildCustomBackgroundHtmlStructured, cleanBackgroundTitle } from './background';
-import { fetchPageContent, renderCollapsible, displayNameFromSlug, parseSearchDirective, parseSearchModeDirective } from '../utils';
+import { fetchPageContent, getObsidianApp, renderCollapsible, displayNameFromSlug, parseSearchDirective, parseSearchModeDirective } from '../utils';
 
 export async function renderBackgroundList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
@@ -21,16 +21,14 @@ export async function renderBackgroundList(source: string, el: HTMLElement, _ctx
   if (!ids.length) {
     const msg = el.createEl('div', { text: 'No backgrounds found (preload may not have completed). Retrying…' });
     const start = Date.now();
-    const intervalId = globalThis.setInterval(async () => {
+    const intervalId = window.setInterval(async () => {
       const current = getKnownBackgroundIdsForKey(urlKey);
       if (current.length) {
-        globalThis.clearInterval(intervalId);
+        window.clearInterval(intervalId);
         el.empty();
-        const container = document.createElement('div');
-        el.appendChild(container);
+        const container = el.createDiv();
         const tasks = current.map(async (id) => {
-          const host = document.createElement('div');
-          container.appendChild(host);
+          const host = container.createDiv();
           const cached = getCachedBackground(urlKey, id);
           if (cached?.html) { renderCollapsible(host, cached.title, cached.html); return; }
           const res = await fetchPageContent(baseUrl, 'background', id);
@@ -46,7 +44,7 @@ export async function renderBackgroundList(source: string, el: HTMLElement, _ctx
       } else {
         const secs = Math.floor((Date.now() - start) / 1000);
         if (secs >= 30) {
-          globalThis.clearInterval(intervalId);
+          window.clearInterval(intervalId);
           msg.textContent = 'No backgrounds found after 30s. Please ensure preloading ran or reload the plugin.';
         } else {
           msg.textContent = 'No backgrounds found yet…';
@@ -56,13 +54,11 @@ export async function renderBackgroundList(source: string, el: HTMLElement, _ctx
     return;
   }
 
-  const container = document.createElement('div');
-  el.appendChild(container);
+  const container = el.createDiv();
 
   const tasks = ids
     .map(async (id) => {
-    const host = document.createElement('div');
-    container.appendChild(host);
+    const host = container.createDiv();
     await (async () => {
     const cached = getCachedBackground(urlKey, id);
     if (cached?.html) { renderCollapsible(host, cached.title, cached.html); return; }
@@ -73,7 +69,7 @@ export async function renderBackgroundList(source: string, el: HTMLElement, _ctx
       const structured = buildCustomBackgroundHtmlStructured(content, title, uid);
       renderCollapsible(host, title, structured.html);
       try {
-        const app = (globalThis as unknown as { app?: import('obsidian').App }).app;
+        const app = getObsidianApp();
         if (structured.descMarkdown && app) {
           const mount = host.querySelector(`#${structured.descMountId}`);
           if (mount instanceof HTMLElement) {

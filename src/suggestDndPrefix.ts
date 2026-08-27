@@ -46,10 +46,6 @@ export class DndPrefixSuggest extends EditorSuggest<{ text: string }> {
     }
 
     // Otherwise suggest URL keys from stored config
-    const result: Array<{ text: string }> = [];
-    peekBaseUrls().then((urls) => {
-      // This is async but getSuggestions is sync — we cache and re-trigger if needed
-    });
     const cachedKeys = this._cachedUrlKeys;
     return cachedKeys
       .filter((k) => k.toLowerCase().startsWith(q))

@@ -2,8 +2,8 @@
  * lineageUtils.ts
  * Utilities for lineage metadata and ID management.
  */
-import { App, TFile, TFolder, TAbstractFile } from 'obsidian';
-import { nameToSlug } from '../utils';
+import { TFile, TFolder, TAbstractFile } from 'obsidian';
+import { getObsidianApp, nameToSlug } from '../utils';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../genericLoader';
 
 const lineageIdCache: Map<string, Set<string>> = new Map();
@@ -47,7 +47,7 @@ export async function preloadAllLineageIds(urlKey: string, baseUrl: string): Pro
 
   // Also include any custom lineages from the vault folder DnD-Cards/Lineages
   try {
-    const app = (globalThis as unknown as { app?: App }).app;
+    const app = getObsidianApp();
     const vault = app?.vault;
     const folderPath = 'DnD-Cards/Lineages';
     const folder = vault?.getAbstractFileByPath(folderPath);

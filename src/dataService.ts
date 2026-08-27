@@ -125,34 +125,13 @@ export async function getBaseUrl(): Promise<string | null> {
 		const task = (baseUrlTask ??= new Promise<string | null>((resolve) => {
 			new BaseUrlPromptModal(app, async (value: string) => {
 				if (!value) {
-					const n = new Notice(
-						"DnD Wiki: No URL provided; plugin may not work."
-					);
-					(
-						globalThis as unknown as { __dndWikiNotices?: unknown[] }
-					).__dndWikiNotices =
-						(
-							globalThis as unknown as {
-								__dndWikiNotices?: unknown[];
-							}
-						).__dndWikiNotices || [];
-					(
-						globalThis as unknown as { __dndWikiNotices: unknown[] }
-					).__dndWikiNotices.push(n);
+					new Notice("DnD Wiki: No URL provided; plugin may not work.");
 					resolve(null);
 					return;
 				}
 				const updated: PluginSettingsJson = { ...current, baseurl: value };
 				await writeSettings(updated);
-				const n2 = new Notice("DnD Wiki: Base URL saved.");
-				(
-					globalThis as unknown as { __dndWikiNotices?: unknown[] }
-				).__dndWikiNotices =
-					(globalThis as unknown as { __dndWikiNotices?: unknown[] })
-						.__dndWikiNotices || [];
-				(
-					globalThis as unknown as { __dndWikiNotices: unknown[] }
-				).__dndWikiNotices.push(n2);
+				new Notice("DnD Wiki: Base URL saved.");
 				cachedBaseUrl = value;
 				// Best-effort: refresh the active Markdown view after a short delay
 				setTimeout(() => {
@@ -160,14 +139,15 @@ export async function getBaseUrl(): Promise<string | null> {
 					const leaf = app.workspace.getLeaf(true);
 					if (leaf && view) {
 						const state = leaf.getViewState();
-						leaf.setViewState(state);
+						void leaf.setViewState(state).catch((error) => {
+							console.warn('DnD Wiki: Failed to refresh the active Markdown view', error);
+						});
 						app.workspace.trigger('active-leaf-change');
 					} else {
 						// Fallback: reopen the active file
 						const file = app.workspace.getActiveFile();
 						if (file) {
-							// eslint-disable-next-line @typescript-eslint/no-explicit-any
-							(app.workspace as any).openLinkText?.(file.path, '', true);
+							void app.workspace.openLinkText(file.path, '', true);
 						}
 					}
 				}, 1000);
@@ -187,15 +167,7 @@ export async function getBaseUrl(): Promise<string | null> {
 	}
 	// 5) If still missing, warn and return empty string-equivalent
 	if (!result) {
-		const warn = new Notice("DnD Wiki: Base URL not set; please configure it.");
-		(
-			globalThis as unknown as { __dndWikiNotices?: unknown[] }
-		).__dndWikiNotices =
-			(globalThis as unknown as { __dndWikiNotices?: unknown[] })
-				.__dndWikiNotices || [];
-		(
-			globalThis as unknown as { __dndWikiNotices: unknown[] }
-		).__dndWikiNotices.push(warn);
+		new Notice("DnD Wiki: Base URL not set; please configure it.");
 		return "";
 	}
 	return result;

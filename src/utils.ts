@@ -93,27 +93,39 @@ export async function fetchPageAtUrl(url: string): Promise<{ ok: boolean; titleT
 }
 
 // Shared collapsible renderer used by spells (and can be reused elsewhere)
+function appendHtmlFragment(container: HTMLElement, html: string): void {
+	const parsed = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
+	const root = parsed.body.firstElementChild;
+	if (!root) return;
+
+	for (const child of Array.from(root.childNodes)) {
+		container.appendChild(document.importNode(child, true));
+	}
+}
+
 export function renderCollapsible(el: HTMLElement, title: string, html: string) {
 	const uid = createUid();
 	const contentDivId = `card-content-${uid}`;
 	const arrowId = `card-arrow-${uid}`;
-	el.innerHTML = `
-		<div class="dnd-wiki-card-title" id="title-${contentDivId}">
-			<span class="dnd-wiki-card-arrow" id="${arrowId}">▼</span>
-			<span class="dnd-wiki-card-title-text">${title}</span>
-		</div>
-		<div class="dnd-wiki-card-content" id="${contentDivId}">${html}</div>
-	`;
-	const titleDiv = el.querySelector(`#title-${contentDivId}`);
-	const contentDiv = el.querySelector(`#${contentDivId}`);
-	const arrow = el.querySelector(`#${arrowId}`);
-	if (!titleDiv || !contentDiv || !arrow) return;
+	el.empty();
+
+	const titleDiv = el.createDiv('dnd-wiki-card-title');
+	titleDiv.id = `title-${contentDivId}`;
+
+	const arrow = titleDiv.createSpan('dnd-wiki-card-arrow');
+	arrow.id = arrowId;
+	arrow.textContent = '▼';
+
+	const titleText = titleDiv.createSpan('dnd-wiki-card-title-text');
+	titleText.textContent = title;
+
+	const contentDiv = el.createDiv('dnd-wiki-card-content');
+	contentDiv.id = contentDivId;
+	appendHtmlFragment(contentDiv, html);
 	titleDiv.addEventListener('click', () => {
-		const c = contentDiv as HTMLElement;
-		const a = arrow as HTMLElement;
-		const isHidden = !c.classList.contains('dnd-wiki-card-content-visible');
-		c.classList.toggle('dnd-wiki-card-content-visible', isHidden);
-		a.textContent = isHidden ? '▲' : '▼';
+		const isHidden = !contentDiv.classList.contains('dnd-wiki-card-content-visible');
+		contentDiv.classList.toggle('dnd-wiki-card-content-visible', isHidden);
+		arrow.textContent = isHidden ? '▲' : '▼';
 	});
 }
 
@@ -121,7 +133,7 @@ export function renderCollapsible(el: HTMLElement, title: string, html: string) 
  * Safely obtain the Obsidian App instance from global scope.
  */
 export function getObsidianApp(): App | null {
-	return (globalThis as unknown as { app?: App }).app ?? null;
+	return (window as Window & { app?: App }).app ?? null;
 }
 
 /**
@@ -130,7 +142,7 @@ export function getObsidianApp(): App | null {
  */
 export function createUid(): string {
 	try {
-		const anyCrypto = (globalThis as unknown as { crypto?: Crypto }).crypto;
+		const anyCrypto = window.crypto;
 		if (anyCrypto && 'randomUUID' in anyCrypto && typeof anyCrypto.randomUUID === 'function') {
 			return anyCrypto.randomUUID();
 		}

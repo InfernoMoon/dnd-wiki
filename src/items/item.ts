@@ -5,8 +5,8 @@
  * Uses a simple in-memory cache and shared collapsible UI renderer.
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { App, TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
-import { nameToSlug, fetchPageContent, renderCollapsible, displayNameFromSlug } from '../utils';
+import { TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
+import { getObsidianApp, nameToSlug, fetchPageContent, renderCollapsible, displayNameFromSlug } from '../utils';
 
 // Cache for fetched item content: outer key = urlKey, inner key = item id
 const itemCache = new Map<string, Map<string, { title: string; html: string }>>();
@@ -37,7 +37,7 @@ export function setCachedItem(urlKey: string, id: string, data: { title: string;
  * @param html Pre-rendered inner HTML content.
  */
 function renderItemCard(container: HTMLElement, title: string, html: string) {
-  const host = document.createElement('div');
+  const host = container.createDiv();
   host.classList.add('dnd-wiki-card-spacer');
   container.appendChild(host);
   renderCollapsible(host, title, html);
@@ -63,8 +63,7 @@ export async function renderItem(source: string, el: HTMLElement, _ctx: Markdown
   }
 
   const ids = lines.map(l => nameToSlug(l)).filter(Boolean);
-  const container = document.createElement('div');
-  el.appendChild(container);
+  const container = el.createDiv();
 
   for (const id of ids) {
     // Try custom item first
@@ -73,13 +72,13 @@ export async function renderItem(source: string, el: HTMLElement, _ctx: Markdown
       const { file, title, content } = custom;
       const uid = Math.random().toString(36).slice(2, 11);
       const structured = buildCustomItemHtmlStructured(content, title, uid);
-      const host = document.createElement('div');
+      const host = container.createDiv();
       host.classList.add('dnd-wiki-card-spacer');
       container.appendChild(host);
       renderCollapsible(host, title, structured.html);
       if (structured.descMarkdown) {
         try {
-          const app = (globalThis as unknown as { app?: App }).app;
+          const app = getObsidianApp();
           if (app) {
             const mount = host.querySelector(`#${structured.descMountId}`);
             if (mount instanceof HTMLElement) {
@@ -122,7 +121,7 @@ export async function renderItem(source: string, el: HTMLElement, _ctx: Markdown
     if (cached?.html) {
       renderItemCard(container, cached.title, cached.html);
     } else {
-      const err = document.createElement('div');
+      const err = container.createDiv();
       err.textContent = `Failed to load item: ${displayNameFromSlug(id)}`;
       container.appendChild(err);
     }
@@ -226,7 +225,7 @@ function buildCustomItemHtmlStructured(content: string, title: string, uid: stri
 
 async function findCustomItemById(id: string): Promise<{ file: TFile; title: string; content: string } | null> {
   try {
-    const app = (globalThis as unknown as { app?: App }).app;
+    const app = getObsidianApp();
     const vault = app?.vault;
     const folderPath = 'DnD-Cards/Items';
     const folder = vault?.getAbstractFileByPath(folderPath);

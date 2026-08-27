@@ -27,8 +27,7 @@ export function cleanLineageTitle(title: string): string {
 }
 
 function renderLineageCard(container: HTMLElement, title: string, html: string) {
-  const host = document.createElement('div');
-  container.appendChild(host);
+  const host = container.createDiv();
   renderCollapsible(host, title, html);
 }
 
@@ -37,14 +36,13 @@ export async function renderLineage(source: string, el: HTMLElement, _ctx: Markd
   if (!baseUrl) { el.createEl('div', { text: 'Base URL is not configured.' }); return; }
   const lines = source.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (!lines.length) { el.createEl('div', { text: 'Provide one or more lineage IDs or names.' }); return; }
-  const container = document.createElement('div');
-  el.appendChild(container);
+  const container = el.createDiv();
   for (const lineageId of lines.map(l => nameToSlug(l)).filter(Boolean)) {
     const cached = await ensureLineageCached(lineageId, urlKey, baseUrl);
     if (cached?.html) {
       renderLineageCard(container, cached.title, cached.html);
     } else {
-      const err = document.createElement('div');
+      const err = container.createDiv();
       err.textContent = `Failed to load lineage: ${lineageId}`;
       container.appendChild(err);
     }
@@ -132,7 +130,8 @@ async function renderCustomLineageToCache(
 ): Promise<{ title: string; html: string } | null> {
   const uid = createUid();
   const structured = buildCustomLineageHtmlStructured(custom.content, custom.title, uid);
-  const host = document.createElement('div');
+  const fragment = document.createDocumentFragment();
+  const host = fragment.createDiv();
   renderCollapsible(host, custom.title, structured.html);
   try {
     const app = getObsidianApp();

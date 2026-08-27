@@ -154,8 +154,7 @@ export function renderWithSections(
   }
 
   for (const section of sections) {
-    const sectionHost = document.createElement('div');
-    host.appendChild(sectionHost);
+    const sectionHost = host.createDiv();
     renderCollapsible(sectionHost, section.title, section.html);
   }
 }

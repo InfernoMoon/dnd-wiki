@@ -4,8 +4,8 @@
  * - Preloads known feat IDs from the configured base URL and custom vault files
  * - Provides helpers to access and format feat identifiers
  */
-import { App, TFile, TFolder, TAbstractFile } from 'obsidian';
-import { nameToSlug } from '../utils';
+import { TFile, TFolder, TAbstractFile } from 'obsidian';
+import { getObsidianApp, nameToSlug } from '../utils';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../genericLoader';
 
 // In-memory set of known feat ids per URL key (normalized slugs)
@@ -51,7 +51,7 @@ export async function preloadAllFeatIds(urlKey: string, baseUrl: string): Promis
 
   // Also include any custom feats from the vault folder DnD-Cards/Feats
   try {
-    const app = (globalThis as unknown as { app?: App }).app;
+    const app = getObsidianApp();
     const vault = app?.vault;
     const folderPath = 'DnD-Cards/Feats';
     const folder = vault?.getAbstractFileByPath(folderPath);

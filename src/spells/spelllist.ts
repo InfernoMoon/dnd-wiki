@@ -226,10 +226,10 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx: Mar
 			const msg = el.createEl("div", { text: "Failed to load spells index. Retrying…" });
 			const start = Date.now();
 			await new Promise<void>((resolve) => {
-				const intervalId = globalThis.setInterval(async () => {
+			const intervalId = window.setInterval(async () => {
 					const attempt = await fetchIndexAndFilters(baseUrl, classSlugs, schoolSlugs);
 					if (attempt.baseDoc) {
-						globalThis.clearInterval(intervalId);
+						window.clearInterval(intervalId);
 						// Clear and proceed
 						el.empty();
 						baseDoc = attempt.baseDoc;
@@ -239,7 +239,7 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx: Mar
 					} else {
 						const secs = Math.floor((Date.now() - start) / 1000);
 						if (secs >= 30) {
-							globalThis.clearInterval(intervalId);
+							window.clearInterval(intervalId);
 							msg.textContent = "Failed to load spells index after 30s. Please check Base URL or network.";
 							resolve();
 						} else {
@@ -328,17 +328,12 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx: Mar
 	seedSpellNamesForKey(urlKey, names);
 
 	const heading = buildHeading(spellLevel, spellLevels, classSlugs, schoolSlugs);
-	const wrap = document.createElement("div");
-	const h2 = document.createElement("h2");
-	h2.classList.add('dnd-wiki-list-heading');
-	h2.textContent = heading;
-	wrap.appendChild(h2);
-	const container = document.createElement("div");
-	wrap.appendChild(container);
-	el.appendChild(wrap);
+	const wrap = el.createDiv();
+	wrap.createEl('h2', { cls: 'dnd-wiki-list-heading', text: heading });
+	const container = wrap.createDiv();
 
 	const tasks = names.map(async (name) => {
-		const host = document.createElement("div");
+		const host = container.createDiv();
 		host.classList.add('dnd-wiki-card-spacer');
 		container.appendChild(host);
 		await renderSingleSpell(host, urlKey, baseUrl, name);

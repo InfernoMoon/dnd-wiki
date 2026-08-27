@@ -37,8 +37,7 @@ export async function renderCustom(
   const sourceDirectiveOffset = sourceMatch.index ?? Number.MAX_SAFE_INTEGER;
   const sectionDirectives = parseSectionDirectives(source, sourceDirectiveOffset);
 
-  const host = document.createElement('div');
-  el.appendChild(host);
+  const host = el.createDiv();
 
   const cache = getCacheForKey(urlKey);
   const cached = cache.get(pageSource);

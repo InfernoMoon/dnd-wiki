@@ -8,7 +8,7 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { Component, MarkdownRenderer } from 'obsidian';
 import { getKnownFeatIdsForKey } from './featUtils';
 import { getCachedFeat, setCachedFeat, findCustomFeatById, buildCustomFeatHtmlStructured } from './feat';
-import { fetchPageContent, renderCollapsible, displayNameFromSlug, parseSearchDirective, parseSearchModeDirective } from '../utils';
+import { fetchPageContent, getObsidianApp, renderCollapsible, displayNameFromSlug, parseSearchDirective, parseSearchModeDirective } from '../utils';
 
 export async function renderFeatList(source: string, el: HTMLElement, _ctx: import('obsidian').MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
@@ -24,17 +24,15 @@ export async function renderFeatList(source: string, el: HTMLElement, _ctx: impo
     // Preloading may be deferred; present a retry message and poll until IDs appear.
     const msg = el.createEl('div', { text: 'No feats found (preload may not have completed). Retrying…' });
     const start = Date.now();
-    const intervalId = globalThis.setInterval(async () => {
+    const intervalId = window.setInterval(async () => {
       const current = getKnownFeatIdsForKey(urlKey);
       if (current.length) {
-        globalThis.clearInterval(intervalId);
+        window.clearInterval(intervalId);
         // Clear previous content and proceed to render
         el.empty();
-        const container = document.createElement('div');
-        el.appendChild(container);
+        const container = el.createDiv();
         const tasks = current.map(async (id) => {
-          const host = document.createElement('div');
-          container.appendChild(host);
+          const host = container.createDiv();
           const cached = getCachedFeat(urlKey, id);
           if (cached?.html) {
             renderCollapsible(host, cached.title, cached.html);
@@ -54,7 +52,7 @@ export async function renderFeatList(source: string, el: HTMLElement, _ctx: impo
         // Update message every second
         const secs = Math.floor((Date.now() - start) / 1000);
         if (secs >= 30) {
-          globalThis.clearInterval(intervalId);
+          window.clearInterval(intervalId);
           msg.textContent = 'No feats found after 30s. Please ensure preloading ran or reload the plugin.';
         } else {
           msg.textContent = `No feats found yet…`;
@@ -64,13 +62,11 @@ export async function renderFeatList(source: string, el: HTMLElement, _ctx: impo
     return;
   }
 
-  const container = document.createElement('div');
-  el.appendChild(container);
+  const container = el.createDiv();
 
   const tasks = ids
     .map(async (id) => {
-    const host = document.createElement('div');
-    container.appendChild(host);
+    const host = container.createDiv();
     await (async () => {
     const cached = getCachedFeat(urlKey, id);
     if (cached?.html) {
@@ -85,7 +81,7 @@ export async function renderFeatList(source: string, el: HTMLElement, _ctx: impo
       const structured = buildCustomFeatHtmlStructured(content, title, uid);
       renderCollapsible(host, title, structured.html);
       try {
-        const app = (globalThis as unknown as { app?: import('obsidian').App }).app;
+        const app = getObsidianApp();
         if (structured.descMarkdown && app) {
           const mount = host.querySelector(`#${structured.descMountId}`);
           if (mount instanceof HTMLElement) {

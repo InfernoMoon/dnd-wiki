@@ -85,18 +85,26 @@ export class DndCardsSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl('h2', { text: 'DnD Wiki Settings' });
+    new Setting(containerEl)
+      .setName('DnD Wiki Settings')
+      .setHeading();
     
-    containerEl.createEl('h3', { text: 'Source URLs' });
+    new Setting(containerEl)
+      .setName('Source URLs')
+      .setHeading();
     containerEl.createEl('p', { text: 'Define multiple Source URLs, like for 5e or 2024' });
     containerEl.createEl('p', { text: 'Obsidian might need to be restarted after adding or removing URLs.' });
     
     const urlsContainer = containerEl.createDiv('urls-container');
     
     // Load and display URLs — exactly what is saved, no automatic additions
-    peekBaseUrls().then((urls) => {
-      displayUrlEntries(urlsContainer, urls);
-    });
+    void peekBaseUrls()
+      .then((urls) => {
+        displayUrlEntries(urlsContainer, urls);
+      })
+      .catch((error) => {
+        console.warn('DnD Wiki: Failed to load source URLs', error);
+      });
     
     containerEl.createEl('hr');
 

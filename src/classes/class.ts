@@ -29,14 +29,12 @@ export async function renderClass(source: string, el: HTMLElement, _ctx: Markdow
   if (!lines.length) { el.createEl('div', { text: 'Provide one or more class names.' }); return; }
 
   const base = baseUrl.replace(/\/$/, '');
-  const container = document.createElement('div');
-  el.appendChild(container);
+  const container = el.createDiv();
 
   for (const line of lines) {
     const id = nameToSlug(line);
     if (!id) continue;
-    const host = document.createElement('div');
-    container.appendChild(host);
+    const host = container.createDiv();
 
     const cached = getCachedClass(urlKey, id);
     if (cached?.html) { renderCollapsible(host, cached.title, cached.html); continue; }

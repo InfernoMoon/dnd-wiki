@@ -45,8 +45,7 @@ export function setCachedFeat(urlKey: string, id: string, data: { title: string;
  * @param html Pre-rendered inner HTML content.
  */
 function renderFeatCard(container: HTMLElement, title: string, html: string) {
-  const host = document.createElement('div');
-  container.appendChild(host);
+  const host = container.createDiv();
   renderCollapsible(host, title, html);
 }
 
@@ -77,15 +76,14 @@ export async function renderFeat(source: string, el: HTMLElement, _ctx: Markdown
   }
 
   const feats = lines.map(l => nameToSlug(l)).filter(Boolean);
-  const container = document.createElement('div');
-  el.appendChild(container);
+  const container = el.createDiv();
 
   for (const featId of feats) {
     const cached = await ensureFeatCached(featId, urlKey, baseUrl);
     if (cached?.html) {
       renderFeatCard(container, cached.title, cached.html);
     } else {
-      const err = document.createElement('div');
+      const err = container.createDiv();
       err.textContent = `Failed to load feat: ${featId}`;
       container.appendChild(err);
     }
@@ -219,7 +217,8 @@ async function renderCustomFeatToCache(
 ): Promise<{ title: string; html: string } | null> {
   const uid = createUid();
   const structured = buildCustomFeatHtmlStructured(custom.content, custom.title, uid);
-  const host = document.createElement('div');
+  const fragment = document.createDocumentFragment();
+  const host = fragment.createDiv();
   renderCollapsible(host, custom.title, structured.html);
   try {
     const app = getObsidianApp();

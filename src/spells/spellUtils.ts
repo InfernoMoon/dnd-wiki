@@ -6,8 +6,8 @@
  * - Fetches spell pages and applies UA fallback
  * - Renders collapsible cards with sanitized content
  */
-import { requestUrl, App, TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from "obsidian";
-import { nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible } from "../utils";
+import { TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from "obsidian";
+import { getObsidianApp, nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible } from "../utils";
 import { loadFromTable, LoaderConfig } from "../genericLoader";
 
 // In-memory cache of rendered spell content: outer key = urlKey, inner key = normalized spell id
@@ -65,7 +65,7 @@ export async function preloadAllSpellNames(urlKey: string, baseUrl: string): Pro
 
   // Also include any custom spells from the vault folder DnD-Cards/Spells
   try {
-    const app = (globalThis as unknown as { app?: App }).app;
+    const app = getObsidianApp();
     const vault = app?.vault;
     const folderPath = 'DnD-Cards/Spells';
     const folder = vault?.getAbstractFileByPath(folderPath);
@@ -101,7 +101,7 @@ export async function renderSingleSpell(host: HTMLElement, urlKey: string, baseU
     const structured = buildCustomSpellHtmlStructured(content, title, uid);
     renderCollapsible(host, title, structured.html);
     try {
-      const app = (globalThis as unknown as { app?: App }).app;
+      const app = getObsidianApp();
       if (structured.descMarkdown && app) {
         const mount = host.querySelector(`#${structured.descMountId}`);
         if (mount instanceof HTMLElement) {
@@ -191,7 +191,7 @@ async function fetchSpellPageWithFallback(baseUrl: string, id: string): Promise<
 /** Try to find a custom spell file by slugged id in DnD-Cards/Spells */
 async function findCustomSpellById(id: string): Promise<{ file: TFile; title: string; content: string } | null> {
   try {
-    const app = (globalThis as unknown as { app?: App }).app;
+    const app = getObsidianApp();
     const vault = app?.vault;
     const folderPath = 'DnD-Cards/Spells';
     const folder = vault?.getAbstractFileByPath(folderPath);
@@ -382,7 +382,7 @@ export interface CustomSpellEntry {
 export async function getCustomSpellEntries(): Promise<CustomSpellEntry[]> {
   const out: CustomSpellEntry[] = [];
   try {
-    const app = (globalThis as unknown as { app?: App }).app;
+    const app = getObsidianApp();
     const vault = app?.vault;
     const folderPath = 'DnD-Cards/Spells';
     const folder = vault?.getAbstractFileByPath(folderPath);

@@ -1,5 +1,5 @@
-import { App, TFolder, TFile, TAbstractFile } from 'obsidian';
-import { nameToSlug } from '../utils';
+import { TFolder, TFile, TAbstractFile } from 'obsidian';
+import { getObsidianApp, nameToSlug } from '../utils';
 import { loadFromTable, LoaderConfig } from '../genericLoader';
 
 // In-memory set of known item ids per URL key (normalized slugs)
@@ -56,7 +56,7 @@ export async function preloadAllItemIds(urlKey: string, baseUrl: string): Promis
 
   // Also include any custom items from the vault folder DnD-Cards/Items
   try {
-    const app = (globalThis as unknown as { app?: App }).app;
+    const app = getObsidianApp();
     const vault = app?.vault;
     const folderPath = 'DnD-Cards/Items';
     const folder = vault?.getAbstractFileByPath(folderPath);

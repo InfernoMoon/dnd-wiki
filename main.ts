@@ -51,7 +51,7 @@ export default class DndWiki extends Plugin {
 		this.registerEditorSuggest(new ItemListSuggest(this));
 		// Register suggestions when typing ```dnd for block suffixes
 		const dndPrefixSuggest = new DndPrefixSuggest(this);
-		dndPrefixSuggest.refreshUrlKeys();
+		await dndPrefixSuggest.refreshUrlKeys();
 		this.registerEditorSuggest(dndPrefixSuggest);
 		// Register editor suggestions for ```dnd-item blocks
 		this.registerEditorSuggest(new ItemNameSuggest(this));
@@ -61,11 +61,10 @@ export default class DndWiki extends Plugin {
 		this.registerEditorSuggest(new LineageNameSuggest(this));
 		this.registerEditorSuggest(new LineageListSuggest(this));
 		const classNameSuggest = new ClassNameSuggest(this);
-		classNameSuggest.refreshClassNames();
+		await classNameSuggest.refreshClassNames();
 		this.registerEditorSuggest(classNameSuggest);
 		// Subclass suggester — receives a lookup fn to resolve urlKey -> baseUrl at suggestion time
-		let urlsSnapshot: Record<string, string> = {};
-		peekBaseUrls().then(u => { urlsSnapshot = u; });
+		const urlsSnapshot = await peekBaseUrls();
 		this.registerEditorSuggest(new SubclassNameSuggest(this, (urlKey) => urlsSnapshot[urlKey] || ''));
 		this.registerEditorSuggest(new CustomSuggest(this));
 		// Block processors — registered dynamically per URL key in onLayoutReady below

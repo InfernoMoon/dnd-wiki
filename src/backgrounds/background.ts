@@ -25,8 +25,7 @@ export function setCachedBackground(urlKey: string, id: string, data: { title: s
 }
 
 function renderBackgroundCard(container: HTMLElement, title: string, html: string) {
-  const host = document.createElement('div');
-  container.appendChild(host);
+  const host = container.createDiv();
   renderCollapsible(host, title, html);
 }
 
@@ -44,15 +43,14 @@ export async function renderBackground(source: string, el: HTMLElement, _ctx: Ma
   }
 
   const backgrounds = lines.map(l => nameToSlug(l)).filter(Boolean);
-  const container = document.createElement('div');
-  el.appendChild(container);
+  const container = el.createDiv();
 
   for (const bgId of backgrounds) {
     const cached = await ensureBackgroundCached(bgId, urlKey, baseUrl);
     if (cached?.html) {
       renderBackgroundCard(container, cached.title, cached.html);
     } else {
-      const err = document.createElement('div');
+      const err = container.createDiv();
       err.textContent = `Failed to load background: ${bgId}`;
       container.appendChild(err);
     }
@@ -162,7 +160,8 @@ async function renderCustomBackgroundToCache(
 ): Promise<{ title: string; html: string } | null> {
   const uid = createUid();
   const structured = buildCustomBackgroundHtmlStructured(custom.content, custom.title, uid);
-  const host = document.createElement('div');
+  const fragment = document.createDocumentFragment();
+  const host = fragment.createDiv();
   renderCollapsible(host, custom.title, structured.html);
   try {
     const app = getObsidianApp();

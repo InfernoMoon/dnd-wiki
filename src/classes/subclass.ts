@@ -49,8 +49,7 @@ export async function renderSubclass(source: string, el: HTMLElement, _ctx: Mark
 
   const base = baseUrl.replace(/\/$/, '');
   const cache = getCacheForKey(urlKey);
-  const host = document.createElement('div');
-  el.appendChild(host);
+  const host = el.createDiv();
 
   const cacheKey = `${classSlug}:${subinfoSlug}`;
   const cached = cache.get(cacheKey);

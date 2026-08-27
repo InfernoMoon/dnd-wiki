@@ -1,4 +1,5 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
+import type { EditorSuggestTriggerInfo } from 'obsidian';
 import { peekBaseUrls } from './dataService';
 
 const BLOCK_SUFFIXES = ['-spell', '-spelllist', '-feat', '-featlist', '-magicitem', '-magicitemlist', '-background', '-backgroundlist', '-lineage', '-lineagelist', '-class', '-classinfo', '-custom'];
@@ -20,13 +21,13 @@ export class DndPrefixSuggest extends EditorSuggest<{ text: string }> {
     return { startCh, fragment };
   }
 
-  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null) {
+  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null): EditorSuggestTriggerInfo | null {
     try {
       const pos = this.isAtDndPrefix(cursor, editor);
       if (!pos) return null;
       const start = { line: cursor.line, ch: pos.startCh };
       const end = { line: cursor.line, ch: cursor.ch };
-      return { start, end, query: pos.fragment } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+      return { start, end, query: pos.fragment };
     } catch {
       return null;
     }

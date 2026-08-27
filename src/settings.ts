@@ -10,7 +10,7 @@ function displayUrlEntries(container: HTMLElement, urls: Record<string, string>)
     
     let currentKeyValue = key;
     let currentUrlValue = url;
-    let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+    let saveTimeout: number | null = null;
 
     const autoSave = async () => {
       const newKey = currentKeyValue.trim();
@@ -26,8 +26,8 @@ function displayUrlEntries(container: HTMLElement, urls: Record<string, string>)
     };
 
     const scheduleAutoSave = () => {
-      if (saveTimeout) clearTimeout(saveTimeout);
-      saveTimeout = setTimeout(autoSave, 600);
+      if (saveTimeout) window.clearTimeout(saveTimeout);
+      saveTimeout = window.setTimeout(autoSave, 600);
     };
     
     const inputRow = entryDiv.createDiv();
@@ -50,7 +50,7 @@ function displayUrlEntries(container: HTMLElement, urls: Record<string, string>)
     const deleteBtn = inputRow.createEl('button', { text: 'Delete' });
     deleteBtn.addClass('dnd-wiki-delete-url-button');
     deleteBtn.onclick = async () => {
-      if (saveTimeout) clearTimeout(saveTimeout);
+      if (saveTimeout) window.clearTimeout(saveTimeout);
       const currentUrls = await peekBaseUrls();
       delete currentUrls[key];
       await setBaseUrls(currentUrls);

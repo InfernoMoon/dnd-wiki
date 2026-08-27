@@ -1,14 +1,15 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
+import type { App, EditorSuggestContext, EditorSuggestTriggerInfo } from 'obsidian';
 import { getCachedClassNames } from '../dataService';
 import { getKnownSubclassNamesForParent, preloadSubclassIds } from '../classes/subclassUtils';
 import { nameToSlug } from '../utils';
 
 export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;
-  private currentUrlKey: string = '';
-  private currentBaseUrl: string = '';
+  private currentUrlKey = '';
+  private currentBaseUrl = '';
 
-  constructor(appPlugin: { app: import('obsidian').App }, private getBaseUrlForKey: (urlKey: string) => string) {
+  constructor(appPlugin: { app: App }, private getBaseUrlForKey: (urlKey: string) => string) {
     super(appPlugin.app);
   }
 
@@ -54,7 +55,7 @@ export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
     return values;
   }
 
-  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null) {
+  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null): EditorSuggestTriggerInfo | null {
     try {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
@@ -65,21 +66,21 @@ export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
       const colonIdx = uptoCursor.indexOf(':');
       if (colonIdx === -1) {
         this.currentKey = null;
-        return { start: { line: cursor.line, ch: 0 }, end: { line: cursor.line, ch: cursor.ch }, query: uptoCursor.trim() } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+        return { start: { line: cursor.line, ch: 0 }, end: { line: cursor.line, ch: cursor.ch }, query: uptoCursor.trim() };
       }
       this.currentKey = uptoCursor.slice(0, colonIdx).trim().toLowerCase();
       let startCh = colonIdx + 1;
       while (startCh < uptoCursor.length && /\s/.test(uptoCursor[startCh])) startCh++;
-      return { start: { line: cursor.line, ch: startCh }, end: { line: cursor.line, ch: cursor.ch }, query: uptoCursor.slice(startCh).trim() } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+      return { start: { line: cursor.line, ch: startCh }, end: { line: cursor.line, ch: cursor.ch }, query: uptoCursor.slice(startCh).trim() };
     } catch { return null; }
   }
 
-  getSuggestions(context: { query: string; editor: Editor; start: EditorPosition }): Array<{ text: string }> {
+  getSuggestions(context: EditorSuggestContext): Array<{ text: string }> {
     const q = (context.query || '').toLowerCase();
 
     if (!this.currentKey) {
-      const editor = (context as any).editor as Editor;
-      const classSlug = editor ? this.getClassFromBlock((context as any).start, editor) : '';
+      const { editor, start } = context;
+        const classSlug = this.getClassFromBlock(start, editor);
       const directives = classSlug
         ? ['class:', 'subinfo:', 'section:', 'sectionFrom:']
         : ['class:'];
@@ -93,10 +94,10 @@ export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
     }
 
     if (this.currentKey === 'subinfo') {
-      const editor = (context as any).editor as Editor;
-      const classSlug = editor ? this.getClassFromBlock((context as any).start, editor) : '';
+      const { editor, start } = context;
+      const classSlug = this.getClassFromBlock(start, editor);
       if (classSlug && this.currentBaseUrl) {
-        const prevSubinfos = editor ? this.getPreviousSubinfosFromBlock((context as any).start, editor) : [];
+        const prevSubinfos = this.getPreviousSubinfosFromBlock(start, editor);
         const parentSubinfo = prevSubinfos.length ? prevSubinfos[prevSubinfos.length - 1] : undefined;
         // Trigger preload if not yet cached (async, will populate on next keystroke)
         void preloadSubclassIds(this.currentUrlKey, this.currentBaseUrl, classSlug, parentSubinfo)
@@ -120,10 +121,7 @@ export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
 
   selectSuggestion(item: { text: string }) {
     if (!this.context) return;
-    const ctx = this.context as { editor: Editor; start: EditorPosition; end: EditorPosition } | null;
-    if (!ctx) return;
-    const { editor, start, end } = ctx;
-    if (!editor) return;
+    const { editor, start, end } = this.context;
     editor.replaceRange(item.text, start, end);
     editor.setCursor({ line: end.line, ch: start.ch + item.text.length });
     this.close();

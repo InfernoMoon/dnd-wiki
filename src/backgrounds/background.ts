@@ -12,8 +12,11 @@ import { nameToSlug, fetchPageContent, renderCollapsible, escapeHtml, getObsidia
 const backgroundCache = new Map<string, Map<string, { title: string; html: string }>>();
 
 function getCacheForKey(urlKey: string): Map<string, { title: string; html: string }> {
-  if (!backgroundCache.has(urlKey)) backgroundCache.set(urlKey, new Map());
-  return backgroundCache.get(urlKey)!;
+  const existing = backgroundCache.get(urlKey);
+  if (existing) return existing;
+  const cache = new Map<string, { title: string; html: string }>();
+  backgroundCache.set(urlKey, cache);
+  return cache;
 }
 
 export function getCachedBackground(urlKey: string, id: string): { title: string; html: string } | null {

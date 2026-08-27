@@ -26,8 +26,11 @@ export function getKnownFeatIdsForKey(urlKey: string): string[] {
  * @param baseUrl The configured base URL to fetch and parse.
  */
 export async function preloadAllFeatIds(urlKey: string, baseUrl: string): Promise<void> {
-  if (!featIdCache.has(urlKey)) featIdCache.set(urlKey, new Set());
-  const cache = featIdCache.get(urlKey)!;
+  let cache = featIdCache.get(urlKey);
+  if (!cache) {
+    cache = new Set();
+    featIdCache.set(urlKey, cache);
+  }
 
   // Configure generic loader for feats
   const config: LoaderConfig = {

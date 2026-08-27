@@ -38,7 +38,7 @@ function parseLevelDirective(source: string): LevelDirective {
   // Also match words (e.g., Common, Very-Rare) possibly comma-separated
   const mWords = m || lines.map((l) => /^level:\s*(.+)$/i.exec(l)).find(Boolean);
   if (!mWords) return null;
-  const raw = (mWords![1] || '').toLowerCase().trim();
+  const raw = (mWords[1] || '').toLowerCase().trim();
   if (raw === 'all') return 'all';
   const expand = (txt: string): number[] => {
     const out: number[] = [];
@@ -131,7 +131,7 @@ function parseTypeDirective(source: string): string[] | 'all' | null {
   const lines = source.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const m = lines.map((l) => /^type:\s*(.+)$/i.exec(l)).find(Boolean);
   if (!m) return null;
-  const raw = (m![1] || '').trim();
+  const raw = (m[1] || '').trim();
   if (/^all$/i.test(raw)) return 'all';
   return raw
     .split(',')
@@ -149,7 +149,7 @@ function extractItems(root: Document | Element): Array<{ name: string; type: str
     const tds = Array.from(tr.querySelectorAll('td'));
     const nameIdx = tds.findIndex((td) => !!td.querySelector('a[href]'));
     if (nameIdx === -1) continue;
-    const anchor = tds[nameIdx].querySelector('a[href]') as HTMLAnchorElement | null;
+    const anchor = tds[nameIdx].querySelector('a[href]');
     const name = (anchor?.textContent || '').trim();
     if (!name) continue;
     // Type is in the immediate next td after the name td (i+1)
@@ -315,7 +315,7 @@ function parseAttunedDirective(sourceText: string): 'all' | boolean | null {
   const lines = sourceText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const m = lines.map((l) => /^attuned:\s*(all|true|false|required|not-required)$/i.exec(l)).find(Boolean);
   if (!m) return null;
-  const v = (m![1] || '').toLowerCase().trim();
+  const v = (m[1] || '').toLowerCase().trim();
   if (v === 'all') return 'all';
   if (v === 'true' || v === 'required') return true;
   if (v === 'false' || v === 'not-required') return false;
@@ -421,7 +421,10 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
     let customEligible: string[] = [];
     if (Array.isArray(itemLevels) && itemLevels.length) {
       const setLvls = new Set(itemLevels);
-      customEligible = customItems.filter(ci => ci.levelIdx !== null && setLvls.has(ci.levelIdx!)).map(ci => ci.name);
+      customEligible = customItems.flatMap((ci) => {
+        const { levelIdx } = ci;
+        return levelIdx !== null && setLvls.has(levelIdx) ? [ci.name] : [];
+      });
     } else if (typeof itemLevel === 'number' && !Number.isNaN(itemLevel)) {
       customEligible = customItems.filter(ci => ci.levelIdx === itemLevel).map(ci => ci.name);
     } else {

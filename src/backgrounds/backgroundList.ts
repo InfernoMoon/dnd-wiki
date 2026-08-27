@@ -17,7 +17,7 @@ export async function renderBackgroundList(source: string, el: HTMLElement, _ctx
   const searches = parseSearchDirective(source);
   const searchMode = parseSearchModeDirective(source);
 
-  let ids = getKnownBackgroundIdsForKey(urlKey);
+  const ids = getKnownBackgroundIdsForKey(urlKey);
   if (!ids.length) {
     const msg = el.createEl('div', { text: 'No backgrounds found (preload may not have completed). Retrying…' });
     const start = Date.now();

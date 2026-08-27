@@ -14,8 +14,11 @@ import { nameToSlug, fetchPageContent, renderCollapsible, escapeHtml, getObsidia
 const featCache = new Map<string, Map<string, { title: string; html: string }>>();
 
 function getCacheForKey(urlKey: string): Map<string, { title: string; html: string }> {
-  if (!featCache.has(urlKey)) featCache.set(urlKey, new Map());
-  return featCache.get(urlKey)!;
+  const existing = featCache.get(urlKey);
+  if (existing) return existing;
+  const cache = new Map<string, { title: string; html: string }>();
+  featCache.set(urlKey, cache);
+  return cache;
 }
 
 /**

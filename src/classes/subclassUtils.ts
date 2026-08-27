@@ -11,8 +11,11 @@ const subclassCache = new Map<string, Map<string, string[]>>();
 const ROOT_PARENT = '__root__';
 
 function getCacheForKey(urlKey: string): Map<string, string[]> {
-  if (!subclassCache.has(urlKey)) subclassCache.set(urlKey, new Map());
-  return subclassCache.get(urlKey)!;
+  const existing = subclassCache.get(urlKey);
+  if (existing) return existing;
+  const cache = new Map<string, string[]>();
+  subclassCache.set(urlKey, cache);
+  return cache;
 }
 
 export function getKnownSubclassIdsForClass(urlKey: string, classSlug: string): string[] {

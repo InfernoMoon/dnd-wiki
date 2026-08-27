@@ -3,14 +3,17 @@
  * Markdown code block processor for ```dnd-lineage blocks.
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
+import { TFile, TFolder, MarkdownRenderer, Component } from 'obsidian';
 import { nameToSlug, fetchPageContent, renderCollapsible, escapeHtml, getObsidianApp, createUid, extractCardContentHtml } from '../utils';
 
 const lineageCache = new Map<string, Map<string, { title: string; html: string }>>();
 
 function getCacheForKey(urlKey: string): Map<string, { title: string; html: string }> {
-  if (!lineageCache.has(urlKey)) lineageCache.set(urlKey, new Map());
-  return lineageCache.get(urlKey)!;
+  const existing = lineageCache.get(urlKey);
+  if (existing) return existing;
+  const cache = new Map<string, { title: string; html: string }>();
+  lineageCache.set(urlKey, cache);
+  return cache;
 }
 
 export function getCachedLineage(urlKey: string, id: string): { title: string; html: string } | null {
@@ -56,7 +59,7 @@ export async function findCustomLineageById(id: string): Promise<{ file: TFile; 
     const folderPath = 'DnD-Cards/Lineages';
     const folder = vault?.getAbstractFileByPath(folderPath);
     if (!(folder instanceof TFolder)) return null;
-    for (const child of (folder.children as TAbstractFile[])) {
+    for (const child of folder.children) {
       if (child instanceof TFile && child.extension?.toLowerCase() === 'md') {
         const baseName: string = child.basename || child.name.replace(/\.md$/i, '');
         if (nameToSlug(baseName) === id) {

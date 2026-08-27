@@ -10,8 +10,11 @@ import { nameToSlug, fetchPageAtUrl, renderCollapsible, displayNameFromSlug } fr
 const classCache = new Map<string, Map<string, { title: string; html: string }>>();
 
 function getCacheForKey(urlKey: string): Map<string, { title: string; html: string }> {
-  if (!classCache.has(urlKey)) classCache.set(urlKey, new Map());
-  return classCache.get(urlKey)!;
+  const existing = classCache.get(urlKey);
+  if (existing) return existing;
+  const cache = new Map<string, { title: string; html: string }>();
+  classCache.set(urlKey, cache);
+  return cache;
 }
 
 export function getCachedClass(urlKey: string, id: string): { title: string; html: string } | null {

@@ -1,9 +1,10 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
+import type { EditorSuggestTriggerInfo } from 'obsidian';
 import { getKnownLineageIdsForKey } from '../lineages/lineageUtils';
 import { displayNameFromSlug } from '../utils';
 
 export class LineageNameSuggest extends EditorSuggest<{ text: string }> {
-  private currentUrlKey: string = '';
+  private currentUrlKey = '';
 
   constructor(appPlugin: { app: import('obsidian').App }) {
     super(appPlugin.app);
@@ -21,7 +22,7 @@ export class LineageNameSuggest extends EditorSuggest<{ text: string }> {
     return false;
   }
 
-  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null) {
+  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null): EditorSuggestTriggerInfo | null {
     try {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
@@ -29,7 +30,7 @@ export class LineageNameSuggest extends EditorSuggest<{ text: string }> {
       const uptoCursor = line.slice(0, cursor.ch);
       const lastComma = uptoCursor.lastIndexOf(',');
       const startCh = lastComma >= 0 ? lastComma + 1 : 0;
-      return { start: { line: cursor.line, ch: startCh }, end: { line: cursor.line, ch: cursor.ch }, query: uptoCursor.slice(startCh).trim().toLowerCase() } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+      return { start: { line: cursor.line, ch: startCh }, end: { line: cursor.line, ch: cursor.ch }, query: uptoCursor.slice(startCh).trim().toLowerCase() };
     } catch { return null; }
   }
 

@@ -4,7 +4,6 @@
  * Uses cached renders where available, prefers custom vault feats,
  * and falls back to fetching from the configured Base URL.
  */
-import type { MarkdownPostProcessorContext } from 'obsidian';
 import { Component, MarkdownRenderer } from 'obsidian';
 import { getKnownFeatIdsForKey } from './featUtils';
 import { getCachedFeat, setCachedFeat, findCustomFeatById, buildCustomFeatHtmlStructured } from './feat';
@@ -19,7 +18,7 @@ export async function renderFeatList(source: string, el: HTMLElement, _ctx: impo
   const searches = parseSearchDirective(source);
   const searchMode = parseSearchModeDirective(source);
 
-  let ids = getKnownFeatIdsForKey(urlKey);
+  const ids = getKnownFeatIdsForKey(urlKey);
   if (!ids.length) {
     // Preloading may be deferred; present a retry message and poll until IDs appear.
     const msg = el.createEl('div', { text: 'No feats found (preload may not have completed). Retrying…' });

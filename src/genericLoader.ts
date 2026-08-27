@@ -66,7 +66,7 @@ export async function loadFromLinks(config: LoaderConfig): Promise<Set<string>> 
       if (!config.linkPattern) continue;
       const m = config.linkPattern.exec(href);
       if (m && m[1]) {
-        let name = m[1];
+        const name = m[1];
         
         // Apply custom filter
         if (config.filterFn && !config.filterFn(name)) continue;

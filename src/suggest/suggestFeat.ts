@@ -1,9 +1,10 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
+import type { EditorSuggestTriggerInfo } from 'obsidian';
 import { getKnownFeatIdsForKey } from '../feats/featUtils';
 import { displayNameFromSlug } from '../utils';
 
 export class FeatNameSuggest extends EditorSuggest<{ text: string }> {
-  private currentUrlKey: string = '';
+  private currentUrlKey = '';
 
   constructor(appPlugin: { app: import('obsidian').App }) {
     super(appPlugin.app);
@@ -24,7 +25,7 @@ export class FeatNameSuggest extends EditorSuggest<{ text: string }> {
     return false;
   }
 
-  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null) {
+  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null): EditorSuggestTriggerInfo | null {
     try {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
@@ -37,7 +38,7 @@ export class FeatNameSuggest extends EditorSuggest<{ text: string }> {
         start: { line: cursor.line, ch: startCh },
         end: { line: cursor.line, ch: cursor.ch },
         query,
-      } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+      };
     } catch {
       return null;
     }

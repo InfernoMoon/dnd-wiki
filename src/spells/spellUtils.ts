@@ -16,13 +16,19 @@ const spellRenderCache: Map<string, Map<string, { titleText: string; contentHtml
 const spellNameCache: Map<string, Set<string>> = new Map();
 
 function getNameCacheForKey(urlKey: string): Set<string> {
-  if (!spellNameCache.has(urlKey)) spellNameCache.set(urlKey, new Set());
-  return spellNameCache.get(urlKey)!;
+  const existing = spellNameCache.get(urlKey);
+  if (existing) return existing;
+  const cache = new Set<string>();
+  spellNameCache.set(urlKey, cache);
+  return cache;
 }
 
 function getRenderCacheForKey(urlKey: string): Map<string, { titleText: string; contentHtml: string }> {
-  if (!spellRenderCache.has(urlKey)) spellRenderCache.set(urlKey, new Map());
-  return spellRenderCache.get(urlKey)!;
+  const existing = spellRenderCache.get(urlKey);
+  if (existing) return existing;
+  const cache = new Map<string, { titleText: string; contentHtml: string }>();
+  spellRenderCache.set(urlKey, cache);
+  return cache;
 }
 
 /** Return known spell IDs for a specific URL key */
@@ -107,7 +113,7 @@ export async function renderSingleSpell(host: HTMLElement, urlKey: string, baseU
         if (mount instanceof HTMLElement) {
           const component = new Component();
           await MarkdownRenderer.render(app, structured.descMarkdown, mount, file.path, component);
-          const contentDiv = mount.parentElement as HTMLElement | null;
+          const contentDiv = mount.parentElement;
           if (contentDiv) {
             renderCache.set(id, { titleText: title, contentHtml: contentDiv.innerHTML });
           }
@@ -399,7 +405,7 @@ export async function getCustomSpellEntries(): Promise<CustomSpellEntry[]> {
           ? meta['spell-lists'].split(',').map(s => s.trim()).filter(Boolean).map(nameToSlug)
           : undefined;
         const school = meta['school'] ? nameToSlug(meta['school']) : undefined;
-        out.push({ id, displayName: baseName, level: Number.isNaN(level!) ? undefined : level, classes, school });
+        out.push({ id, displayName: baseName, level: level === undefined || Number.isNaN(level) ? undefined : level, classes, school });
       }
     }
   } catch {

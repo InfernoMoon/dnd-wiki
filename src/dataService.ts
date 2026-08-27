@@ -123,40 +123,48 @@ export async function getBaseUrl(): Promise<string | null> {
 	// 3) If a prompt task is already in-flight, await it; else start one
 	if (!baseUrlTask) {
 		const task = (baseUrlTask ??= new Promise<string | null>((resolve) => {
-			new BaseUrlPromptModal(app, async (value: string) => {
-				if (!value) {
-					new Notice("DnD Wiki: No URL provided; plugin may not work.");
-					resolve(null);
-					return;
-				}
-				const updated: PluginSettingsJson = { ...current, baseurl: value };
-				await writeSettings(updated);
-				new Notice("DnD Wiki: Base URL saved.");
-				cachedBaseUrl = value;
-				// Best-effort: refresh the active Markdown view after a short delay
-				setTimeout(() => {
-					const view = app.workspace.getActiveViewOfType(MarkdownView);
-					const leaf = app.workspace.getLeaf(true);
-					if (leaf && view) {
-						const state = leaf.getViewState();
-						void leaf.setViewState(state).catch((error) => {
-							console.warn('DnD Wiki: Failed to refresh the active Markdown view', error);
-						});
-						app.workspace.trigger('active-leaf-change');
-					} else {
-						// Fallback: reopen the active file
-						const file = app.workspace.getActiveFile();
-						if (file) {
-							void app.workspace.openLinkText(file.path, '', true);
-						}
+			const handleSubmit = (value: string): void => {
+				void (async () => {
+					if (!value) {
+						new Notice("DnD Wiki: No URL provided; plugin may not work.");
+						resolve(null);
+						return;
 					}
-				}, 1000);
-				resolve(cachedBaseUrl);
-			}).open();
+					const updated: PluginSettingsJson = { ...current, baseurl: value };
+					await writeSettings(updated);
+					new Notice("DnD Wiki: Base URL saved.");
+					cachedBaseUrl = value;
+					// Best-effort: refresh the active Markdown view after a short delay
+					window.setTimeout(() => {
+						const view = app.workspace.getActiveViewOfType(MarkdownView);
+						const leaf = app.workspace.getLeaf(true);
+						if (leaf && view) {
+							const state = leaf.getViewState();
+							void leaf.setViewState(state).catch((error) => {
+								console.warn('DnD Wiki: Failed to refresh the active Markdown view', error);
+							});
+							app.workspace.trigger('active-leaf-change');
+						} else {
+							// Fallback: reopen the active file
+							const file = app.workspace.getActiveFile();
+							if (file) {
+								void app.workspace.openLinkText(file.path, '', true);
+							}
+						}
+					}, 1000);
+					resolve(cachedBaseUrl);
+				})().catch((error: unknown) => {
+					console.warn('DnD Wiki: Failed to save the Base URL', error);
+					resolve(null);
+				});
+			};
+			new BaseUrlPromptModal(app, handleSubmit).open();
 		}));
-		task.finally(() => {
+		void task.finally(() => {
 			// Clear the task so subsequent calls can re-prompt if needed
 			baseUrlTask = undefined;
+		}).catch((error: unknown) => {
+			console.warn('DnD Wiki: Base URL prompt failed', error);
 		});
 	}
 

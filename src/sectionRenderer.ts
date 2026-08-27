@@ -34,8 +34,8 @@ function extractSection(
     range.setEndAfter(header);
   }
 
-  const wrapper = doc.createElement('div');
-  wrapper.appendChild(range.cloneContents());
+	const wrapper = root.cloneNode(false) as HTMLElement;
+	wrapper.appendChild(range.cloneContents());
   return {
     title: (header.textContent || '').trim() || fallbackTitle.trim(),
     html: wrapper.innerHTML,
@@ -101,7 +101,7 @@ function extractSectionsFromHtml(
   const root = doc.querySelector('#section-root');
   if (!root) return [];
 
-  const headers = Array.from(root.querySelectorAll('h1,h2,h3,h4,h5,h6')) as HTMLElement[];
+  const headers = Array.from(root.querySelectorAll<HTMLHeadingElement>('h1,h2,h3,h4,h5,h6'));
   if (!headers.length) return [];
 
   const results: Array<{ title: string; html: string }> = [];
@@ -116,8 +116,12 @@ function extractSectionsFromHtml(
 
 export function parseSectionDirectives(source: string, afterOffset: number): ParsedSectionDirectives {
   const directives: SectionDirective[] = [];
-  const matches = Array.from(source.matchAll(/^(section|sectionFrom):\s*(.+)$/gim))
-    .filter((match) => (match.index ?? Number.MAX_SAFE_INTEGER) > afterOffset);
+  const matches: RegExpExecArray[] = [];
+  const pattern = /^(section|sectionFrom):\s*(.+)$/gim;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(source)) !== null) {
+    if ((match.index ?? Number.MAX_SAFE_INTEGER) > afterOffset) matches.push(match);
+  }
 
   for (const match of matches) {
     const kind = match[1].toLowerCase();

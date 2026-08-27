@@ -13,8 +13,11 @@ import { parseSectionDirectives, renderWithSections } from '../sectionRenderer';
 const subclassRenderCache = new Map<string, Map<string, { title: string; html: string }>>();
 
 function getCacheForKey(urlKey: string): Map<string, { title: string; html: string }> {
-  if (!subclassRenderCache.has(urlKey)) subclassRenderCache.set(urlKey, new Map());
-  return subclassRenderCache.get(urlKey)!;
+  const existing = subclassRenderCache.get(urlKey);
+  if (existing) return existing;
+  const cache = new Map<string, { title: string; html: string }>();
+  subclassRenderCache.set(urlKey, cache);
+  return cache;
 }
 
 export async function renderSubclass(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
@@ -22,7 +25,12 @@ export async function renderSubclass(source: string, el: HTMLElement, _ctx: Mark
   if (!baseUrl) { el.createEl('div', { text: 'Base URL is not configured.' }); return; }
 
   const classMatch = /^class:\s*(.+)$/im.exec(source);
-  const subinfoMatches = Array.from(source.matchAll(/^subinfo:\s*(.+)$/gim));
+  const subinfoMatches: RegExpExecArray[] = [];
+  const subinfoPattern = /^subinfo:\s*(.+)$/gim;
+  let subinfoMatch: RegExpExecArray | null;
+  while ((subinfoMatch = subinfoPattern.exec(source)) !== null) {
+    subinfoMatches.push(subinfoMatch);
+  }
 
   if (!classMatch) { el.createEl('div', { text: 'Provide a `class:` directive.' }); return; }
   if (!subinfoMatches.length) { el.createEl('div', { text: 'Provide one or more `subinfo:` directives.' }); return; }

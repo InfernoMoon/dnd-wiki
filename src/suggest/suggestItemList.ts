@@ -1,4 +1,5 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
+import type { EditorSuggestTriggerInfo } from 'obsidian';
 import { getCachedItemTypes } from '../items/itemUtils';
 
 const HARD_CODED_TYPES = [
@@ -15,7 +16,7 @@ const HARD_CODED_TYPES = [
 
 export class ItemListSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;
-  private currentUrlKey: string = '';
+  private currentUrlKey = '';
   constructor(appPlugin: { app: import('obsidian').App }) {
     super(appPlugin.app);
   }
@@ -35,7 +36,7 @@ export class ItemListSuggest extends EditorSuggest<{ text: string }> {
     return false;
   }
 
-  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null) {
+  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null): EditorSuggestTriggerInfo | null {
     try {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
@@ -50,7 +51,7 @@ export class ItemListSuggest extends EditorSuggest<{ text: string }> {
           start: { line: cursor.line, ch: 0 },
           end: { line: cursor.line, ch: cursor.ch },
           query: fragment,
-        } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+        };
       }
       const key = uptoCursor.slice(0, colonIdx).trim().toLowerCase();
       this.currentKey = key;
@@ -69,7 +70,7 @@ export class ItemListSuggest extends EditorSuggest<{ text: string }> {
         start: { line: cursor.line, ch: startCh },
         end: { line: cursor.line, ch: cursor.ch },
         query: queryFrag,
-      } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+      };
     } catch {
       return null;
     }

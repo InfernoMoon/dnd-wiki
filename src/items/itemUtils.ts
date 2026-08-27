@@ -8,8 +8,11 @@ const itemIdCache: Map<string, Set<string>> = new Map();
 const itemTypeCache: Map<string, string> = new Map();
 
 function getItemCacheForKey(urlKey: string): Set<string> {
-  if (!itemIdCache.has(urlKey)) itemIdCache.set(urlKey, new Set());
-  return itemIdCache.get(urlKey)!;
+  const existing = itemIdCache.get(urlKey);
+  if (existing) return existing;
+  const cache = new Set<string>();
+  itemIdCache.set(urlKey, cache);
+  return cache;
 }
 
 export function getKnownItemIdsForKey(urlKey: string): string[] {

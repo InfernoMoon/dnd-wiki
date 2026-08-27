@@ -1,11 +1,12 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
+import type { EditorSuggestTriggerInfo } from 'obsidian';
 import { getCachedClassNames, getCachedSchoolNames } from '../dataService';
 import { getKnownSpellIdsForKey } from '../spells/spellUtils';
 import { displayNameFromSlug } from '../utils';
 
 export class SpellListSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;
-  private currentUrlKey: string = '';
+  private currentUrlKey = '';
   constructor(appPlugin: { app: import('obsidian').App }) {
     super(appPlugin.app);
   }
@@ -25,7 +26,7 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
     return false;
   }
 
-  onTrigger(cursor: EditorPosition, editor: Editor, file: TFile | null) {
+  onTrigger(cursor: EditorPosition, editor: Editor, file: TFile | null): EditorSuggestTriggerInfo | null {
     try {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
@@ -41,7 +42,7 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
           start: { line: cursor.line, ch: 0 },
           end: { line: cursor.line, ch: cursor.ch },
           query: fragment,
-        } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+        };
       }
       // If we have a directive key, capture it and compute value fragment
       const key = uptoCursor.slice(0, colonIdx).trim().toLowerCase();
@@ -62,7 +63,7 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
         start: { line: cursor.line, ch: startCh },
         end: { line: cursor.line, ch: cursor.ch },
         query: queryFrag,
-      } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+      };
     } catch {
       return null;
     }

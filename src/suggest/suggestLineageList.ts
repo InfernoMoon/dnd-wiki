@@ -1,4 +1,5 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
+import type { EditorSuggestTriggerInfo } from 'obsidian';
 
 export class LineageListSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;
@@ -15,7 +16,7 @@ export class LineageListSuggest extends EditorSuggest<{ text: string }> {
     return false;
   }
 
-  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null) {
+  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null): EditorSuggestTriggerInfo | null {
     try {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
@@ -24,12 +25,12 @@ export class LineageListSuggest extends EditorSuggest<{ text: string }> {
       const colonIdx = uptoCursor.indexOf(':');
       if (colonIdx === -1) {
         this.currentKey = null;
-        return { start: { line: cursor.line, ch: 0 }, end: { line: cursor.line, ch: cursor.ch }, query: uptoCursor.trim() } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+        return { start: { line: cursor.line, ch: 0 }, end: { line: cursor.line, ch: cursor.ch }, query: uptoCursor.trim() };
       }
       this.currentKey = uptoCursor.slice(0, colonIdx).trim().toLowerCase();
       let startCh = colonIdx + 1;
       while (startCh < uptoCursor.length && /\s/.test(uptoCursor[startCh])) startCh++;
-      return { start: { line: cursor.line, ch: startCh }, end: { line: cursor.line, ch: cursor.ch }, query: uptoCursor.slice(startCh).trim() } as unknown as { start: EditorPosition; end: EditorPosition; query: string };
+      return { start: { line: cursor.line, ch: startCh }, end: { line: cursor.line, ch: cursor.ch }, query: uptoCursor.slice(startCh).trim() };
     } catch { return null; }
   }
 

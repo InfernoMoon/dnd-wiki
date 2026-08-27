@@ -12,8 +12,11 @@ import { getObsidianApp, nameToSlug, fetchPageContent, renderCollapsible, displa
 const itemCache = new Map<string, Map<string, { title: string; html: string }>>();
 
 function getItemCacheForKey(urlKey: string): Map<string, { title: string; html: string }> {
-  if (!itemCache.has(urlKey)) itemCache.set(urlKey, new Map());
-  return itemCache.get(urlKey)!;
+  const existing = itemCache.get(urlKey);
+  if (existing) return existing;
+  const cache = new Map<string, { title: string; html: string }>();
+  itemCache.set(urlKey, cache);
+  return cache;
 }
 
 /**
@@ -84,7 +87,7 @@ export async function renderItem(source: string, el: HTMLElement, _ctx: Markdown
             if (mount instanceof HTMLElement) {
               const component = new Component();
               await MarkdownRenderer.render(app, structured.descMarkdown, mount, file.path, component);
-              const contentDiv = mount.parentElement as HTMLElement | null;
+              const contentDiv = mount.parentElement;
               if (contentDiv) {
                 setCachedItem(urlKey, id, { title, html: contentDiv.innerHTML });
               }

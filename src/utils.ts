@@ -82,9 +82,7 @@ export async function fetchPageAtUrl(url: string): Promise<{ ok: boolean; titleT
 		}
 		const links = contentClone.querySelectorAll('a');
 		for (const a of Array.from(links)) {
-			const span = doc.createElement('span');
-			span.textContent = a.textContent || '';
-			a.replaceWith(span);
+			a.replaceWith(doc.createTextNode(a.textContent || ''));
 		}
 		return { ok: true, titleText, contentHtml: contentClone.innerHTML };
 	} catch {
@@ -237,6 +235,6 @@ export async function fetchTitleAndBody(url: string): Promise<{ title: string; h
 	const first = await attempt();
 	if (first) return first;
 	// Retry once after 5 seconds
-	await new Promise(resolve => setTimeout(resolve, 5000));
+	await new Promise<void>(resolve => window.setTimeout(resolve, 5000));
 	return attempt();
 }

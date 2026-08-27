@@ -1,15 +1,16 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
+import type { App, EditorSuggestContext, EditorSuggestTriggerInfo } from 'obsidian';
 import { displayNameFromSlug } from '../utils';
 import { getKnownSpellIdsForKey } from '../spells/spellUtils';
 
 export class SpellNameSuggest extends EditorSuggest<{ slug: string; display: string }> {
-  private currentUrlKey: string = '';
+  private currentUrlKey = '';
 
-  constructor(appPlugin: any) {
+  constructor(appPlugin: { app: App }) {
     super(appPlugin.app);
   }
 
-  onTrigger(cursor: EditorPosition, editor: Editor, file: TFile | null) {
+  onTrigger(cursor: EditorPosition, editor: Editor, file: TFile | null): EditorSuggestTriggerInfo | null {
     try {
       const line = editor.getLine(cursor.line);
       if (line.trim().startsWith('```')) return null;
@@ -36,17 +37,17 @@ export class SpellNameSuggest extends EditorSuggest<{ slug: string; display: str
         start: { line: cursor.line, ch: cursor.ch - query.length },
         end: cursor,
         query,
-      } as any;
+      };
     } catch {
       return null;
     }
   }
 
-  getSuggestions(context: any): Array<{ slug: string; display: string }> {
+  getSuggestions(context: EditorSuggestContext): Array<{ slug: string; display: string }> {
     const q = (context.query || '').toLowerCase();
     // Use per-key spell list if a specific URL key was detected in onTrigger
     const slugs = getKnownSpellIdsForKey(this.currentUrlKey);
-    const items = slugs.map((s: string) => ({ slug: s, display: displayNameFromSlug(s) }));
+    const items = slugs.map((s) => ({ slug: s, display: displayNameFromSlug(s) }));
     return items.filter((it: { display: string }) => it.display.toLowerCase().includes(q)).slice(0, 50);
   }
 
@@ -56,8 +57,7 @@ export class SpellNameSuggest extends EditorSuggest<{ slug: string; display: str
 
   selectSuggestion(item: { slug: string; display: string }) {
     if (!this.context) return;
-    const { editor, start, end } = this.context as any;
-    if (!editor) return;
+    const { editor, start, end } = this.context;
     editor.replaceRange(item.display, start, end);
     editor.setCursor({ line: end.line, ch: start.ch + item.display.length });
     this.close();

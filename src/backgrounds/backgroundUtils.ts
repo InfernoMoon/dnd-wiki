@@ -26,8 +26,11 @@ export function getKnownBackgroundIdsForKey(urlKey: string): string[] {
  * @param baseUrl The configured base URL to fetch and parse.
  */
 export async function preloadAllBackgroundIds(urlKey: string, baseUrl: string): Promise<void> {
-  if (!backgroundIdCache.has(urlKey)) backgroundIdCache.set(urlKey, new Set());
-  const cache = backgroundIdCache.get(urlKey)!;
+  let cache = backgroundIdCache.get(urlKey);
+  if (!cache) {
+    cache = new Set();
+    backgroundIdCache.set(urlKey, cache);
+  }
 
   // Configure generic loader for backgrounds
   const config: LoaderConfig = {

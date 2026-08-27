@@ -13,8 +13,11 @@ export function getKnownLineageIdsForKey(urlKey: string): string[] {
 }
 
 export async function preloadAllLineageIds(urlKey: string, baseUrl: string): Promise<void> {
-  if (!lineageIdCache.has(urlKey)) lineageIdCache.set(urlKey, new Set());
-  const cache = lineageIdCache.get(urlKey)!;
+  let cache = lineageIdCache.get(urlKey);
+  if (!cache) {
+    cache = new Set();
+    lineageIdCache.set(urlKey, cache);
+  }
 
   const is2024 = baseUrl.includes('2024');
 

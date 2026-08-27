@@ -1,7 +1,7 @@
 {
   "id": "dnd-wiki",
   "name": "DnD Wiki",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "minAppVersion": "1.4.0",
   "description": "Turn D&D wiki content into interactive reference cards and filtered lists.",
   "author": "Inferno Moon",

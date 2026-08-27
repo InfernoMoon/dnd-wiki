@@ -330,7 +330,7 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx: Mar
 	const heading = buildHeading(spellLevel, spellLevels, classSlugs, schoolSlugs);
 	const wrap = document.createElement("div");
 	const h2 = document.createElement("h2");
-	h2.style.margin = "0 0 0.5em 0";
+	h2.classList.add('dnd-wiki-list-heading');
 	h2.textContent = heading;
 	wrap.appendChild(h2);
 	const container = document.createElement("div");
@@ -339,7 +339,7 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx: Mar
 
 	const tasks = names.map(async (name) => {
 		const host = document.createElement("div");
-		host.style.marginBottom = "0.75em";
+		host.classList.add('dnd-wiki-card-spacer');
 		container.appendChild(host);
 		await renderSingleSpell(host, urlKey, baseUrl, name);
 		if (searches.length > 0) {
@@ -347,7 +347,7 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx: Mar
 			const match = searchMode === 'and'
 				? searches.every(s => text.includes(s))
 				: searches.some(s => text.includes(s));
-			if (!match) host.style.display = 'none';
+			if (!match) host.classList.add('dnd-wiki-search-hidden');
 		}
 	});
 	await Promise.all(tasks);

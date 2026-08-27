@@ -6,9 +6,7 @@ function displayUrlEntries(container: HTMLElement, urls: Record<string, string>)
   
   for (const [key, url] of Object.entries(urls)) {
     const entryDiv = container.createDiv('url-entry');
-    entryDiv.style.marginBottom = '12px';
-    entryDiv.style.borderLeft = '2px solid #999';
-    entryDiv.style.paddingLeft = '12px';
+    entryDiv.addClass('dnd-wiki-url-entry');
     
     let currentKeyValue = key;
     let currentUrlValue = url;
@@ -33,26 +31,24 @@ function displayUrlEntries(container: HTMLElement, urls: Record<string, string>)
     };
     
     const inputRow = entryDiv.createDiv();
-    inputRow.style.display = 'flex';
-    inputRow.style.gap = '8px';
-    inputRow.style.alignItems = 'center';
+    inputRow.addClass('dnd-wiki-url-input-row');
     
     new Setting(inputRow).addText((t) => {
       t.setValue(key)
         .setPlaceholder('e.g., 5e')
         .onChange((v) => { currentKeyValue = v; scheduleAutoSave(); });
-      t.inputEl.style.width = '100px';
+      t.inputEl.addClass('dnd-wiki-url-key-input');
     });
     
     new Setting(inputRow).addText((t) => {
       t.setValue(url)
         .setPlaceholder('https://example.com')
         .onChange((v) => { currentUrlValue = v; scheduleAutoSave(); });
-      t.inputEl.style.flex = '1';
+      t.inputEl.addClass('dnd-wiki-url-value-input');
     });
     
     const deleteBtn = inputRow.createEl('button', { text: 'Delete' });
-    deleteBtn.style.color = '#d00';
+    deleteBtn.addClass('dnd-wiki-delete-url-button');
     deleteBtn.onclick = async () => {
       if (saveTimeout) clearTimeout(saveTimeout);
       const currentUrls = await peekBaseUrls();
@@ -65,7 +61,7 @@ function displayUrlEntries(container: HTMLElement, urls: Record<string, string>)
   
   // Add new entry button
   const addBtn = container.createEl('button', { text: '+ Add URL' });
-  addBtn.style.marginTop = '12px';
+  addBtn.addClass('dnd-wiki-add-url-button');
   addBtn.onclick = async () => {
     const currentUrls = await peekBaseUrls();
     // Generate a unique key

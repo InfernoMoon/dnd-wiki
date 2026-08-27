@@ -344,7 +344,7 @@ function buildCustomSpellHtmlStructured(content: string, title: string, uid: str
   const spellLists = formatSpellLists(meta['spell-lists']);
 
   const parts: string[] = [];
-  const spacer = '<div style="height:0.5em;"></div>';
+  const spacer = '<div class="dnd-wiki-section-spacer"></div>';
   parts.push('<div>Source: Custom</div>');
   parts.push(spacer);
   if (heading) {
@@ -360,10 +360,10 @@ function buildCustomSpellHtmlStructured(content: string, title: string, uid: str
   }
   const descMountId = `desc-${uid}`;
   if (descriptionRaw) {
-    parts.push(`<div id="${descMountId}" style="margin-top:0.5em;"></div>`);
+    parts.push(`<div id="${descMountId}" class="dnd-wiki-description-mount"></div>`);
     parts.push(spacer);
   }
-  if (spellLists) parts.push(`<div style="margin-top:0.5em;"><strong><em>Spell Lists.</em></strong> ${spellLists}</div>`);
+  if (spellLists) parts.push(`<div class="dnd-wiki-spell-lists"><strong><em>Spell Lists.</em></strong> ${spellLists}</div>`);
   return { html: parts.join(''), descMarkdown: descriptionRaw || null, descMountId };
 }
 

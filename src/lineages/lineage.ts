@@ -113,7 +113,7 @@ export function buildCustomLineageHtmlStructured(content: string, title: string,
   const descRaw        = meta['description'] || '';
 
   const parts: string[] = [];
-  const spacer = '<div style="height:0.5em;"></div>';
+  const spacer = '<div class="dnd-wiki-section-spacer"></div>';
   parts.push('<div>Source: Custom</div>');
   parts.push(spacer);
   if (creatureType) parts.push(`<div><strong>Creature Type:</strong> ${creatureType}</div>`);
@@ -122,7 +122,7 @@ export function buildCustomLineageHtmlStructured(content: string, title: string,
   if (speed) parts.push(`<div><strong>Speed:</strong> ${speed}</div>`);
   if (traits) { parts.push(spacer); parts.push(`<div><strong>Traits:</strong> ${traits}</div>`); }
   const descMountId = `lineage-desc-${uid}`;
-  if (descRaw) { parts.push(spacer); parts.push(`<div id="${descMountId}" style="margin-top:0.5em;"></div>`); }
+  if (descRaw) { parts.push(spacer); parts.push(`<div id="${descMountId}" class="dnd-wiki-description-mount"></div>`); }
   return { html: parts.join(''), descMarkdown: descRaw || null, descMountId };
 }
 

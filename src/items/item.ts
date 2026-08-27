@@ -38,7 +38,7 @@ export function setCachedItem(urlKey: string, id: string, data: { title: string;
  */
 function renderItemCard(container: HTMLElement, title: string, html: string) {
   const host = document.createElement('div');
-  host.style.marginBottom = '0.75em';
+  host.classList.add('dnd-wiki-card-spacer');
   container.appendChild(host);
   renderCollapsible(host, title, html);
 }
@@ -74,7 +74,7 @@ export async function renderItem(source: string, el: HTMLElement, _ctx: Markdown
       const uid = Math.random().toString(36).slice(2, 11);
       const structured = buildCustomItemHtmlStructured(content, title, uid);
       const host = document.createElement('div');
-      host.style.marginBottom = '0.75em';
+      host.classList.add('dnd-wiki-card-spacer');
       container.appendChild(host);
       renderCollapsible(host, title, structured.html);
       if (structured.descMarkdown) {
@@ -209,7 +209,7 @@ function buildCustomItemHtmlStructured(content: string, title: string, uid: stri
   const descriptionRaw = meta['description'] || '';
 
   const parts: string[] = [];
-  const spacer = '<div style="height:0.5em;"></div>';
+  const spacer = '<div class="dnd-wiki-section-spacer"></div>';
   parts.push('<div>Source: Custom</div>');
   parts.push(spacer);
   if (type) parts.push(`<div><strong>Type:</strong> ${escapeHtml(type)}</div>`);
@@ -218,7 +218,7 @@ function buildCustomItemHtmlStructured(content: string, title: string, uid: stri
   if (type || level || attuned) parts.push(spacer);
   const descMountId = `desc-${uid}`;
   if (descriptionRaw) {
-    parts.push(`<div id="${descMountId}" style="margin-top:0.5em;"></div>`);
+    parts.push(`<div id="${descMountId}" class="dnd-wiki-description-mount"></div>`);
     parts.push(spacer);
   }
   return { html: parts.join(''), descMarkdown: descriptionRaw || null, descMountId };

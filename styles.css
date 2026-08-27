@@ -1,0 +1,73 @@
+.dnd-wiki-card-title {
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+}
+
+.dnd-wiki-card-arrow {
+	margin-right: 0.5em;
+}
+
+.dnd-wiki-card-title-text {
+	font-size: 1.1em;
+	font-weight: 600;
+	margin: 0;
+}
+
+.dnd-wiki-card-content {
+	display: none;
+	margin-top: 0.5em;
+}
+
+.dnd-wiki-card-content-visible {
+	display: block;
+}
+
+.dnd-wiki-card-spacer {
+	margin-bottom: 0.75em;
+}
+
+.dnd-wiki-section-spacer {
+	height: 0.5em;
+}
+
+.dnd-wiki-description-mount,
+.dnd-wiki-spell-lists {
+	margin-top: 0.5em;
+}
+
+.dnd-wiki-list-heading {
+	margin: 0 0 0.5em 0;
+}
+
+.dnd-wiki-search-hidden {
+	display: none;
+}
+
+.dnd-wiki-url-entry {
+	margin-bottom: 12px;
+	border-left: 2px solid var(--background-modifier-border);
+	padding-left: 12px;
+}
+
+.dnd-wiki-url-input-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.dnd-wiki-url-key-input {
+	width: 100px;
+}
+
+.dnd-wiki-url-value-input {
+	flex: 1;
+}
+
+.dnd-wiki-delete-url-button {
+	color: var(--text-error);
+}
+
+.dnd-wiki-add-url-button {
+	margin-top: 12px;
+}

@@ -115,7 +115,7 @@ export async function renderFeatList(source: string, el: HTMLElement, _ctx: impo
       const match = searchMode === 'and'
         ? searches.every(s => text.includes(s))
         : searches.some(s => text.includes(s));
-      if (!match) host.style.display = 'none';
+      if (!match) host.classList.add('dnd-wiki-search-hidden');
     }
   });
   await Promise.all(tasks);

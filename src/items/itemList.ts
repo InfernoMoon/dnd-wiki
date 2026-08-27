@@ -243,7 +243,7 @@ function buildCustomItemHtmlStructured(content: string, title: string, uid: stri
   const descriptionRaw = meta['description'] || '';
 
   const parts: string[] = [];
-  const spacer = '<div style="height:0.5em;"></div>';
+  const spacer = '<div class="dnd-wiki-section-spacer"></div>';
   parts.push('<div>Source: Custom</div>');
   parts.push(spacer);
   if (type) parts.push(`<div><strong>Type:</strong> ${escapeHtml(type)}</div>`);
@@ -252,7 +252,7 @@ function buildCustomItemHtmlStructured(content: string, title: string, uid: stri
   if (type || level || attuned) parts.push(spacer);
   const descMountId = `desc-${uid}`;
   if (descriptionRaw) {
-    parts.push(`<div id="${descMountId}" style="margin-top:0.5em;"></div>`);
+    parts.push(`<div id="${descMountId}" class="dnd-wiki-description-mount"></div>`);
     parts.push(spacer);
   }
   return { html: parts.join(''), descMarkdown: descriptionRaw || null, descMountId };
@@ -359,7 +359,7 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
     const container = document.createElement('div');
     const heading = buildHeading(itemLevel, itemLevels);
     const h2 = document.createElement('h2');
-    h2.style.margin = '0 0 0.5em 0';
+    h2.classList.add('dnd-wiki-list-heading');
     h2.textContent = heading;
     el.appendChild(h2);
     el.appendChild(container);
@@ -389,7 +389,7 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
         const match = searchMode === 'and'
           ? searches.every(s => text.includes(s))
           : searches.some(s => text.includes(s));
-        if (!match) host.style.display = 'none';
+        if (!match) host.classList.add('dnd-wiki-search-hidden');
       }
     });
     await Promise.all(tasks);
@@ -480,7 +480,7 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
   const container = document.createElement('div');
   const heading = buildHeading(itemLevel, itemLevels);
   const h2 = document.createElement('h2');
-  h2.style.margin = '0 0 0.5em 0';
+  h2.classList.add('dnd-wiki-list-heading');
   h2.textContent = heading;
   el.appendChild(h2);
   el.appendChild(container);
@@ -534,7 +534,7 @@ export async function renderItemList(source: string, el: HTMLElement, _ctx: Mark
       const match = searchMode === 'and'
         ? searches.every(s => text.includes(s))
         : searches.some(s => text.includes(s));
-      if (!match) host.style.display = 'none';
+      if (!match) host.classList.add('dnd-wiki-search-hidden');
     }
   });
   await Promise.all(tasks);

@@ -188,7 +188,7 @@ export function buildCustomFeatHtmlStructured(content: string, title: string, ui
   const prereq = meta['prerequisite'] ? escapeHtml(meta['prerequisite']) : '';
   const descRaw = meta['description'] || '';
   const parts: string[] = [];
-  const spacer = '<div style="height:0.5em;"></div>';
+  const spacer = '<div class="dnd-wiki-section-spacer"></div>';
   parts.push('<div>Source: Custom</div>');
   parts.push(spacer);
   if (prereq) {
@@ -197,7 +197,7 @@ export function buildCustomFeatHtmlStructured(content: string, title: string, ui
   }
   const descMountId = `feat-desc-${uid}`;
   if (descRaw) {
-    parts.push(`<div id="${descMountId}" style="margin-top:0.5em;"></div>`);
+    parts.push(`<div id="${descMountId}" class="dnd-wiki-description-mount"></div>`);
     parts.push(spacer);
   }
   return { html: parts.join(''), descMarkdown: descRaw || null, descMountId };

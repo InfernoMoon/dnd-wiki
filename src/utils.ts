@@ -98,11 +98,11 @@ export function renderCollapsible(el: HTMLElement, title: string, html: string) 
 	const contentDivId = `card-content-${uid}`;
 	const arrowId = `card-arrow-${uid}`;
 	el.innerHTML = `
-		<div style="display:flex; align-items:center; cursor:pointer;" id="title-${contentDivId}">
-			<span style="margin-right:0.5em;" id="${arrowId}">▼</span>
-			<span style="font-size: 1.1em; font-weight: 600; margin:0;">${title}</span>
+		<div class="dnd-wiki-card-title" id="title-${contentDivId}">
+			<span class="dnd-wiki-card-arrow" id="${arrowId}">▼</span>
+			<span class="dnd-wiki-card-title-text">${title}</span>
 		</div>
-		<div id="${contentDivId}" style="display:none; margin-top:0.5em;">${html}</div>
+		<div class="dnd-wiki-card-content" id="${contentDivId}">${html}</div>
 	`;
 	const titleDiv = el.querySelector(`#title-${contentDivId}`);
 	const contentDiv = el.querySelector(`#${contentDivId}`);
@@ -111,8 +111,8 @@ export function renderCollapsible(el: HTMLElement, title: string, html: string) 
 	titleDiv.addEventListener('click', () => {
 		const c = contentDiv as HTMLElement;
 		const a = arrow as HTMLElement;
-		const isHidden = c.style.display === 'none';
-		c.style.display = isHidden ? 'block' : 'none';
+		const isHidden = !c.classList.contains('dnd-wiki-card-content-visible');
+		c.classList.toggle('dnd-wiki-card-content-visible', isHidden);
 		a.textContent = isHidden ? '▲' : '▼';
 	});
 }

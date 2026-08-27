@@ -39,7 +39,7 @@ export async function renderSpell(source: string, el: HTMLElement, _ctx: Markdow
 
   const tasks = lines.map(async (name) => {
     const host = document.createElement('div');
-    host.style.marginBottom = '0.75em';
+    host.classList.add('dnd-wiki-card-spacer');
     container.appendChild(host);
     await renderSingleSpell(host, urlKey, baseUrl, name);
   });

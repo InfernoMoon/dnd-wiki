@@ -207,7 +207,7 @@ function buildHeading(spellLevel: number | undefined, spellLevels: number[] | un
 export async function renderSpellList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
 	el.empty();
 	if (!baseUrl) {
-		el.createEl("div", { text: "Base URL is not configured." });
+		el.createDiv({ text: "Base URL is not configured." });
 		return;
 	}
 
@@ -223,7 +223,7 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx: Mar
 	if (!names) {
 		let { baseDoc, classDocs, schoolDocs } = await fetchIndexAndFilters(baseUrl, classSlugs, schoolSlugs);
 		if (!baseDoc) {
-			const msg = el.createEl("div", { text: "Failed to load spells index. Retrying…" });
+			const msg = el.createDiv({ text: "Failed to load spells index. Retrying…" });
 			const start = Date.now();
 			await new Promise<void>((resolve) => {
 			const intervalId = window.setInterval(async () => {

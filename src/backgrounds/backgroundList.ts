@@ -11,7 +11,7 @@ import { fetchPageContent, getObsidianApp, renderCollapsible, displayNameFromSlu
 export async function renderBackgroundList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
   if (!baseUrl) {
-    el.createEl('div', { text: 'Base URL is not configured.' });
+    el.createDiv({ text: 'Base URL is not configured.' });
     return;
   }
   const searches = parseSearchDirective(source);
@@ -19,7 +19,7 @@ export async function renderBackgroundList(source: string, el: HTMLElement, _ctx
 
   const ids = getKnownBackgroundIdsForKey(urlKey);
   if (!ids.length) {
-    const msg = el.createEl('div', { text: 'No backgrounds found (preload may not have completed). Retrying…' });
+    const msg = el.createDiv({ text: 'No backgrounds found (preload may not have completed). Retrying…' });
     const start = Date.now();
     const intervalId = window.setInterval(async () => {
       const current = getKnownBackgroundIdsForKey(urlKey);

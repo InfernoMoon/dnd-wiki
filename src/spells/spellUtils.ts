@@ -96,7 +96,7 @@ export async function renderSingleSpell(host: HTMLElement, urlKey: string, baseU
   const renderCache = getRenderCacheForKey(urlKey);
   const id = nameToSlug(name);
   if (!id) {
-    host.createEl('div', { text: 'No spell name provided' });
+    host.createDiv({ text: 'No spell name provided' });
     return;
   }
   // Check for a custom spell file first

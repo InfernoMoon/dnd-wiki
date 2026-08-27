@@ -21,19 +21,19 @@ export async function renderCustom(
 ): Promise<void> {
   el.empty();
   if (!baseUrl) {
-    el.createEl('div', { text: 'Base URL is not configured.' });
+    el.createDiv({ text: 'Base URL is not configured.' });
     return;
   }
 
   const sourceMatch = /^source:\s*(.+)$/im.exec(source);
   if (!sourceMatch) {
-    el.createEl('div', { text: 'Provide a `source:` directive.' });
+    el.createDiv({ text: 'Provide a `source:` directive.' });
     return;
   }
 
   const pageSource = sourceMatch[1].trim().replace(/^\/+/, '');
   if (!pageSource) {
-    el.createEl('div', { text: 'Provide a non-empty `source:` directive.' });
+    el.createDiv({ text: 'Provide a non-empty `source:` directive.' });
     return;
   }
 

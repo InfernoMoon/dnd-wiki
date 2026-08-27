@@ -10,13 +10,13 @@ import { fetchPageContent, getObsidianApp, renderCollapsible, displayNameFromSlu
 
 export async function renderLineageList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
-  if (!baseUrl) { el.createEl('div', { text: 'Base URL is not configured.' }); return; }
+  if (!baseUrl) { el.createDiv({ text: 'Base URL is not configured.' }); return; }
   const searches = parseSearchDirective(source);
   const searchMode = parseSearchModeDirective(source);
 
   const ids = getKnownLineageIdsForKey(urlKey);
   if (!ids.length) {
-    const msg = el.createEl('div', { text: 'No lineages found (preload may not have completed). Retrying…' });
+    const msg = el.createDiv({ text: 'No lineages found (preload may not have completed). Retrying…' });
     const start = Date.now();
     const intervalId = window.setInterval(async () => {
       const current = getKnownLineageIdsForKey(urlKey);

@@ -12,7 +12,7 @@ import { fetchPageContent, getObsidianApp, renderCollapsible, displayNameFromSlu
 export async function renderFeatList(source: string, el: HTMLElement, _ctx: import('obsidian').MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
   if (!baseUrl) {
-    el.createEl('div', { text: 'Base URL is not configured.' });
+    el.createDiv({ text: 'Base URL is not configured.' });
     return;
   }
   const searches = parseSearchDirective(source);
@@ -21,7 +21,7 @@ export async function renderFeatList(source: string, el: HTMLElement, _ctx: impo
   const ids = getKnownFeatIdsForKey(urlKey);
   if (!ids.length) {
     // Preloading may be deferred; present a retry message and poll until IDs appear.
-    const msg = el.createEl('div', { text: 'No feats found (preload may not have completed). Retrying…' });
+    const msg = el.createDiv({ text: 'No feats found (preload may not have completed). Retrying…' });
     const start = Date.now();
     const intervalId = window.setInterval(async () => {
       const current = getKnownFeatIdsForKey(urlKey);

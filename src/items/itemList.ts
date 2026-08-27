@@ -325,7 +325,7 @@ function parseAttunedDirective(sourceText: string): 'all' | boolean | null {
 export async function renderItemList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
   if (!baseUrl) {
-    el.createEl('div', { text: 'Base URL is not configured.' });
+    el.createDiv({ text: 'Base URL is not configured.' });
     return;
   }
         /**

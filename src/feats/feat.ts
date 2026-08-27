@@ -68,13 +68,13 @@ function renderFeatCard(container: HTMLElement, title: string, html: string) {
 export async function renderFeat(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
   if (!baseUrl) {
-    el.createEl('div', { text: 'Base URL is not configured.' });
+    el.createDiv({ text: 'Base URL is not configured.' });
     return;
   }
 
   const lines = source.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (!lines.length) {
-    el.createEl('div', { text: 'Provide one or more feat IDs or names.' });
+    el.createDiv({ text: 'Provide one or more feat IDs or names.' });
     return;
   }
 

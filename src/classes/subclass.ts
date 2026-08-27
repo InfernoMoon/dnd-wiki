@@ -22,7 +22,7 @@ function getCacheForKey(urlKey: string): Map<string, { title: string; html: stri
 
 export async function renderSubclass(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
-  if (!baseUrl) { el.createEl('div', { text: 'Base URL is not configured.' }); return; }
+  if (!baseUrl) { el.createDiv({ text: 'Base URL is not configured.' }); return; }
 
   const classMatch = /^class:\s*(.+)$/im.exec(source);
   const subinfoMatches: RegExpExecArray[] = [];
@@ -32,8 +32,8 @@ export async function renderSubclass(source: string, el: HTMLElement, _ctx: Mark
     subinfoMatches.push(subinfoMatch);
   }
 
-  if (!classMatch) { el.createEl('div', { text: 'Provide a `class:` directive.' }); return; }
-  if (!subinfoMatches.length) { el.createEl('div', { text: 'Provide one or more `subinfo:` directives.' }); return; }
+  if (!classMatch) { el.createDiv({ text: 'Provide a `class:` directive.' }); return; }
+  if (!subinfoMatches.length) { el.createDiv({ text: 'Provide one or more `subinfo:` directives.' }); return; }
 
   const classSlug = nameToSlug(classMatch[1].trim());
   const classDirectiveOffset = classMatch.index ?? Number.MAX_SAFE_INTEGER;
@@ -43,14 +43,14 @@ export async function renderSubclass(source: string, el: HTMLElement, _ctx: Mark
     .filter(Boolean);
   const sectionDirectives = parseSectionDirectives(source, classDirectiveOffset);
 
-  if (!classSlug) { el.createEl('div', { text: 'Invalid class name.' }); return; }
-  if (!rawSubinfos.length) { el.createEl('div', { text: 'Place `subinfo:` lines after `class:`.' }); return; }
+  if (!classSlug) { el.createDiv({ text: 'Invalid class name.' }); return; }
+  if (!rawSubinfos.length) { el.createDiv({ text: 'Place `subinfo:` lines after `class:`.' }); return; }
 
   const subinfoSlugs = rawSubinfos
     .map(v => nameToSlug(v))
     .filter(Boolean);
 
-  if (!subinfoSlugs.length) { el.createEl('div', { text: 'Invalid subinfo name(s).' }); return; }
+  if (!subinfoSlugs.length) { el.createDiv({ text: 'Invalid subinfo name(s).' }); return; }
 
   // If multiple subinfo lines are provided, render only the last one.
   const subinfoSlug = subinfoSlugs[subinfoSlugs.length - 1];

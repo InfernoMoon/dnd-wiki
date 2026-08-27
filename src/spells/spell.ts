@@ -22,12 +22,12 @@ export async function renderSpell(source: string, el: HTMLElement, _ctx: Markdow
     .filter(Boolean);
 
   if (!lines.length) {
-    el.createEl("div", { text: "Provide one or more spell IDs or names." });
+    el.createDiv({ text: "Provide one or more spell IDs or names." });
     return;
   }
 
   if (!baseUrl) {
-    el.createEl("div", { text: "Base URL is not configured." });
+    el.createDiv({ text: "Base URL is not configured." });
     return;
   }
 

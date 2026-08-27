@@ -27,9 +27,9 @@ export function setCachedClass(urlKey: string, id: string, data: { title: string
 
 export async function renderClass(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
-  if (!baseUrl) { el.createEl('div', { text: 'Base URL is not configured.' }); return; }
+  if (!baseUrl) { el.createDiv({ text: 'Base URL is not configured.' }); return; }
   const lines = source.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  if (!lines.length) { el.createEl('div', { text: 'Provide one or more class names.' }); return; }
+  if (!lines.length) { el.createDiv({ text: 'Provide one or more class names.' }); return; }
 
   const base = baseUrl.replace(/\/$/, '');
   const container = el.createDiv();

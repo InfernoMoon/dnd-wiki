@@ -1,6 +1,6 @@
 # DnD Wiki
 
-DnD Wiki is an [Obsidian](https://obsidian.md) plugin that turns Markdown code blocks into expandable DnD reference cards. It displays spells, feats, magic items, backgrounds, lineages or species, classes, subclass information, and other wiki content directly inside your notes.
+DnD Wiki displays spells, feats, magic items, and other wiki content directly inside your notes.
 
 The plugin includes source configurations for both the 2014/5e and 2024 rules. You can add other compatible wiki-style sources in the plugin settings.
 
@@ -14,30 +14,7 @@ The plugin includes source configurations for both the 2014/5e and 2024 rules. Y
 - Get autocomplete for block types, names, and supported filters.
 - Add experimental local custom cards to your vault.
 
-## Installation
-
-### Manual installation
-
-1. Create the following folder inside your vault:
-
-   ```text
-   <Vault>/.obsidian/plugins/dnd-wiki/
-   ```
-
-2. Copy `main.js`, `manifest.json`, and `styles.css` when present into that folder.
-3. Restart Obsidian or select **Reload app without saving** from the command palette.
-4. Open **Settings → Community plugins** and enable **DnD Wiki**.
-
-### Build from source
-
-Building requires a current Node.js LTS release and npm.
-
-```bash
-npm install
-npm run build
-```
-
-Copy the generated `main.js` and `manifest.json` into `<Vault>/.obsidian/plugins/dnd-wiki/`, then reload Obsidian. Use `npm run dev` for a watch build during development.
+![Spell Example](assets/spell-example.gif)
 
 ## Basics
 
@@ -54,12 +31,6 @@ Two versions are configured by default:
 
 The content type determines what is displayed. Examples include `spell`, `spelllist`, `feat`, `magicitem`, `classinfo`, and `custom`:
 
-```text
-dnd5e-spell
-dnd2024-spelllist
-dnd5e-classinfo
-```
-
 Individual blocks display named entries:
 
 ````markdown
@@ -69,24 +40,19 @@ Mage Hand
 ```
 ````
 
-````markdown
-```dnd2024-spell
-Fireball
-```
-````
-
 List blocks load a collection and apply filters:
 
 ````markdown
 ```dnd5e-spelllist
 level: 3
 class: Wizard
+school: Divination
 ```
 ````
 
 ````markdown
 ```dnd2024-spelllist
-level: 1
+level: 1-4
 class: Cleric
 ```
 ````
@@ -172,10 +138,8 @@ search: strength
 searchMode: or
 ```
 ````
-
 Change `searchMode:` to `and` to require both terms.
 
-For magic items, `level:` represents rarity. Supported values are `Common`, `Uncommon`, `Rare`, `Very-Rare`, `Legendary`, `Artifact`, `Unique`, and `Other`. `attuned:` accepts `required`, `not-required`, `true`, `false`, or `all`.
 
 ````markdown
 ```dnd5e-magicitemlist
@@ -183,6 +147,8 @@ level: Uncommon, Rare
 type: Wondrous Item
 attuned: required
 search: teleport
+search: 30 feet
+searchMode: And
 ```
 ````
 
@@ -248,7 +214,8 @@ Autocomplete suggests the directive names, but it cannot suggest wiki page paths
 ## Local custom cards
 
 > [!WARNING]
-> Local custom cards are still experimental. The workflow is somewhat clunky, metadata support is incomplete, and not every card type or field is supported yet.
+> Local custom cards are still experimental. The workflow is somewhat clunky, metadata support is incomplete, and not every card type or field is supported yet.   
+> I intend to improve this feature over time and use Markdown metadata and clean Markdown content instead of the current plain YAML format. So i currently do not recommend spending too much time on local custom cards.
 
 Select **Add Custom Cards** under **Settings → DnD Wiki** to create example files and these folders:
 
@@ -271,6 +238,9 @@ Open **Settings → DnD Wiki → Source URLs** to add, rename, or remove wiki so
 | `2024` | `url` |
 
 The key becomes the version in the block name. A source with the key `homebrew`, for example, provides blocks such as `dndhomebrew-spell`. Use keys made from letters and numbers, and restart Obsidian after changing them.
+
+Note that this plugin expects wikis that follow the same structure as wikidot wikis.
+So adding more sources will likely not work correctly.
 
 ## Data and privacy
 
@@ -296,6 +266,5 @@ See the official [Wizards of the Coast Fan Content Policy](https://company.wizar
 
 This project is mostly for fun. I created it to make writing my DM and player notes in Obsidian easier and to reference DnD rules directly from those notes.
 
-DnD Wiki depends on the structure of external wikis. If those wikis change, some features may stop working. I intend to fix issues when they arise, but I cannot make any promises.
-
-Thanks for checking it out! :)
+DnD Wiki depends on the structure of external wikis. If those wikis change, some features may stop working. I intend to fix issues when they arise.
+Also sometimes the wiki pages may be temporarily unavailable, so the plugin won't be able to display content during those times.

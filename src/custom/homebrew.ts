@@ -10,6 +10,9 @@ const HOMEBREW_PROPERTY_TYPES: Record<string, string> = {
 	'casting-time-dndwiki': 'text',
 	'components-dndwiki': 'text',
 	'duration-dndwiki': 'text',
+	'item-level-dndwiki': 'text',
+	'item-type-dndwiki': 'text',
+	'requires-attunement': 'checkbox',
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {

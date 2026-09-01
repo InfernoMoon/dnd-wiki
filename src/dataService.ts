@@ -1,9 +1,7 @@
-import { App, Notice, Plugin, MarkdownView } from "obsidian";
+import { Plugin } from "obsidian";
 import { STATIC_CLASSES, STATIC_SCHOOLS, STATIC_ITEM_RARITY_WORD_TO_INDEX } from "./data/staticData";
 import { getCustomSpellEntries } from "./spells/spellUtils";
 import { displayNameFromSlug, nameToSlug } from "./utils";
-import { BaseUrlPromptModal } from "./prompts";
-declare const app: App;
 
 /** Settings file structure */
 interface PluginSettingsJson {
@@ -103,124 +101,10 @@ export async function getFirstBaseUrl(): Promise<string | null> {
 	return null;
 }
 
-// ------------------------------
-// Base URL management
-// ------------------------------
-
-let cachedBaseUrl: string | undefined;
-// Singleton in-flight prompt task to avoid multiple modals
-let baseUrlTask: Promise<string | null> | undefined;
-
 /** Keep Base URL cache in sync with changes to settings.json */
 export function initBaseUrlWatcher(plugin: Plugin) {
 	// With loadData/saveData, we don't need file watchers. Keep a weak ref.
 	configurePluginRef(plugin);
-}
-
-/**
- * Resolve the Base URL used for fetching content.
- * - Returns cached value if present
- * - Reads from new baseurls if available
- * - Falls back to old baseurl for backward compatibility
- * - Prompts the user to enter a URL when missing and persists it
- */
-export async function getBaseUrl(): Promise<string | null> {
-	// 1) Return from memory if available
-	if (typeof cachedBaseUrl === "string") {
-		return cachedBaseUrl;
-	}
-
-	// 2) Try new baseurls system first
-	const urls = await peekBaseUrls();
-	const firstUrl = Object.values(urls).find(u => u && u.trim());
-	if (firstUrl) {
-		cachedBaseUrl = firstUrl.trim();
-		return cachedBaseUrl;
-	}
-
-	// 3) Fall back to old baseurl for backward compatibility
-	const current = await readSettings();
-	if (current.baseurl) {
-		cachedBaseUrl = current.baseurl;
-		return cachedBaseUrl;
-	}
-
-	// 3) If a prompt task is already in-flight, await it; else start one
-	if (!baseUrlTask) {
-		const task = (baseUrlTask ??= new Promise<string | null>((resolve) => {
-			const handleSubmit = (value: string): void => {
-				void (async () => {
-					if (!value) {
-						new Notice("DnD Wiki: No URL provided; plugin may not work.");
-						resolve(null);
-						return;
-					}
-					const updated: PluginSettingsJson = { ...current, baseurl: value };
-					await writeSettings(updated);
-					new Notice("DnD Wiki: Base URL saved.");
-					cachedBaseUrl = value;
-					// Best-effort: refresh the active Markdown view after a short delay
-					window.setTimeout(() => {
-						const view = app.workspace.getActiveViewOfType(MarkdownView);
-						const leaf = app.workspace.getLeaf(true);
-						if (leaf && view) {
-							const state = leaf.getViewState();
-							void leaf.setViewState(state).catch((error) => {
-								console.warn('DnD Wiki: Failed to refresh the active Markdown view', error);
-							});
-							app.workspace.trigger('active-leaf-change');
-						} else {
-							// Fallback: reopen the active file
-							const file = app.workspace.getActiveFile();
-							if (file) {
-								void app.workspace.openLinkText(file.path, '', true);
-							}
-						}
-					}, 1000);
-					resolve(cachedBaseUrl);
-				})().catch((error: unknown) => {
-					console.warn('DnD Wiki: Failed to save the Base URL', error);
-					resolve(null);
-				});
-			};
-			new BaseUrlPromptModal(app, handleSubmit).open();
-		}));
-		const clearBaseUrlTask = (): void => {
-			// Clear the task so subsequent calls can re-prompt if needed
-			baseUrlTask = undefined;
-		};
-		void task.then(clearBaseUrlTask, (error: unknown) => {
-			clearBaseUrlTask();
-			console.warn('DnD Wiki: Base URL prompt failed', error);
-		});
-	}
-
-	const result = await baseUrlTask;
-	// 4) Return from memory if set by the task
-	if (typeof cachedBaseUrl === "string") {
-		return cachedBaseUrl;
-	}
-	// 5) If still missing, warn and return empty string-equivalent
-	if (!result) {
-		new Notice("DnD Wiki: Base URL not set; please configure it.");
-		return "";
-	}
-	return result;
-}
-
-/** Update and persist the Base URL, updating cache and settings.json */
-export async function setBaseUrl(value: string | undefined): Promise<void> {
-		const current = await readSettings();
-		const updated: PluginSettingsJson = { ...current, baseurl: value || undefined };
-		await writeSettings(updated);
-		cachedBaseUrl = value || undefined;
-}
-
-/** Peek the Base URL without prompting the user. */
-export async function peekBaseUrl(): Promise<string | undefined> {
-	if (typeof cachedBaseUrl === 'string') return cachedBaseUrl;
-	const current = await readSettings();
-	return current.baseurl || undefined;
 }
 
 // ------------------------------

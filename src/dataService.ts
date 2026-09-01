@@ -9,7 +9,16 @@ declare const app: App;
 interface PluginSettingsJson {
 	baseurl?: string;
 	baseurls?: Record<string, string>;
+	homebrewSearchEntireVault?: boolean;
+	homebrewFolderPath?: string;
 }
+
+export interface HomebrewSettings {
+	searchEntireVault: boolean;
+	folderPath: string;
+}
+
+export const DEFAULT_HOMEBREW_FOLDER = 'Custom Homebrew';
 
 // Use Obsidian's official plugin data APIs via plugin.loadData/saveData
 let pluginRef: Plugin | undefined;
@@ -60,6 +69,22 @@ export async function initializeDefaultUrls(): Promise<void> {
 export async function setBaseUrls(urls: Record<string, string>): Promise<void> {
 	const current = await readSettings();
 	current.baseurls = urls;
+	await writeSettings(current);
+}
+
+export async function getHomebrewSettings(): Promise<HomebrewSettings> {
+	const settings = await readSettings();
+	const folderPath = settings.homebrewFolderPath?.trim();
+	return {
+		searchEntireVault: settings.homebrewSearchEntireVault ?? false,
+		folderPath: folderPath ? folderPath.replace(/^\/+|\/+$/g, '') : DEFAULT_HOMEBREW_FOLDER,
+	};
+}
+
+export async function setHomebrewSettings(settings: HomebrewSettings): Promise<void> {
+	const current = await readSettings();
+	current.homebrewSearchEntireVault = settings.searchEntireVault;
+	current.homebrewFolderPath = settings.folderPath.trim().replace(/^\/+|\/+$/g, '') || DEFAULT_HOMEBREW_FOLDER;
 	await writeSettings(current);
 }
 

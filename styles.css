@@ -71,3 +71,7 @@
 .dnd-wiki-add-url-button {
 	margin-top: 12px;
 }
+
+.dnd-wiki-setting-hidden {
+	display: none;
+}

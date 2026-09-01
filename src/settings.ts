@@ -1,78 +1,89 @@
 import { App, Plugin, PluginSettingTab, Setting, Notice } from 'obsidian';
-import { peekBaseUrls, setBaseUrls } from './dataService';
+import {
+  DEFAULT_HOMEBREW_FOLDER,
+  getHomebrewSettings,
+  peekBaseUrls,
+  setBaseUrls,
+  setHomebrewSettings,
+} from './dataService';
+import { createHomebrewTemplateFolders } from './custom/homebrewTemplates';
 
 function displayUrlEntries(container: HTMLElement, urls: Record<string, string>): void {
   container.empty();
-  
+
   for (const [key, url] of Object.entries(urls)) {
     const entryDiv = container.createDiv('url-entry');
     entryDiv.addClass('dnd-wiki-url-entry');
-    
+
     let currentKeyValue = key;
     let currentUrlValue = url;
     let saveTimeout: number | null = null;
 
-    const autoSave = async () => {
+    const autoSave = async (): Promise<void> => {
       const newKey = currentKeyValue.trim();
       const newUrl = currentUrlValue.trim();
       if (!newKey) return;
       const currentUrls = await peekBaseUrls();
-      // Remove old key if renamed
-      if (newKey !== key && key in currentUrls) {
-        delete currentUrls[key];
-      }
+      if (newKey !== key && key in currentUrls) delete currentUrls[key];
       currentUrls[newKey] = newUrl;
       await setBaseUrls(currentUrls);
     };
 
-    const scheduleAutoSave = () => {
+    const scheduleAutoSave = (): void => {
       if (saveTimeout) window.clearTimeout(saveTimeout);
-      saveTimeout = window.setTimeout(autoSave, 600);
+      saveTimeout = window.setTimeout(() => {
+        void autoSave().catch((error: unknown) => {
+          console.warn('DnD Wiki: Failed to save source URL', error);
+        });
+      }, 600);
     };
-    
+
     const inputRow = entryDiv.createDiv();
     inputRow.addClass('dnd-wiki-url-input-row');
-    
-    new Setting(inputRow).addText((t) => {
-      t.setValue(key)
+
+    new Setting(inputRow).addText((text) => {
+      text.setValue(key)
         .setPlaceholder('e.g., 5e')
-        .onChange((v) => { currentKeyValue = v; scheduleAutoSave(); });
-      t.inputEl.addClass('dnd-wiki-url-key-input');
+        .onChange((value) => { currentKeyValue = value; scheduleAutoSave(); });
+      text.inputEl.addClass('dnd-wiki-url-key-input');
     });
-    
-    new Setting(inputRow).addText((t) => {
-      t.setValue(url)
+
+    new Setting(inputRow).addText((text) => {
+      text.setValue(url)
         .setPlaceholder('https://example.com')
-        .onChange((v) => { currentUrlValue = v; scheduleAutoSave(); });
-      t.inputEl.addClass('dnd-wiki-url-value-input');
+        .onChange((value) => { currentUrlValue = value; scheduleAutoSave(); });
+      text.inputEl.addClass('dnd-wiki-url-value-input');
     });
-    
+
     const deleteBtn = inputRow.createEl('button', { text: 'Delete' });
     deleteBtn.addClass('dnd-wiki-delete-url-button');
-    deleteBtn.onclick = async () => {
+    deleteBtn.onclick = (): void => {
       if (saveTimeout) window.clearTimeout(saveTimeout);
-      const currentUrls = await peekBaseUrls();
-      delete currentUrls[key];
-      await setBaseUrls(currentUrls);
-      const updated = await peekBaseUrls();
-      displayUrlEntries(container, updated);
+      void (async (): Promise<void> => {
+        const currentUrls = await peekBaseUrls();
+        delete currentUrls[key];
+        await setBaseUrls(currentUrls);
+        displayUrlEntries(container, await peekBaseUrls());
+      })().catch((error: unknown) => {
+        console.warn('DnD Wiki: Failed to delete source URL', error);
+      });
     };
   }
-  
-  // Add new entry button
+
   const addBtn = container.createEl('button', { text: '+ Add URL' });
   addBtn.addClass('dnd-wiki-add-url-button');
-  addBtn.onclick = async () => {
-    const currentUrls = await peekBaseUrls();
-    // Generate a unique key
-    let newKey = 'custom';
-    let counter = 1;
-    while (newKey in currentUrls) {
-      newKey = `custom${counter++}`;
-    }
-    currentUrls[newKey] = '';
-    await setBaseUrls(currentUrls);
-    displayUrlEntries(container, currentUrls);
+  addBtn.onclick = (): void => {
+    void (async (): Promise<void> => {
+      const currentUrls = await peekBaseUrls();
+      let newKey = 'custom';
+      let counter = 1;
+      while (newKey in currentUrls) newKey = `custom${counter++}`;
+      currentUrls[newKey] = '';
+      await setBaseUrls(currentUrls);
+      displayUrlEntries(container, currentUrls);
+    })().catch((error: unknown) => {
+      console.warn('DnD Wiki: Failed to add source URL', error);
+    });
   };
 }
 
@@ -88,158 +99,84 @@ export class DndCardsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Source URLs')
       .setHeading();
-    containerEl.createEl('p', { text: 'Define multiple Source URLs, like for 5e or 2024' });
+    containerEl.createEl('p', { text: 'Define multiple source URLs, like for 5e or 2024.' });
     containerEl.createEl('p', { text: 'Obsidian might need to be restarted after adding or removing URLs.' });
-    
+
     const urlsContainer = containerEl.createDiv('urls-container');
-    
-    // Load and display URLs — exactly what is saved, no automatic additions
     void peekBaseUrls()
-      .then((urls) => {
-        displayUrlEntries(urlsContainer, urls);
-      })
-      .catch((error) => {
+      .then((urls) => displayUrlEntries(urlsContainer, urls))
+      .catch((error: unknown) => {
         console.warn('DnD Wiki: Failed to load source URLs', error);
       });
-    
+
     containerEl.createEl('hr');
+    void this.displayHomebrewSettings(containerEl).catch((error: unknown) => {
+      console.warn('DnD Wiki: Failed to load homebrew settings', error);
+    });
+  }
 
+  private async displayHomebrewSettings(containerEl: HTMLElement): Promise<void> {
+    const settings = await getHomebrewSettings();
+    const homebrewContainer = containerEl.createDiv('dnd-wiki-homebrew-settings');
 
-    // Add button to create custom cards folder structure
-    new Setting(containerEl)
-      .setName('Add Custom Cards')
-      .setDesc('Create folder "DnD-Cards", to store your custom cards. You might need to restart Obsidian to see your custom cards in suggestions.')
-      .addButton((btn) => {
-        btn.setButtonText('Add Custom Cards')
+    new Setting(homebrewContainer)
+      .setName('Homebrew templates')
+      .setHeading();
+
+    const folderSettingRef: { current?: Setting } = {};
+    const updateFolderVisibility = (): void => {
+      const folderSetting = folderSettingRef.current;
+      if (!folderSetting) return;
+      folderSetting.settingEl.toggleClass('dnd-wiki-setting-hidden', settings.searchEntireVault);
+    };
+
+    new Setting(homebrewContainer)
+      .setName('Search the entire vault for homebrew templates')
+      .setDesc('Find homebrew files anywhere in the vault instead of only in the configured folder.')
+      .addToggle((toggle) => {
+        toggle.setValue(settings.searchEntireVault).onChange((value) => {
+          settings.searchEntireVault = value;
+          updateFolderVisibility();
+          void setHomebrewSettings(settings).catch((error: unknown) => {
+            console.warn('DnD Wiki: Failed to save homebrew search setting', error);
+          });
+        });
+      });
+
+    folderSettingRef.current = new Setting(homebrewContainer)
+      .setName('Homebrew template folder')
+      .setDesc('Folder path relative to the vault root.')
+      .addText((text) => {
+        text.setPlaceholder(DEFAULT_HOMEBREW_FOLDER)
+          .setValue(settings.folderPath)
+          .onChange((value) => {
+            settings.folderPath = value;
+            void setHomebrewSettings(settings).catch((error: unknown) => {
+              console.warn('DnD Wiki: Failed to save homebrew folder setting', error);
+            });
+          });
+      });
+    updateFolderVisibility();
+
+    new Setting(homebrewContainer)
+      .setName('Create homebrew templates')
+      .setDesc('Create the folder structure for spells, feats, backgrounds, lineages, and magic items.')
+      .addButton((button) => {
+        button.setButtonText('Create templates')
           .setCta()
-          .onClick(async () => {
-            const vault = this.app.vault;
-            const root = 'DnD-Cards';
-            const subs = ['Spells', 'Feats', 'Items'];
-
-            try {
-              // Ensure root folder exists
-              if (!vault.getAbstractFileByPath(root)) {
-                await vault.createFolder(root);
-              }
-
-              // Ensure subfolders exist
-              for (const sub of subs) {
-                const path = `${root}/${sub}`;
-                if (!vault.getAbstractFileByPath(path)) {
-                  await vault.createFolder(path);
-                }
-              }
-
-              // Create sample custom spell files in the Spells folder
-              const spellsFolder = `${root}/Spells`;
-              const fireballPath = `${spellsFolder}/Custom Fireball.md`;
-              const templatePath = `${spellsFolder}/Custom Spell.md`;
-
-              if (!vault.getAbstractFileByPath(fireballPath)) {
-                const fireballContent = [
-                  '```',
-                  'level: 3',
-                  'casting-time:\u00A01 action',
-                  'range: 150 feet',
-                  'components: V,S,M (a tiny ball of bat guano and sulfur)',
-                  'duration: Instantaneous',
-                  'spell-lists: Sorcerer,\u00A0Wizard',
-                  'school: Evocation',
-                  'description: "A bright streak flashes from your pointing finger to a point you choose within range then blossoms with a low roar into an explosion of flame. Each creature in a 20-foot radius must make a Dexterity saving throw. A target takes 8d6 fire damage on a failed save, or half as much damage on a successful one. The fire spreads around corners. It ignites flammable objects in the area that aren’t being worn or carried.',
-                  '',
-                  '**_At Higher Levels._**\u00A0When you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d6 for each slot level above 3rd."',
-                  '```'
-                ].join('\n');
-                await vault.create(fireballPath, fireballContent);
-              }
-
-              if (!vault.getAbstractFileByPath(templatePath)) {
-                const templateContent = [
-                  '```',
-                  'level: ',
-                  'casting-time:\u00A0',
-                  'range: ',
-                  'components: ',
-                  'duration: ',
-                  'spell-lists: ',
-                  'school: ',
-                  'description: ""',
-                  '```'
-                ].join('\n');
-                await vault.create(templatePath, templateContent);
-              }
-
-              // Create sample custom feat files in the Feats folder
-              const featsFolder = `${root}/Feats`;
-              const featTemplatePath = `${featsFolder}/Custom Feat.md`;
-              const luckyPath = `${featsFolder}/Custom Lucky.md`;
-
-              if (!vault.getAbstractFileByPath(featTemplatePath)) {
-                const featTemplateContent = [
-                  '```',
-                  'prerequisite:',
-                  'description: ""',
-                  '```'
-                ].join('\n');
-                await vault.create(featTemplatePath, featTemplateContent);
-              }
-
-              if (!vault.getAbstractFileByPath(luckyPath)) {
-                const luckyContent = [
-                  '```',
-                  'prerequisite:',
-                  'description: "You have inexplicable luck that seems to kick in at just the right moment.',
-                  '',
-                  'You have 3 luck points. Whenever you make an attack roll, an ability check, or a saving throw, you can spend one luck point to roll an additional d20. You can choose to spend one of your luck points after you roll the die, but before the outcome is determined. You choose which of the d20s is used for the attack roll, ability check, or saving throw.',
-                  '',
-                  'You can also spend one luck point when an attack roll is made against you. Roll a d20 and then choose whether the attack uses the attacker\'s roll or yours.',
-                  '',
-                  'If more than one creature spends a luck point to influence the outcome of a roll, the points cancel each other out; no additional dice are rolled.',
-                  '',
-                  'You regain your expended luck points when you finish a long rest."',
-                  '```'
-                ].join('\n');
-                await vault.create(luckyPath, luckyContent);
-              }
-
-              // Create sample custom item files in the Items folder
-              const itemsFolder = `${root}/Items`;
-              const customItemTemplatePath = `${itemsFolder}/Custom Item.md`;
-              const bagOfHoldingPath = `${itemsFolder}/Custom Bag of Holding.md`;
-
-              if (!vault.getAbstractFileByPath(customItemTemplatePath)) {
-                const customItemTemplateContent = [
-                  '```',
-                  'type: ',
-                  'level: ',
-                  'attuned: ',
-                  'description: ""',
-                  '```'
-                ].join('\n');
-                await vault.create(customItemTemplatePath, customItemTemplateContent);
-              }
-
-              if (!vault.getAbstractFileByPath(bagOfHoldingPath)) {
-                const bagOfHoldingContent = [
-                  '```',
-                  'type: Wondrous Item',
-                  'level: Uncommon',
-                  'attuned: Not-Required',
-                  'description: "This bag has an interior space considerably larger than its outside dimensions, roughly 2 feet in diameter at the mouth and 4 feet deep. The bag can hold up to 500 pounds, not exceeding a volume of 64 cubic feet. The bag weighs 15 pounds, regardless of its contents. Retrieving an item from the bag requires an action.',
-                  '',
-                  'If the bag is overloaded, pierced, or torn, it ruptures and is destroyed, and its contents are scattered in the Astral Plane. If the bag is turned inside out, its contents spill forth, unharmed, but the bag must be put right before it can be used again. Breathing creatures inside the bag can survive up to a number of minutes equal to 10 divided by the number of creatures (minimum 1 minute), after which time they begin to suffocate.',
-                  '',
-                  'Placing a bag of holding inside an extradimensional space created by a _Heward\'s Handy Haversack, Portable Hole_, or similar item instantly destroys both items and opens a gate to the Astral Plane. The gate originates where the one item was placed inside the other. Any creature within 10 feet of the gate is sucked through it to a random location on the Astral Plane. The gate then closes. The gate is one-way only and can\'t be reopened."',
-                  '```'
-                ].join('\n');
-                await vault.create(bagOfHoldingPath, bagOfHoldingContent);
-              }
-              new Notice('You can now add your custom cards to the DnD-Cards folder!');
-            } catch (err) {
-              console.error('Failed creating DnD-Cards folders', err);
-              new Notice('Failed to create folders. See console for details.');
-            }
+          .onClick(() => {
+            const targetFolder = settings.searchEntireVault ? DEFAULT_HOMEBREW_FOLDER : settings.folderPath;
+            void createHomebrewTemplateFolders(this.app.vault, targetFolder)
+              .then((result) => {
+                const message = result.createdPaths.length === 0
+                  ? 'Homebrew template folders already exist.'
+                  : 'Homebrew template folders created.';
+                new Notice(message);
+              })
+              .catch((error: unknown) => {
+                console.error('DnD Wiki: Failed to create homebrew template folders', error);
+                new Notice('Failed to create homebrew template folders. See the console for details.');
+              });
           });
       });
   }

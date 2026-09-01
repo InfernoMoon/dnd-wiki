@@ -1,6 +1,7 @@
 import { App, Modal, Notice, Setting, TFile } from 'obsidian';
-import { DEFAULT_HOMEBREW_FOLDER, getHomebrewSettings } from '../dataService';
-import { ensureHomebrewFolderStructure, HOMEBREW_CATEGORIES } from './homebrewTemplates';
+import { getHomebrewSettings } from '../dataService';
+import { ensureHomebrewFolderPath } from './homebrew';
+import { ensureHomebrewCategoryFolder, HOMEBREW_CATEGORIES } from './homebrewTemplates';
 
 const CATEGORY_LABELS: Record<string, string> = {
 	Spells: 'Spell',
@@ -10,9 +11,12 @@ const CATEGORY_LABELS: Record<string, string> = {
 	'Magic Items': 'Magic item',
 };
 
+type HomebrewFileDestination = 'homebrew' | 'current';
+
 export class HomebrewFileModal extends Modal {
 	private category = 'Spells';
 	private fileName = '';
+	private destination: HomebrewFileDestination = 'homebrew';
 
 	onOpen(): void {
 		const { contentEl } = this;
@@ -38,6 +42,18 @@ export class HomebrewFileModal extends Modal {
 			.addText((text) => {
 				text.setPlaceholder('e.g., Fireball')
 					.onChange((value) => { this.fileName = value; });
+			});
+
+		new Setting(contentEl)
+			.setName('Create in')
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption('homebrew', 'Homebrew folder')
+					.addOption('current', 'Current folder')
+					.setValue(this.destination)
+					.onChange((value) => {
+						this.destination = value === 'current' ? 'current' : 'homebrew';
+					});
 			});
 
 		new Setting(contentEl)
@@ -71,11 +87,17 @@ export class HomebrewFileModal extends Modal {
 			return;
 		}
 
-		const settings = await getHomebrewSettings();
-		const rootPath = settings.searchEntireVault ? DEFAULT_HOMEBREW_FOLDER : settings.folderPath;
-		const { rootPath: normalizedRootPath } = await ensureHomebrewFolderStructure(this.app.vault, rootPath);
-		const categoryFolder = `${normalizedRootPath}/${this.category}`;
-		const filePath = `${categoryFolder}/${baseName}.md`;
+		let targetFolder = '';
+		if (this.destination === 'homebrew') {
+			const settings = await getHomebrewSettings();
+			const rootPath = await ensureHomebrewFolderPath(this.app.vault, settings);
+			targetFolder = await ensureHomebrewCategoryFolder(this.app.vault, rootPath, this.category);
+		} else {
+			const activeFile = this.app.workspace.getActiveFile();
+			targetFolder = activeFile?.parent?.path ?? '';
+		}
+
+		const filePath = targetFolder ? `${targetFolder}/${baseName}.md` : `${baseName}.md`;
 		const existing = this.app.vault.getAbstractFileByPath(filePath);
 
 		if (existing && !(existing instanceof TFile)) {
@@ -96,5 +118,3 @@ export function registerHomebrewFileCommand(app: App, addCommand: (command: { id
 		callback: () => new HomebrewFileModal(app).open(),
 	});
 }
-
-

@@ -6,6 +6,7 @@ import {
   setBaseUrls,
   setHomebrewSettings,
 } from './dataService';
+import { ensureHomebrewFolderPath } from './homebrew/homebrew';
 import { createHomebrewTemplateFolders } from './homebrew/homebrewTemplates';
 
 function displayUrlEntries(container: HTMLElement, urls: Record<string, string>): void {
@@ -123,27 +124,19 @@ export class DndCardsSettingTab extends PluginSettingTab {
       .setName('Homebrew templates')
       .setHeading();
 
-    const folderSettingRef: { current?: Setting } = {};
-    const updateFolderVisibility = (): void => {
-      const folderSetting = folderSettingRef.current;
-      if (!folderSetting) return;
-      folderSetting.settingEl.toggleClass('dnd-wiki-setting-hidden', settings.searchEntireVault);
-    };
-
     new Setting(homebrewContainer)
       .setName('Search the entire vault for homebrew templates')
-      .setDesc('Find homebrew files anywhere in the vault instead of only in the configured folder.')
+      .setDesc('Reserved for a future option to find homebrew files anywhere in the vault.')
       .addToggle((toggle) => {
         toggle.setValue(settings.searchEntireVault).onChange((value) => {
           settings.searchEntireVault = value;
-          updateFolderVisibility();
           void setHomebrewSettings(settings).catch((error: unknown) => {
             console.warn('DnD Wiki: Failed to save homebrew search setting', error);
           });
         });
       });
 
-    folderSettingRef.current = new Setting(homebrewContainer)
+    new Setting(homebrewContainer)
       .setName('Homebrew template folder')
       .setDesc('Folder path relative to the vault root.')
       .addText((text) => {
@@ -156,7 +149,6 @@ export class DndCardsSettingTab extends PluginSettingTab {
             });
           });
       });
-    updateFolderVisibility();
 
     new Setting(homebrewContainer)
       .setName('Create homebrew templates')
@@ -165,8 +157,8 @@ export class DndCardsSettingTab extends PluginSettingTab {
         button.setButtonText('Create templates')
           .setCta()
           .onClick(() => {
-            const targetFolder = settings.searchEntireVault ? DEFAULT_HOMEBREW_FOLDER : settings.folderPath;
-            void createHomebrewTemplateFolders(this.app.vault, targetFolder)
+            void ensureHomebrewFolderPath(this.app.vault, settings)
+              .then((rootPath) => createHomebrewTemplateFolders(this.app.vault, rootPath))
               .then((result) => {
                 const message = result.createdPaths.length === 0 && result.createdFiles.length === 0
                   ? 'Homebrew templates already exist.'

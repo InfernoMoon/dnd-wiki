@@ -1,5 +1,4 @@
-import { Vault } from 'obsidian';
-import { DEFAULT_HOMEBREW_FOLDER } from '../dataService';
+import { TFolder, Vault } from 'obsidian';
 
 export const HOMEBREW_CATEGORIES = ['Spells', 'Feats', 'Backgrounds', 'Lineages', 'Magic Items'] as const;
 
@@ -10,7 +9,7 @@ export interface HomebrewFolderResult {
 }
 
 function normalizeFolderPath(folderPath: string): string {
-	return folderPath.trim().replace(/^\/+|\/+$/g, '') || DEFAULT_HOMEBREW_FOLDER;
+	return folderPath.trim().replace(/^\/+|\/+$/g, '');
 }
 
 async function ensureFolder(vault: Vault, folderPath: string, createdPaths: string[]): Promise<void> {
@@ -19,10 +18,24 @@ async function ensureFolder(vault: Vault, folderPath: string, createdPaths: stri
 
 	for (const segment of segments) {
 		currentPath = currentPath ? `${currentPath}/${segment}` : segment;
-		if (vault.getAbstractFileByPath(currentPath)) continue;
+		const existing = vault.getAbstractFileByPath(currentPath);
+		if (existing && !(existing instanceof TFolder)) {
+			throw new Error(`The path component is not a folder: ${currentPath}`);
+		}
+		if (existing) continue;
 		await vault.createFolder(currentPath);
 		createdPaths.push(currentPath);
 	}
+}
+
+export async function ensureHomebrewCategoryFolder(
+	vault: Vault,
+	rootPath: string,
+	category: string,
+): Promise<string> {
+	const categoryPath = `${normalizeFolderPath(rootPath)}/${category}`;
+	await ensureFolder(vault, categoryPath, []);
+	return categoryPath;
 }
 
 async function createHomebrewFolderStructure(
@@ -30,7 +43,6 @@ async function createHomebrewFolderStructure(
 	rootPath: string,
 	createdPaths: string[],
 ): Promise<void> {
-	await ensureFolder(vault, rootPath, createdPaths);
 	for (const category of HOMEBREW_CATEGORIES) {
 		await ensureFolder(vault, `${rootPath}/${category}`, createdPaths);
 	}
@@ -45,8 +57,9 @@ export async function ensureHomebrewFolderStructure(
 	vault: Vault,
 	folderPath: string,
 ): Promise<HomebrewFolderStructureResult> {
-	const rootPath = normalizeFolderPath(folderPath);
 	const createdPaths: string[] = [];
+	const rootPath = normalizeFolderPath(folderPath);
+	await ensureFolder(vault, rootPath, createdPaths);
 	await createHomebrewFolderStructure(vault, rootPath, createdPaths);
 	return { rootPath, createdPaths };
 }
@@ -286,14 +299,10 @@ export async function createHomebrewTemplateFolders(
 	vault: Vault,
 	folderPath: string,
 ): Promise<HomebrewFolderResult> {
-	const rootPath = normalizeFolderPath(folderPath);
-	const createdPaths: string[] = [];
+	const folderStructure = await ensureHomebrewFolderStructure(vault, folderPath);
 	const createdFiles: string[] = [];
 
-	await createHomebrewFolderStructure(vault, rootPath, createdPaths);
-	await createHomebrewTemplateFiles(vault, rootPath, createdFiles);
+	await createHomebrewTemplateFiles(vault, folderStructure.rootPath, createdFiles);
 
-	return { rootPath, createdPaths, createdFiles };
+	return { ...folderStructure, createdFiles };
 }
-
-

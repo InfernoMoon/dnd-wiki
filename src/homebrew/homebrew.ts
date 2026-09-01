@@ -1,4 +1,7 @@
-import type { DataAdapter } from 'obsidian';
+import { normalizePath, TFolder } from 'obsidian';
+import type { DataAdapter, Vault } from 'obsidian';
+import { DEFAULT_HOMEBREW_FOLDER } from '../dataService';
+import type { HomebrewSettings } from '../dataService';
 
 const TYPES_PATH = '.obsidian/types.json';
 
@@ -14,6 +17,48 @@ const HOMEBREW_PROPERTY_TYPES: Record<string, string> = {
 	'item-type-dndwiki': 'text',
 	'requires-attunement': 'checkbox',
 };
+
+export async function ensureHomebrewFolderPath(vault: Vault, settings: HomebrewSettings): Promise<string> {
+	const configuredPath = settings.folderPath.trim();
+	const configuredSegments = configuredPath.split(/[\\/]+/).filter(Boolean);
+	const isSafeRelativePath = Boolean(configuredPath)
+		&& !configuredPath.startsWith('/')
+		&& !configuredPath.startsWith('\\')
+		&& !/^[A-Za-z]:[\\/]/.test(configuredPath)
+		&& !configuredSegments.some((segment) => segment === '.' || segment === '..');
+	const normalizedConfiguredPath = isSafeRelativePath
+		? normalizePath(configuredPath).replace(/^\/+|\/+$/g, '')
+		: '';
+	const candidatePaths = normalizedConfiguredPath && normalizedConfiguredPath !== DEFAULT_HOMEBREW_FOLDER
+		? [normalizedConfiguredPath, DEFAULT_HOMEBREW_FOLDER]
+		: [DEFAULT_HOMEBREW_FOLDER];
+
+	for (const rootPath of candidatePaths) {
+		try {
+			const rootSegments = rootPath.split('/').filter(Boolean);
+			let currentPath = '';
+
+			for (const segment of rootSegments) {
+				currentPath = currentPath ? `${currentPath}/${segment}` : segment;
+				const existing = vault.getAbstractFileByPath(currentPath);
+				if (existing && !(existing instanceof TFolder)) {
+					throw new Error(`The path component is not a folder: ${currentPath}`);
+				}
+				if (!existing) await vault.createFolder(currentPath);
+			}
+
+			return rootPath;
+		} catch (error: unknown) {
+			if (rootPath === DEFAULT_HOMEBREW_FOLDER) throw error;
+			console.warn(
+				`DnD Wiki: Could not use homebrew folder path "${rootPath}". Falling back to "${DEFAULT_HOMEBREW_FOLDER}".`,
+				error,
+			);
+		}
+	}
+
+	throw new Error(`Could not create the homebrew folder: ${DEFAULT_HOMEBREW_FOLDER}`);
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -55,5 +100,3 @@ export async function ensureHomebrewPropertyTypes(adapter: DataAdapter): Promise
 	config.types = updatedTypes;
 	await adapter.write(TYPES_PATH, `${JSON.stringify(config, null, 2)}\n`);
 }
-
-

@@ -10,17 +10,40 @@ const HOMEBREW_CATEGORY_TAGS: Record<string, string> = {
 	'Magic Items': 'dndwiki/item',
 };
 
-export function getHomebrewFileTemplate(category: string): string {
+export interface HomebrewSpellProperties {
+	level: string;
+	classes: string[];
+	school: string;
+}
+
+export interface HomebrewMagicItemProperties {
+	level: string;
+	type: string;
+	requiresAttunement: boolean;
+}
+
+export interface HomebrewFileTemplateOptions {
+	spell?: HomebrewSpellProperties;
+	magicItem?: HomebrewMagicItemProperties;
+}
+
+export function getHomebrewFileTemplate(category: string, options: HomebrewFileTemplateOptions = {}): string {
 	const tag = HOMEBREW_CATEGORY_TAGS[category];
 	if (!tag) throw new Error(`Unknown homebrew category: ${category}`);
 
 	if (category === 'Spells') {
+		const level = options.spell?.level ? `spell-level-dndwiki: ${options.spell.level}` : 'spell-level-dndwiki:';
+		const classes = options.spell?.classes.length
+			? `class-dndwiki:\n${options.spell.classes.map((className) => `  - ${className}`).join('\n')}`
+			: 'class-dndwiki:';
+		const school = options.spell?.school ? `school-dndwiki: ${options.spell.school}` : 'school-dndwiki:';
+
 		return `---
 tags:
   - ${tag}
-spell-level-dndwiki:
-class-dndwiki:
-school-dndwiki:
+${level}
+${classes}
+${school}
 range-dndwiki:
 casting-time-dndwiki:
 components-dndwiki:
@@ -30,12 +53,16 @@ duration-dndwiki:
 	}
 
 	if (category === 'Magic Items') {
+		const level = options.magicItem?.level ? `item-level-dndwiki: ${options.magicItem.level}` : 'item-level-dndwiki:';
+		const type = options.magicItem?.type ? `item-type-dndwiki: ${options.magicItem.type}` : 'item-type-dndwiki:';
+		const requiresAttunement = options.magicItem?.requiresAttunement ?? false;
+
 		return `---
 tags:
   - ${tag}
-item-level-dndwiki:
-item-type-dndwiki:
-requires-attunement:
+${level}
+${type}
+requires-attunement: ${requiresAttunement}
 ---
 `;
 	}

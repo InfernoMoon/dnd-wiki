@@ -6,6 +6,17 @@ import { loadFromTable, LoaderConfig } from '../genericLoader';
 const itemIdCache: Map<string, Set<string>> = new Map();
 // In-memory map of item types (case-insensitive key -> original display value)
 const itemTypeCache: Map<string, string> = new Map();
+const STANDARD_ITEM_TYPES = [
+  'Armor',
+  'Potion',
+  'Ring',
+  'Rod',
+  'Scroll',
+  'Staff',
+  'Wand',
+  'Weapon',
+  'Wondrous Item',
+];
 
 function getItemCacheForKey(urlKey: string): Set<string> {
   const existing = itemIdCache.get(urlKey);
@@ -21,6 +32,11 @@ export function getKnownItemIdsForKey(urlKey: string): string[] {
 
 export function getCachedItemTypes(): string[] {
   return Array.from(itemTypeCache.values()).sort((a, b) => a.localeCompare(b));
+}
+
+/** Return standard and discovered item types in one shared suggestion list. */
+export function getItemTypeSuggestions(): string[] {
+  return Array.from(new Set([...STANDARD_ITEM_TYPES, ...getCachedItemTypes()]));
 }
 
 export async function preloadAllItemIds(urlKey: string, baseUrl: string): Promise<void> {

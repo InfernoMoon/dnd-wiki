@@ -174,12 +174,12 @@ export async function preloadDirectiveNames(): Promise<void> {
 
 /** Get cached class names (may be empty until initData runs) */
 export function getCachedClassNames(): string[] {
-	return cachedClassNames;
+	return cachedClassNames.length ? cachedClassNames : STATIC_CLASSES;
 }
 
 /** Get cached school names (may be empty until initData runs) */
 export function getCachedSchoolNames(): string[] {
-	return cachedSchoolNames;
+	return cachedSchoolNames.length ? cachedSchoolNames : STATIC_SCHOOLS;
 }
 
 // ------------------------------

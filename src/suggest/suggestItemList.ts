@@ -1,18 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
-import { getCachedItemTypes } from '../items/itemUtils';
-
-const HARD_CODED_TYPES = [
-  'Armor',
-  'Potion',
-  'Ring',
-  'Rod',
-  'Scroll',
-  'Staff',
-  'Wand',
-  'Weapon',
-  'Wondrous Item',
-];
+import { getItemTypeSuggestions } from '../items/itemUtils';
 
 export class ItemListSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;
@@ -89,9 +77,10 @@ export class ItemListSuggest extends EditorSuggest<{ text: string }> {
       return levels.filter(n => n.toLowerCase().startsWith(q)).map(n => ({ text: n }));
     }
     if (this.currentKey === 'type') {
-      const dynamicTypes = getCachedItemTypes();
-      const allTypes = Array.from(new Set([...HARD_CODED_TYPES, ...dynamicTypes]));
-      return allTypes.filter(t => t.toLowerCase().includes(q)).slice(0, 50).map(t => ({ text: t }));
+      return getItemTypeSuggestions()
+        .filter(t => t.toLowerCase().includes(q))
+        .slice(0, 50)
+        .map(t => ({ text: t }));
     }
     if (this.currentKey === 'searchmode') {
       return ['Or', 'And'].filter(o => o.toLowerCase().startsWith(q)).map(o => ({ text: o }));

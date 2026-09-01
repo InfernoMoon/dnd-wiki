@@ -1,7 +1,9 @@
 import { App, Modal, Notice, Setting, TFile } from 'obsidian';
-import { getHomebrewSettings } from '../dataService';
+import { getCachedClassNames, getCachedSchoolNames, getHomebrewSettings, getItemRarityNames } from '../dataService';
+import { getItemTypeSuggestions } from '../items/itemUtils';
 import { ensureHomebrewFolderPath } from './homebrew';
 import { ensureHomebrewCategoryFolder, getHomebrewFileTemplate, HOMEBREW_CATEGORIES } from './homebrewTemplates';
+import type { HomebrewFileTemplateOptions } from './homebrewTemplates';
 
 const CATEGORY_LABELS: Record<string, string> = {
 	Spells: 'Spell',
@@ -17,6 +19,12 @@ export class HomebrewFileModal extends Modal {
 	private category = 'Spells';
 	private fileName = '';
 	private destination: HomebrewFileDestination = 'homebrew';
+	private spellLevel = '';
+	private spellSchool = '';
+	private spellClasses: string[] = [];
+	private itemLevel = '';
+	private itemType = '';
+	private itemRequiresAttunement = false;
 
 	onOpen(): void {
 		const { contentEl } = this;
@@ -26,6 +34,8 @@ export class HomebrewFileModal extends Modal {
 			.setName('Create homebrew file')
 			.setHeading();
 
+		const categorySettings = contentEl.createDiv({ cls: 'dnd-wiki-homebrew-category-settings' });
+
 		new Setting(contentEl)
 			.setName('Category')
 			.addDropdown((dropdown) => {
@@ -34,6 +44,7 @@ export class HomebrewFileModal extends Modal {
 				}
 				dropdown.setValue(this.category).onChange((value) => {
 					this.category = value;
+					this.renderCategorySettings(categorySettings);
 				});
 			});
 
@@ -43,6 +54,9 @@ export class HomebrewFileModal extends Modal {
 				text.setPlaceholder('e.g., Fireball')
 					.onChange((value) => { this.fileName = value; });
 			});
+
+		contentEl.appendChild(categorySettings);
+		this.renderCategorySettings(categorySettings);
 
 		new Setting(contentEl)
 			.setName('Create in')
@@ -69,6 +83,101 @@ export class HomebrewFileModal extends Modal {
 			})
 			.addButton((button) => {
 				button.setButtonText('Cancel').onClick(() => this.close());
+			});
+	}
+
+	private renderCategorySettings(containerEl: HTMLElement): void {
+		containerEl.empty();
+		if (this.category === 'Spells') {
+			this.renderSpellSettings(containerEl);
+		} else if (this.category === 'Magic Items') {
+			this.renderMagicItemSettings(containerEl);
+		}
+	}
+
+	private renderSpellSettings(containerEl: HTMLElement): void {
+
+		new Setting(containerEl)
+			.setName('Spell level')
+			.addDropdown((dropdown) => {
+				dropdown.addOption('', 'Select a level');
+				for (let level = 0; level <= 9; level++) {
+					dropdown.addOption(String(level), String(level));
+				}
+				dropdown.setValue(this.spellLevel).onChange((value) => {
+					this.spellLevel = value;
+				});
+			});
+
+		new Setting(containerEl)
+			.setName('Spell school')
+			.addDropdown((dropdown) => {
+				dropdown.addOption('', 'Select a school');
+				for (const school of getCachedSchoolNames()) {
+					dropdown.addOption(school, school);
+				}
+				dropdown.setValue(this.spellSchool).onChange((value) => {
+					this.spellSchool = value;
+				});
+			});
+
+		new Setting(containerEl)
+			.setName('Spell classes')
+			.setDesc('Select all classes that can use this spell.');
+
+		containerEl.createDiv({ cls: 'dnd-wiki-homebrew-class-grid-spacer' });
+		const classGrid = containerEl.createDiv({
+			cls: 'dnd-wiki-homebrew-class-grid',
+		});
+
+		for (const className of getCachedClassNames()) {
+			new Setting(classGrid)
+				.setName(className)
+				.addToggle((toggle) => {
+					toggle
+						.setValue(this.spellClasses.includes(className))
+						.onChange((enabled) => {
+							if (enabled && !this.spellClasses.includes(className)) {
+								this.spellClasses.push(className);
+							} else if (!enabled) {
+								this.spellClasses = this.spellClasses.filter((selected) => selected !== className);
+							}
+						});
+				});
+		}
+	}
+
+	private renderMagicItemSettings(containerEl: HTMLElement): void {
+		new Setting(containerEl)
+			.setName('Item rarity')
+			.addDropdown((dropdown) => {
+				dropdown.addOption('', 'Select a rarity');
+				for (const rarity of getItemRarityNames()) {
+					dropdown.addOption(rarity, rarity.replace('-', ' '));
+				}
+				dropdown.setValue(this.itemLevel).onChange((value) => {
+					this.itemLevel = value;
+				});
+			});
+
+		new Setting(containerEl)
+			.setName('Item type')
+			.addDropdown((dropdown) => {
+				dropdown.addOption('', 'Select a type');
+				for (const itemType of getItemTypeSuggestions()) {
+					dropdown.addOption(itemType, itemType);
+				}
+				dropdown.setValue(this.itemType).onChange((value) => {
+					this.itemType = value;
+				});
+			});
+
+		new Setting(containerEl)
+			.setName('Requires attunement')
+			.addToggle((toggle) => {
+				toggle.setValue(this.itemRequiresAttunement).onChange((value) => {
+					this.itemRequiresAttunement = value;
+				});
 			});
 	}
 
@@ -105,9 +214,23 @@ export class HomebrewFileModal extends Modal {
 			return;
 		}
 
+		const templateOptions: HomebrewFileTemplateOptions = {};
+		if (this.category === 'Spells') {
+			templateOptions.spell = {
+				level: this.spellLevel,
+				classes: this.spellClasses,
+				school: this.spellSchool,
+			};
+		} else if (this.category === 'Magic Items') {
+			templateOptions.magicItem = {
+				level: this.itemLevel,
+				type: this.itemType,
+				requiresAttunement: this.itemRequiresAttunement,
+			};
+		}
 		const file = existing instanceof TFile
 			? existing
-			: await this.app.vault.create(filePath, getHomebrewFileTemplate(this.category));
+			: await this.app.vault.create(filePath, getHomebrewFileTemplate(this.category, templateOptions));
 		this.close();
 		await this.app.workspace.getLeaf(false).openFile(file);
 	}

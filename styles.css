@@ -71,3 +71,28 @@
 .dnd-wiki-add-url-button {
 	margin-top: 12px;
 }
+
+.dnd-wiki-homebrew-category-settings {
+	border-left: 2px solid var(--background-modifier-border);
+	margin: 0.5em 0 1em;
+	padding-left: 1em;
+}
+
+.dnd-wiki-homebrew-class-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+	gap: 0 1rem;
+	margin-top: 0.5em;
+	align-items: center;
+}
+
+.dnd-wiki-homebrew-class-grid-spacer {
+	height: 0.25em;
+}
+
+.dnd-wiki-homebrew-class-grid .setting-item {
+	border: 0;
+	margin: 0;
+	min-height: 0;
+	padding: 0.25em 0;
+}

@@ -2,6 +2,51 @@ import { TFolder, Vault } from 'obsidian';
 
 export const HOMEBREW_CATEGORIES = ['Spells', 'Feats', 'Backgrounds', 'Lineages', 'Magic Items'] as const;
 
+const HOMEBREW_CATEGORY_TAGS: Record<string, string> = {
+	Spells: 'dndwiki/spell',
+	Feats: 'dndwiki/feat',
+	Backgrounds: 'dndwiki/background',
+	Lineages: 'dndwiki/lineage',
+	'Magic Items': 'dndwiki/item',
+};
+
+export function getHomebrewFileTemplate(category: string): string {
+	const tag = HOMEBREW_CATEGORY_TAGS[category];
+	if (!tag) throw new Error(`Unknown homebrew category: ${category}`);
+
+	if (category === 'Spells') {
+		return `---
+tags:
+  - ${tag}
+spell-level-dndwiki:
+class-dndwiki:
+school-dndwiki:
+range-dndwiki:
+casting-time-dndwiki:
+components-dndwiki:
+duration-dndwiki:
+---
+`;
+	}
+
+	if (category === 'Magic Items') {
+		return `---
+tags:
+  - ${tag}
+item-level-dndwiki:
+item-type-dndwiki:
+requires-attunement:
+---
+`;
+	}
+
+	return `---
+tags:
+  - ${tag}
+---
+`;
+}
+
 export interface HomebrewFolderResult {
 	rootPath: string;
 	createdPaths: string[];

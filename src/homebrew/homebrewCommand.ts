@@ -1,7 +1,7 @@
 import { App, Modal, Notice, Setting, TFile } from 'obsidian';
 import { getHomebrewSettings } from '../dataService';
 import { ensureHomebrewFolderPath } from './homebrew';
-import { ensureHomebrewCategoryFolder, HOMEBREW_CATEGORIES } from './homebrewTemplates';
+import { ensureHomebrewCategoryFolder, getHomebrewFileTemplate, HOMEBREW_CATEGORIES } from './homebrewTemplates';
 
 const CATEGORY_LABELS: Record<string, string> = {
 	Spells: 'Spell',
@@ -105,7 +105,9 @@ export class HomebrewFileModal extends Modal {
 			return;
 		}
 
-		const file = existing instanceof TFile ? existing : await this.app.vault.create(filePath, '');
+		const file = existing instanceof TFile
+			? existing
+			: await this.app.vault.create(filePath, getHomebrewFileTemplate(this.category));
 		this.close();
 		await this.app.workspace.getLeaf(false).openFile(file);
 	}

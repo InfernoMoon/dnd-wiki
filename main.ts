@@ -33,12 +33,16 @@ import { DndPrefixSuggest } from './src/suggestDndPrefix';
 import { DndCardsSettingTab } from './src/settings';
 import { renderCustom } from './src/custom/custom';
 import { CustomSuggest } from './src/suggest/suggestCustom';
+import { ensureHomebrewPropertyTypes } from './src/custom/homebrew';
 
 
 export default class DndWiki extends Plugin {
 	async onload() {
 		configurePluginRef(this);
 		initBaseUrlWatcher(this);
+		void ensureHomebrewPropertyTypes(this.app.vault.adapter).catch((error: unknown) => {
+			console.warn('DnD Wiki: Failed to ensure homebrew property types', error);
+		});
 		// Write default URLs to disk on first install (no-op if already saved)
 		await initializeDefaultUrls();
 		// Register editor suggestions for ```spell blocks using known spell ids

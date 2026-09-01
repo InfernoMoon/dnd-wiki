@@ -160,7 +160,7 @@ export class DndCardsSettingTab extends PluginSettingTab {
 
     new Setting(homebrewContainer)
       .setName('Create homebrew templates')
-      .setDesc('Create the folder structure for spells, feats, backgrounds, lineages, and magic items.')
+      .setDesc('Create templates for spells, feats, backgrounds, lineages, and magic items.')
       .addButton((button) => {
         button.setButtonText('Create templates')
           .setCta()
@@ -168,9 +168,9 @@ export class DndCardsSettingTab extends PluginSettingTab {
             const targetFolder = settings.searchEntireVault ? DEFAULT_HOMEBREW_FOLDER : settings.folderPath;
             void createHomebrewTemplateFolders(this.app.vault, targetFolder)
               .then((result) => {
-                const message = result.createdPaths.length === 0
-                  ? 'Homebrew template folders already exist.'
-                  : 'Homebrew template folders created.';
+                const message = result.createdPaths.length === 0 && result.createdFiles.length === 0
+                  ? 'Homebrew templates already exist.'
+                  : 'Homebrew templates created.';
                 new Notice(message);
               })
               .catch((error: unknown) => {

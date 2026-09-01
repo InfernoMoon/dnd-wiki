@@ -6,7 +6,7 @@ import {
   setBaseUrls,
   setHomebrewSettings,
 } from './dataService';
-import { createHomebrewTemplateFolders } from './custom/homebrewTemplates';
+import { createHomebrewTemplateFolders } from './homebrew/homebrewTemplates';
 
 function displayUrlEntries(container: HTMLElement, urls: Record<string, string>): void {
   container.empty();

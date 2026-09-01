@@ -33,13 +33,15 @@ import { DndPrefixSuggest } from './src/suggestDndPrefix';
 import { DndCardsSettingTab } from './src/settings';
 import { renderCustom } from './src/custom/custom';
 import { CustomSuggest } from './src/suggest/suggestCustom';
-import { ensureHomebrewPropertyTypes } from './src/custom/homebrew';
+import { ensureHomebrewPropertyTypes } from './src/homebrew/homebrew';
+import { registerHomebrewFileCommand } from './src/homebrew/homebrewCommand';
 
 
 export default class DndWiki extends Plugin {
 	async onload() {
 		configurePluginRef(this);
 		initBaseUrlWatcher(this);
+		registerHomebrewFileCommand(this.app, (command) => this.addCommand(command));
 		void ensureHomebrewPropertyTypes(this.app.vault.adapter).catch((error: unknown) => {
 			console.warn('DnD Wiki: Failed to ensure homebrew property types', error);
 		});

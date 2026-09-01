@@ -36,6 +36,21 @@ async function createHomebrewFolderStructure(
 	}
 }
 
+export interface HomebrewFolderStructureResult {
+	rootPath: string;
+	createdPaths: string[];
+}
+
+export async function ensureHomebrewFolderStructure(
+	vault: Vault,
+	folderPath: string,
+): Promise<HomebrewFolderStructureResult> {
+	const rootPath = normalizeFolderPath(folderPath);
+	const createdPaths: string[] = [];
+	await createHomebrewFolderStructure(vault, rootPath, createdPaths);
+	return { rootPath, createdPaths };
+}
+
 async function createHomebrewTemplateFiles(
 	vault: Vault,
 	rootPath: string,
@@ -280,3 +295,5 @@ export async function createHomebrewTemplateFolders(
 
 	return { rootPath, createdPaths, createdFiles };
 }
+
+

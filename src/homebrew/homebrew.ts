@@ -55,3 +55,5 @@ export async function ensureHomebrewPropertyTypes(adapter: DataAdapter): Promise
 	config.types = updatedTypes;
 	await adapter.write(TYPES_PATH, `${JSON.stringify(config, null, 2)}\n`);
 }
+
+

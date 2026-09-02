@@ -21,6 +21,32 @@ export class IdCache {
 	}
 }
 
+/** In-memory cache for IDs grouped by a URL and a second scope. */
+export class GroupedIdCache {
+	private readonly entries = new Map<string, Map<string, string[]>>();
+
+	private getEntriesForUrl(urlKey: string): Map<string, string[]> {
+		const existing = this.entries.get(urlKey);
+		if (existing) return existing;
+
+		const created = new Map<string, string[]>();
+		this.entries.set(urlKey, created);
+		return created;
+	}
+
+	get(urlKey: string, groupKey: string): string[] {
+		return this.getEntriesForUrl(urlKey).get(groupKey) ?? [];
+	}
+
+	has(urlKey: string, groupKey: string): boolean {
+		return this.getEntriesForUrl(urlKey).has(groupKey);
+	}
+
+	set(urlKey: string, groupKey: string, ids: string[]): void {
+		this.getEntriesForUrl(urlKey).set(groupKey, ids);
+	}
+}
+
 /** Wait for cached IDs to become available, or return after the timeout. */
 export async function waitForCachedIds(
 	getIds: () => string[],

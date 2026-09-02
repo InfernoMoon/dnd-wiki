@@ -3,7 +3,7 @@ import { renderSpell } from './src/dnd/spells/spell';
 import { renderSpellList } from './src/dnd/spells/spelllist';
 import { renderFeat } from './src/dnd/feats/feat';
 import { renderItem } from './src/dnd/items/item';
-import { initBaseUrlWatcher, configurePluginRef, initData, peekBaseUrls, initializeDefaultUrls } from './src/dataService';
+import { configurePluginRef, peekBaseUrls, initializeDefaultUrls } from './src/settings/settingsService';
 import { preloadAllSpellNames } from './src/dnd/spells/spellUtils';
 import { SpellNameSuggest } from './src/suggest/suggestSpell';
 import { SpellListSuggest } from './src/suggest/suggestSpellList';
@@ -30,7 +30,7 @@ import { renderLineageList } from './src/dnd/lineages/lineageList';
 import { renderClass } from './src/dnd/classes/class';
 import { renderSubclass } from './src/dnd/classes/subclass';
 import { DndPrefixSuggest } from './src/suggestDndPrefix';
-import { DndCardsSettingTab } from './src/settings';
+import { DndCardsSettingTab } from './src/settings/settings';
 import { renderCustom } from './src/dnd/custom/custom';
 import { CustomSuggest } from './src/suggest/suggestCustom';
 import { ensureHomebrewPropertyTypes } from './src/homebrew/homebrew';
@@ -40,41 +40,33 @@ import { registerHomebrewFileCommand } from './src/homebrew/homebrewCommand';
 export default class DndWiki extends Plugin {
 	async onload() {
 		configurePluginRef(this);
-		initBaseUrlWatcher(this);
 		registerHomebrewFileCommand(this.app, (command) => this.addCommand(command));
 		void ensureHomebrewPropertyTypes(this.app.vault.adapter).catch((error: unknown) => {
 			console.warn('DnD Wiki: Failed to ensure homebrew property types', error);
 		});
-		// Write default URLs to disk on first install (no-op if already saved)
 		await initializeDefaultUrls();
-		// Register editor suggestions for ```spell blocks using known spell ids
-		this.registerEditorSuggest(new SpellNameSuggest(this));
-		// Register editor suggestions for ```feat blocks using known feat ids
-		this.registerEditorSuggest(new FeatNameSuggest(this));
-		// Register directive suggestions for ```spelllist blocks
-		this.registerEditorSuggest(new SpellListSuggest(this));
-		// Register directive suggestions for ```dnd-itemlist blocks
-		this.registerEditorSuggest(new ItemListSuggest(this));
-		// Register suggestions when typing ```dnd for block suffixes
 		const dndPrefixSuggest = new DndPrefixSuggest(this);
 		await dndPrefixSuggest.refreshUrlKeys();
 		this.registerEditorSuggest(dndPrefixSuggest);
-		// Register editor suggestions for ```dnd-item blocks
-		this.registerEditorSuggest(new ItemNameSuggest(this));
-		this.registerEditorSuggest(new BackgroundNameSuggest(this));
+
+		this.registerEditorSuggest(new SpellNameSuggest(this));
+		this.registerEditorSuggest(new SpellListSuggest(this));
+		this.registerEditorSuggest(new FeatNameSuggest(this));
 		this.registerEditorSuggest(new FeatListSuggest(this));
+		this.registerEditorSuggest(new ItemNameSuggest(this));
+		this.registerEditorSuggest(new ItemListSuggest(this));
+		this.registerEditorSuggest(new BackgroundNameSuggest(this));
 		this.registerEditorSuggest(new BackgroundListSuggest(this));
 		this.registerEditorSuggest(new LineageNameSuggest(this));
 		this.registerEditorSuggest(new LineageListSuggest(this));
+
 		const classNameSuggest = new ClassNameSuggest(this);
 		await classNameSuggest.refreshClassNames();
 		this.registerEditorSuggest(classNameSuggest);
-		// Subclass suggester — receives a lookup fn to resolve urlKey -> baseUrl at suggestion time
 		const urlsSnapshot = await peekBaseUrls();
 		this.registerEditorSuggest(new SubclassNameSuggest(this, (urlKey) => urlsSnapshot[urlKey] || ''));
 		this.registerEditorSuggest(new CustomSuggest(this));
-		// Block processors — registered dynamically per URL key in onLayoutReady below
-		// Feat block processor — register for each configured URL key
+		
 		this.app.workspace.onLayoutReady(async () => {
 			const urls = await peekBaseUrls();
 			for (const [urlKey, baseUrl] of Object.entries(urls)) {
@@ -134,7 +126,6 @@ export default class DndWiki extends Plugin {
 					await preloadAllBackgroundIds(urlKey, url);
 					await preloadAllLineageIds(urlKey, url);
 				}
-				await initData();
 			} catch (e) {
 				console.warn('Failed to preload data', e);
 			}

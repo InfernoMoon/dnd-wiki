@@ -1,14 +1,9 @@
 import { App, Plugin, PluginSettingTab, Setting, Notice } from 'obsidian';
-import {
-  DEFAULT_HOMEBREW_FOLDER,
-  getHomebrewSettings,
-  peekBaseUrls,
-  setBaseUrls,
-  setHomebrewSettings,
-} from './dataService';
-import { ensureHomebrewFolderPath } from './homebrew/homebrew';
-import { createHomebrewTemplateFolders } from './homebrew/homebrewTemplates';
-import { openHomebrewFileModal } from './homebrew/homebrewCommand';
+import { peekBaseUrls, setBaseUrls } from './settingsService';
+import { DEFAULT_HOMEBREW_FOLDER, getHomebrewSettings, setHomebrewSettings } from '../homebrew/homebrewSettings';
+import { ensureHomebrewFolderPath } from '../homebrew/homebrew';
+import { createHomebrewTemplateFolders } from '../homebrew/homebrewTemplates';
+import { openHomebrewFileModal } from '../homebrew/homebrewCommand';
 
 function displayUrlEntries(container: HTMLElement, urls: Record<string, string>): void {
   container.empty();

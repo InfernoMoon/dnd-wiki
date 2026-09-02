@@ -2,7 +2,7 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
 import { getPrimarySlug, nameToSlugs, displayNameFromSlug } from '../../utils/text';
-import { fetchPageAtUrlWithSlugFallbacks } from '../../utils/fetcher';
+import { fetchPageAtUrlWithSlugFallbacks } from '../../utils/wikiPageFetcher';
 import { prepareNameInput, renderCollapsible } from '../../utils/renderer';
 
 const classRenderCache = new RenderCache<CachedRender>();

@@ -63,9 +63,3 @@ export function renderCollapsible(el: HTMLElement, title: string, html: string):
 		arrow.textContent = isHidden ? '▲' : '▼';
 	});
 }
-
-/** Extract the inner content HTML of a rendered card for caching. */
-export function extractCardContentHtml(host: HTMLElement): string | null {
-	const contentDiv = host.querySelector('div[id^="card-content-"]');
-	return contentDiv?.innerHTML || null;
-}

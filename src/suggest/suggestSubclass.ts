@@ -1,6 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { App, EditorSuggestContext, EditorSuggestTriggerInfo } from 'obsidian';
-import { getCachedClassNames } from '../dataService';
+import { getClassNames } from '../data/staticData';
 import { getKnownSubclassNamesForParent, preloadSubclassIds } from '../dnd/classes/subclassUtils';
 import { getPrimarySlug } from '../utils/text';
 
@@ -90,7 +90,7 @@ export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
     }
 
     if (this.currentKey === 'class') {
-      return getCachedClassNames().filter(n => n.toLowerCase().includes(q)).slice(0, 50).map(n => ({ text: n }));
+      return getClassNames().filter(n => n.toLowerCase().includes(q)).slice(0, 50).map(n => ({ text: n }));
     }
 
     if (this.currentKey === 'subinfo') {

@@ -1,5 +1,6 @@
 import { App, Modal, Notice, Setting, TFile } from 'obsidian';
-import { getCachedClassNames, getCachedSchoolNames, getHomebrewSettings, getItemRarityNames } from '../dataService';
+import { getClassNames, getItemRarityNames, getSchoolNames } from '../data/staticData';
+import { getHomebrewSettings } from './homebrewSettings';
 import { getItemTypeSuggestions } from '../dnd/items/itemService';
 import { ensureHomebrewFolderPath } from './homebrew';
 import { ensureHomebrewCategoryFolder, getHomebrewFileTemplate, HOMEBREW_CATEGORIES } from './homebrewTemplates';
@@ -117,7 +118,7 @@ export class HomebrewFileModal extends Modal {
 			.setName('Spell school')
 			.addDropdown((dropdown) => {
 				dropdown.addOption('', 'Select a school');
-				for (const school of getCachedSchoolNames()) {
+				for (const school of getSchoolNames()) {
 					dropdown.addOption(school, school);
 				}
 				dropdown.setValue(this.spellSchool).onChange((value) => {
@@ -134,7 +135,7 @@ export class HomebrewFileModal extends Modal {
 			cls: 'dnd-wiki-homebrew-class-grid',
 		});
 
-		for (const className of getCachedClassNames()) {
+		for (const className of getClassNames()) {
 			new Setting(classGrid)
 				.setName(className)
 				.addToggle((toggle) => {

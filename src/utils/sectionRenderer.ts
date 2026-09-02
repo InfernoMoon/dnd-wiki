@@ -1,4 +1,8 @@
-import { renderCollapsible } from './utils/renderer';
+/**
+ * Parse fetched HTML headings and render only sections requested by the
+ * `section:` and `sectionFrom:` parameters.
+ */
+import { renderCollapsible } from './renderer';
 
 export interface SectionDirective {
   kind: 'section' | 'sectionFrom';
@@ -22,7 +26,7 @@ function extractSection(
   root: Element,
   header: HTMLElement,
   endHeader: HTMLElement | null,
-  fallbackTitle: string
+  fallbackTitle: string,
 ): { title: string; html: string } {
   const range = doc.createRange();
   range.setStartAfter(header);
@@ -34,8 +38,8 @@ function extractSection(
     range.setEndAfter(header);
   }
 
-	const wrapper = root.cloneNode(false) as HTMLElement;
-	wrapper.appendChild(range.cloneContents());
+  const wrapper = root.cloneNode(false) as HTMLElement;
+  wrapper.appendChild(range.cloneContents());
   return {
     title: (header.textContent || '').trim() || fallbackTitle.trim(),
     html: wrapper.innerHTML,
@@ -46,7 +50,7 @@ function extractSingleSection(
   doc: Document,
   root: Element,
   headers: HTMLElement[],
-  query: string
+  query: string,
 ): Array<{ title: string; html: string }> {
   const headerIndex = headers.findIndex((header) => normalizeHeaderText(header.textContent || '') === normalizeHeaderText(query));
   if (headerIndex === -1) return [];
@@ -62,7 +66,7 @@ function extractSectionRange(
   doc: Document,
   root: Element,
   headers: HTMLElement[],
-  query: string
+  query: string,
 ): Array<{ title: string; html: string }> {
   const startIndex = headers.findIndex((header) => normalizeHeaderText(header.textContent || '') === normalizeHeaderText(query));
   if (startIndex === -1) return [];
@@ -94,7 +98,7 @@ function extractSectionRange(
 
 function extractSectionsFromHtml(
   contentHtml: string,
-  directives: SectionDirective[]
+  directives: SectionDirective[],
 ): Array<{ title: string; html: string }> {
   const parser = new DOMParser();
   const doc = parser.parseFromString(`<div id="section-root">${contentHtml}</div>`, 'text/html');
@@ -123,9 +127,9 @@ export function parseSectionDirectives(source: string, afterOffset: number): Par
     if ((match.index ?? Number.MAX_SAFE_INTEGER) > afterOffset) matches.push(match);
   }
 
-  for (const match of matches) {
-    const kind = match[1].toLowerCase();
-    const query = (match[2] || '').trim();
+  for (const directiveMatch of matches) {
+    const kind = directiveMatch[1].toLowerCase();
+    const query = (directiveMatch[2] || '').trim();
     if (!query) continue;
 
     if (kind === 'section') {
@@ -143,7 +147,7 @@ export function renderWithSections(
   fallbackTitle: string,
   contentHtml: string,
   sectionDirectives: ParsedSectionDirectives,
-  missingSectionsMessagePrefix: string
+  missingSectionsMessagePrefix: string,
 ): void {
   if (!sectionDirectives.directives.length) {
     renderCollapsible(host, fallbackTitle, contentHtml);

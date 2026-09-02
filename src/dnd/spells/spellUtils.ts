@@ -10,9 +10,9 @@ import { IdCache } from '../../cache/idCache';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
 import { getPrimarySlug, nameToSlugs, displayNameFromSlug } from '../../utils/text';
-import { fetchPageContent } from '../../utils/fetcher';
+import { fetchPageContent } from '../../utils/wikiPageFetcher';
 import { renderCollapsible } from '../../utils/renderer';
-import { loadFromTable, LoaderConfig } from "../../genericLoader";
+import { loadFromTable, LoaderConfig } from "../../utils/wikiIndexLoader";
 
 export const spellIdCache = new IdCache();
 const spellRenderCache = new RenderCache<CachedRender>();
@@ -37,12 +37,10 @@ export async function preloadAllSpellNames(urlKey: string, baseUrl: string): Pro
   const config: LoaderConfig = {
     baseUrl,
     indexPath: '/spells',
-    tableRowSelector: 'table tr',
-    tableCellSelector: 'td',
-    replacePatterns: [['(ua)', ''], ['(UA)', '']],
-    useLinkMethod: false,
-    useTableMethod: true,
-  };
+		tableRowSelector: 'table tr',
+		tableCellSelector: 'td',
+		replacePatterns: [['(ua)', ''], ['(UA)', '']],
+	};
 
 	const ids = await loadFromTable(config);
 	spellIdCache.addMany(urlKey, ids);

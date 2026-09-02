@@ -1,9 +1,9 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
-import { fetchPageAtUrl } from '../../utils/fetcher';
+import { fetchPageAtUrl } from '../../utils/wikiPageFetcher';
 import { requireBaseUrl } from '../../utils/renderer';
-import { parseSectionDirectives, renderWithSections } from '../../sectionRenderer';
+import { parseSectionDirectives, renderWithSections } from '../../utils/sectionRenderer';
 
 const customRenderCache = new RenderCache<CachedRender>();
 

@@ -1,9 +1,9 @@
 import { IdCache } from '../../cache/idCache';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
-import { fetchPageContentWithSlugFallbacks } from '../../utils/fetcher';
+import { fetchPageContentWithSlugFallbacks } from '../../utils/wikiPageFetcher';
 import { nameToSlugs } from '../../utils/text';
-import { loadFromLinks, loadFromTable, LoaderConfig } from '../../genericLoader';
+import { loadFromLinks, loadFromTable, LoaderConfig } from '../../utils/wikiIndexLoader';
 
 export const backgroundIdCache = new IdCache();
 const backgroundRenderCache = new RenderCache<CachedRender>();

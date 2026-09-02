@@ -1,6 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
-import { getCachedClassNames, getCachedSchoolNames } from '../dataService';
+import { getClassNames, getSchoolNames } from '../data/staticData';
 import { getKnownSpellIdsForKey } from '../dnd/spells/spellUtils';
 import { displayNameFromSlug } from '../utils/text';
 
@@ -82,11 +82,11 @@ export class SpellListSuggest extends EditorSuggest<{ text: string }> {
       return levels.filter(n => n.startsWith(q)).map(n => ({ text: n }));
     }
     if (this.currentKey === 'class') {
-      const options = getCachedClassNames();
+      const options = getClassNames();
       return options.filter(n => n.toLowerCase().includes(q)).slice(0, 50).map(n => ({ text: n }));
     }
     if (this.currentKey === 'school') {
-      const options = getCachedSchoolNames();
+      const options = getSchoolNames();
       return options.filter(n => n.toLowerCase().includes(q)).slice(0, 50).map(n => ({ text: n }));
     }
     if (this.currentKey === 'searchmode') {

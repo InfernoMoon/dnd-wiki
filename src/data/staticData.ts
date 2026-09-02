@@ -48,3 +48,24 @@ export const STATIC_ITEM_RARITY_WORD_TO_INDEX: Record<string, number> = {
   unique: 6,
   other: 7,
 };
+
+/** Return the supported D&D class names in alphabetical order. */
+export function getClassNames(): string[] {
+	return STATIC_CLASSES.slice().sort((a, b) => a.localeCompare(b));
+}
+
+/** Return the supported spell schools in alphabetical order. */
+export function getSchoolNames(): string[] {
+	return STATIC_SCHOOLS.slice().sort((a, b) => a.localeCompare(b));
+}
+
+/** Return display-friendly item rarity names in canonical order. */
+export function getItemRarityNames(): string[] {
+	const entries = Object.entries(STATIC_ITEM_RARITY_WORD_TO_INDEX);
+	entries.sort((a, b) => a[1] - b[1]);
+	return entries.map(([key]) => key.split('-').map(capitalizeWord).join('-'));
+}
+
+function capitalizeWord(word: string): string {
+	return word.charAt(0).toUpperCase() + word.slice(1);
+}

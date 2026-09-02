@@ -3,8 +3,8 @@ import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
 import { requestUrl } from 'obsidian';
 import { displayNameFromSlug, nameToSlugs } from '../../utils/text';
-import { fetchPageContentWithSlugFallbacks } from '../../utils/fetcher';
-import { loadFromTable, LoaderConfig } from '../../genericLoader';
+import { fetchPageContentWithSlugFallbacks } from '../../utils/wikiPageFetcher';
+import { loadFromTable, LoaderConfig } from '../../utils/wikiIndexLoader';
 import { STATIC_ITEM_TYPES } from '../../data/staticData';
 
 export const itemIdCache = new IdCache();
@@ -101,8 +101,6 @@ export async function preloadAllItemIds(urlKey: string, baseUrl: string): Promis
 		baseUrl,
 		tableRowSelector: 'table tr',
 		tableCellSelector: 'td a[href]',
-		useLinkMethod: false,
-		useTableMethod: true,
 		rowProcessor,
 	};
 	const [wondrousIds, magicItemIds] = await Promise.all([

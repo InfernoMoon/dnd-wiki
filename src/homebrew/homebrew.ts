@@ -1,7 +1,7 @@
 import { normalizePath, TFolder } from 'obsidian';
 import type { DataAdapter, Vault } from 'obsidian';
-import { DEFAULT_HOMEBREW_FOLDER } from '../dataService';
-import type { HomebrewSettings } from '../dataService';
+import { DEFAULT_HOMEBREW_FOLDER } from './homebrewSettings';
+import type { HomebrewSettings } from './homebrewSettings';
 
 const TYPES_PATH = '.obsidian/types.json';
 

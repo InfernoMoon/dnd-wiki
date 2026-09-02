@@ -2,8 +2,8 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
 import { getPrimarySlug, nameToSlugs, displayNameFromSlug } from '../../utils/text';
-import { fetchPageAtUrl } from '../../utils/fetcher';
-import { renderWithSections, parseSectionDirectives } from '../../sectionRenderer';
+import { fetchPageAtUrl } from '../../utils/wikiPageFetcher';
+import { renderWithSections, parseSectionDirectives } from '../../utils/sectionRenderer';
 import { requireBaseUrl } from '../../utils/renderer';
 import { preloadSubclassIds } from './subclassUtils';
 

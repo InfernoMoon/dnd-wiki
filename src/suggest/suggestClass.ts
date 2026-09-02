@@ -1,6 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
-import { getClassNames } from '../dataService';
+import { getClassNames } from '../data/staticData';
 
 export class ClassNameSuggest extends EditorSuggest<{ text: string }> {
   private _cachedClassNames: string[] = [];

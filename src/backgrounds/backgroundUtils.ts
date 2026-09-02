@@ -5,7 +5,8 @@
  * - Provides helpers to access and format background identifiers
  */
 import { TFile, TFolder, TAbstractFile } from 'obsidian';
-import { getObsidianApp, nameToSlug } from '../utils';
+import { getObsidianApp } from '../utils/obsidian';
+import { nameToSlug } from '../utils/text';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../genericLoader';
 
 // In-memory set of known background ids per URL key (normalized slugs)

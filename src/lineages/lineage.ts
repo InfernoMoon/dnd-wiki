@@ -4,7 +4,10 @@
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { TFile, TFolder, MarkdownRenderer, Component } from 'obsidian';
-import { nameToSlug, fetchPageContent, renderCollapsible, escapeHtml, getObsidianApp, createUid, extractCardContentHtml } from '../utils';
+import { nameToSlug, escapeHtml } from '../utils/text';
+import { fetchPageContent } from '../utils/fetcher';
+import { renderCollapsible, extractCardContentHtml } from '../utils/renderer';
+import { getObsidianApp, createUid } from '../utils/obsidian';
 
 const lineageCache = new Map<string, Map<string, { title: string; html: string }>>();
 

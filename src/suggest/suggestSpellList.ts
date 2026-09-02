@@ -2,7 +2,7 @@ import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
 import { getCachedClassNames, getCachedSchoolNames } from '../dataService';
 import { getKnownSpellIdsForKey } from '../spells/spellUtils';
-import { displayNameFromSlug } from '../utils';
+import { displayNameFromSlug } from '../utils/text';
 
 export class SpellListSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;

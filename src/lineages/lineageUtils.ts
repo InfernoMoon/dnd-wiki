@@ -3,7 +3,8 @@
  * Utilities for lineage metadata and ID management.
  */
 import { TFile, TFolder, TAbstractFile } from 'obsidian';
-import { getObsidianApp, nameToSlug } from '../utils';
+import { getObsidianApp } from '../utils/obsidian';
+import { nameToSlug } from '../utils/text';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../genericLoader';
 
 const lineageIdCache: Map<string, Set<string>> = new Map();

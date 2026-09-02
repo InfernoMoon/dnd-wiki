@@ -1,7 +1,7 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
 import { getKnownFeatIdsForKey } from '../feats/featUtils';
-import { displayNameFromSlug } from '../utils';
+import { displayNameFromSlug } from '../utils/text';
 
 export class FeatNameSuggest extends EditorSuggest<{ text: string }> {
   private currentUrlKey = '';

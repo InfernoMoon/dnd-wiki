@@ -1,7 +1,7 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
 import { getKnownLineageIdsForKey } from '../lineages/lineageUtils';
-import { displayNameFromSlug } from '../utils';
+import { displayNameFromSlug } from '../utils/text';
 
 export class LineageNameSuggest extends EditorSuggest<{ text: string }> {
   private currentUrlKey = '';

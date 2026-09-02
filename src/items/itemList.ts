@@ -1,6 +1,11 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { requestUrl, TFolder, TAbstractFile, TFile, MarkdownRenderer, Component } from 'obsidian';
-import { getObsidianApp, nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible, extractTableNamesFromFirstCell, parseSearchDirective, parseSearchModeDirective } from '../utils';
+import { getObsidianApp } from '../utils/obsidian';
+import { nameToSlug, displayNameFromSlug } from '../utils/text';
+import { fetchPageContent } from '../utils/fetcher';
+import { renderCollapsible } from '../utils/renderer';
+import { extractTableNamesFromFirstCell } from '../utils/dom';
+import { parseSearchDirective, parseSearchModeDirective } from '../utils/search';
 import { STATIC_ITEM_RARITY_WORD_TO_INDEX } from '../data/staticData';
 import { getCachedItem, setCachedItem } from './item';
 

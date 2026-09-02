@@ -6,7 +6,11 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { Component, MarkdownRenderer } from 'obsidian';
 import { getKnownBackgroundIdsForKey } from './backgroundUtils';
 import { getCachedBackground, setCachedBackground, findCustomBackgroundById, buildCustomBackgroundHtmlStructured, cleanBackgroundTitle } from './background';
-import { fetchPageContent, getObsidianApp, renderCollapsible, displayNameFromSlug, parseSearchDirective, parseSearchModeDirective } from '../utils';
+import { fetchPageContent } from '../utils/fetcher';
+import { getObsidianApp } from '../utils/obsidian';
+import { renderCollapsible } from '../utils/renderer';
+import { displayNameFromSlug } from '../utils/text';
+import { parseSearchDirective, parseSearchModeDirective } from '../utils/search';
 
 export async function renderBackgroundList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();

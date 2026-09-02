@@ -8,7 +8,10 @@
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
-import { nameToSlug, fetchPageContent, renderCollapsible, escapeHtml, getObsidianApp, createUid, extractCardContentHtml } from '../utils';
+import { nameToSlug, escapeHtml } from '../utils/text';
+import { fetchPageContent } from '../utils/fetcher';
+import { renderCollapsible, extractCardContentHtml } from '../utils/renderer';
+import { getObsidianApp, createUid } from '../utils/obsidian';
 
 // In-memory cache for fetched feat content: outer key = urlKey, inner key = feat id/slug
 const featCache = new Map<string, Map<string, { title: string; html: string }>>();
@@ -249,10 +252,10 @@ async function renderCustomFeatToCache(
  * @param baseUrl Configured base URL used for fallback fetch.
  * @returns Cached title and HTML or null if unavailable.
  */
-async function ensureFeatCached(
-  featId: string,
-  urlKey: string,
-  baseUrl: string
+export async function ensureFeatCached(
+	featId: string,
+	urlKey: string,
+	baseUrl: string
 ): Promise<{ title: string; html: string } | null> {
   const existing = getCachedFeat(urlKey, featId);
   if (existing) return existing;

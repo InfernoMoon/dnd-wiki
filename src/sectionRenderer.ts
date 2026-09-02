@@ -1,4 +1,4 @@
-import { renderCollapsible } from './utils';
+import { renderCollapsible } from './utils/renderer';
 
 export interface SectionDirective {
   kind: 'section' | 'sectionFrom';

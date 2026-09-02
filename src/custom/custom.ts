@@ -1,5 +1,5 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { fetchPageAtUrl } from '../utils';
+import { fetchPageAtUrl } from '../utils/fetcher';
 import { parseSectionDirectives, renderWithSections } from '../sectionRenderer';
 
 const customPageCache = new Map<string, Map<string, { title: string; html: string }>>();

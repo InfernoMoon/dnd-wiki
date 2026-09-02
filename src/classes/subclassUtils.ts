@@ -4,7 +4,7 @@
  * Loads by fetching class/subinfo pages and extracting /{classname}:{subinfo} links.
  */
 import { requestUrl } from 'obsidian';
-import { nameToSlug, displayNameFromSlug } from '../utils';
+import { nameToSlug, displayNameFromSlug } from '../utils/text';
 
 // subclassCache[urlKey]["classSlug|parentSubinfoSlug"] = string[] of subinfo slugs
 const subclassCache = new Map<string, Map<string, string[]>>();

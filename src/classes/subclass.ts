@@ -5,7 +5,8 @@
  * Fetches /{class}:{subinfo} and optionally renders only matching header sections.
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { nameToSlug, fetchPageAtUrl, displayNameFromSlug } from '../utils';
+import { nameToSlug, displayNameFromSlug } from '../utils/text';
+import { fetchPageAtUrl } from '../utils/fetcher';
 import { preloadSubclassIds } from './subclassUtils';
 import { parseSectionDirectives, renderWithSections } from '../sectionRenderer';
 

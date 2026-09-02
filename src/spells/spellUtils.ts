@@ -7,7 +7,10 @@
  * - Renders collapsible cards with sanitized content
  */
 import { TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from "obsidian";
-import { getObsidianApp, nameToSlug, displayNameFromSlug, fetchPageContent, renderCollapsible } from "../utils";
+import { getObsidianApp } from '../utils/obsidian';
+import { nameToSlug, displayNameFromSlug } from '../utils/text';
+import { fetchPageContent } from '../utils/fetcher';
+import { renderCollapsible } from '../utils/renderer';
 import { loadFromTable, LoaderConfig } from "../genericLoader";
 
 // In-memory cache of rendered spell content: outer key = urlKey, inner key = normalized spell id

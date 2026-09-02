@@ -5,7 +5,7 @@
  * Highly customizable with parameters for different data types.
  */
 import { requestUrl } from 'obsidian';
-import { nameToSlug } from './utils';
+import { nameToSlug } from './utils/text';
 
 export interface LoaderConfig {
   /** Base URL to fetch from */

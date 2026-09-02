@@ -6,7 +6,10 @@
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
-import { getObsidianApp, nameToSlug, fetchPageContent, renderCollapsible, displayNameFromSlug } from '../utils';
+import { getObsidianApp } from '../utils/obsidian';
+import { nameToSlug, displayNameFromSlug } from '../utils/text';
+import { fetchPageContent } from '../utils/fetcher';
+import { renderCollapsible } from '../utils/renderer';
 
 // Cache for fetched item content: outer key = urlKey, inner key = item id
 const itemCache = new Map<string, Map<string, { title: string; html: string }>>();

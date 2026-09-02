@@ -1,7 +1,7 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
 import { getKnownBackgroundIdsForKey } from '../backgrounds/backgroundUtils';
-import { displayNameFromSlug } from '../utils';
+import { displayNameFromSlug } from '../utils/text';
 
 export class BackgroundNameSuggest extends EditorSuggest<{ text: string }> {
   private currentUrlKey = '';

@@ -2,7 +2,7 @@ import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { App, EditorSuggestContext, EditorSuggestTriggerInfo } from 'obsidian';
 import { getCachedClassNames } from '../dataService';
 import { getKnownSubclassNamesForParent, preloadSubclassIds } from '../classes/subclassUtils';
-import { nameToSlug } from '../utils';
+import { nameToSlug } from '../utils/text';
 
 export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;

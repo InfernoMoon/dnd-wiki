@@ -1,349 +1,368 @@
-/**
- * spellList.ts
- * Markdown code block processor for ```spellList blocks.
- * Parses directives (level, class, school), filters index pages,
- * and renders matching spells using `renderSingleSpell`.
- */
-import { MarkdownPostProcessorContext, requestUrl } from "obsidian";
-import { renderSingleSpell, getCustomSpellEntries, seedSpellNamesForKey } from "./spellUtils";
-import { getPrimarySlug, displayNameFromSlug } from '../../utils/text';
+/** Render filtered `spellList` code blocks. */
+import type { MarkdownPostProcessorContext } from 'obsidian';
+import { requestUrl } from 'obsidian';
+import { FilteredListCache } from '../../cache/filteredListCache';
 import { extractTableNamesFromFirstCell } from '../../utils/dom';
-import { parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
+import { getTextProperties } from '../../utils/directives';
 import { requireBaseUrl } from '../../utils/renderer';
+import {
+	matchesSearch,
+	parseSearchDirective,
+	parseSearchModeDirective,
+} from '../../utils/search';
+import type { SearchMode } from '../../utils/search';
+import { displayNameFromSlug, getPrimarySlug } from '../../utils/text';
+import {
+	renderSingleSpell,
+	seedSpellNamesForKey,
+} from './spellUtils';
+import { SpellListCacheItem } from './spellListCacheItem';
+import type {
+	SpellLevelDirective,
+	SpellFilterDirective,
+} from './spellListCacheItem';
 
-/**
- * Render a filtered list of spells based on directives provided in the block.
- * Supports:
- * - level: all | 0..9 | ranges like 2-4
- * - class: comma-separated names or "all"
- * - school: comma-separated names or "all"
- * Fetches `/spells` and optional `/spells:<slug>` pages to intersect results.
- */
-type LevelDirective = number | number[] | "all" | null;
-
-// In-memory cache: key is combination of filters, value is list of spell names
-const spellListCache: Map<string, string[]> = new Map();
-
-function buildCacheKey(urlKey: string, levelDirective: LevelDirective, classSlugs?: string[], schoolSlugs?: string[]): string {
-	const levelKey = Array.isArray(levelDirective)
-		? `levels:${levelDirective.join(',')}`
-		: typeof levelDirective === 'number'
-		? `level:${levelDirective}`
-		: levelDirective === 'all'
-		? 'level:all'
-		: 'level:null';
-	const classKey = Array.isArray(classSlugs) && classSlugs.length ? `classes:${classSlugs.slice().sort().join(',')}` : 'classes:null';
-	const schoolKey = Array.isArray(schoolSlugs) && schoolSlugs.length ? `schools:${schoolSlugs.slice().sort().join(',')}` : 'schools:null';
-	return `${urlKey}|${levelKey}|${classKey}|${schoolKey}`;
+interface SpellListDirectives {
+	level: SpellLevelDirective;
+	classDirective: SpellFilterDirective;
+	schoolDirective: SpellFilterDirective;
+	addSpells: string[];
+	removeSpells: string[];
+	searches: string[];
+	searchMode: SearchMode;
 }
 
-function parseDirectives(source: string): {
-	levelDirective: LevelDirective;
-	classDirective: string[] | "all" | null;
-	schoolDirective: string[] | "all" | null;
-	addSpells: string[]; // list of slugs to add (not a filter)
-	removeSpells: string[]; // list of slugs to remove (post-add removal)
-} {
-	const lines = source.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-	let levelDirective: LevelDirective = null;
-	let classDirective: string[] | "all" | null = null;
-	let schoolDirective: string[] | "all" | null = null;
-	const addSpells: string[] = [];
-	const removeSpells: string[] = [];
-
-	const expandLevels = (raw: string): number[] => {
-		const out: number[] = [];
-		const tokens = raw.split(",").map((s) => s.trim()).filter(Boolean);
-		for (const tok of tokens) {
-			if (/^\d+$/.test(tok)) {
-				const n = Number.parseInt(tok, 10);
-				if (!Number.isNaN(n) && n >= 0 && n <= 9) out.push(n);
-			} else {
-				const mm = /^(\d+)\s*-\s*(\d+)$/.exec(tok);
-				if (mm) {
-					const a = Number.parseInt(mm[1], 10);
-					const b = Number.parseInt(mm[2], 10);
-					if (!Number.isNaN(a) && !Number.isNaN(b)) {
-						const start = Math.max(0, Math.min(a, b));
-						const end = Math.min(9, Math.max(a, b));
-						for (let i = start; i <= end; i++) out.push(i);
-					}
-				}
-			}
-		}
-		return Array.from(new Set(out)).sort((x, y) => x - y);
-	};
-
-	for (const line of lines) {
-		const mLevel = /^level:\s*(all|[\d\s,-]+)$/i.exec(line);
-		if (mLevel) {
-			const vraw = mLevel[1].toLowerCase();
-			levelDirective = vraw.trim() === "all" ? "all" : ((): LevelDirective => {
-				const parts = expandLevels(vraw);
-				return parts.length <= 1 ? parts[0] ?? null : parts;
-			})();
-			continue;
-		}
-		const mClass = /^class:\s*(.+)$/i.exec(line);
-		if (mClass) {
-			const raw = mClass[1].trim();
-			classDirective = /^all$/i.test(raw)
-				? "all"
-				: raw.split(",").map((s) => s.trim()).filter(Boolean).map((p) => getPrimarySlug(p)).filter(Boolean);
-			continue;
-		}
-		const mSchool = /^school:\s*(.+)$/i.exec(line);
-		if (mSchool) {
-			const raw = mSchool[1].trim();
-			schoolDirective = /^all$/i.test(raw)
-				? "all"
-				: raw.split(",").map((s) => s.trim()).filter(Boolean).map((p) => getPrimarySlug(p)).filter(Boolean);
-			continue;
-		}
-		const mAdd = /^addspells:\s*(.+)$/i.exec(line);
-		if (mAdd) {
-			const raw = mAdd[1].trim();
-			const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
-			for (const p of parts) {
-				const slug = getPrimarySlug(p);
-				if (slug) addSpells.push(slug);
-			}
-			continue;
-		}
-		const mRemove = /^removespells:\s*(.+)$/i.exec(line);
-		if (mRemove) {
-			const raw = mRemove[1].trim();
-			const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
-			for (const p of parts) {
-				const slug = getPrimarySlug(p);
-				if (slug) removeSpells.push(slug);
-			}
-			continue;
-		}
-	}
-	return { levelDirective, classDirective, schoolDirective, addSpells, removeSpells };
+interface SpellIndexDocuments {
+	base: Document;
+	classes: Document[];
+	schools: Document[];
 }
 
-function toNames(docs: (Document | null)[]): string[][] {
-	return docs.filter((d): d is Document => !!d).map((d) => extractTableNamesFromFirstCell(d));
+interface FilteredSpellNames {
+	names: string[];
+	message?: string;
 }
 
-function unionNormalized(listOfNameArrays: string[][]): Set<string> {
-	const set = new Set<string>();
-	for (const arr of listOfNameArrays) {
-		for (const n of arr) set.add(getPrimarySlug(n));
-	}
-	return set;
-}
+const spellListCache = new FilteredListCache<SpellListCacheItem, string[]>();
 
-async function fetchIndexAndFilters(baseUrl: string, classSlugs?: string[], schoolSlugs?: string[]) {
-	const base = baseUrl.replace(/\/$/, "");
-	const baseHtml = await requestUrl({ url: `${base}/spells`, method: "GET" });
-	if (baseHtml.status < 200 || baseHtml.status >= 300) {
-		return { baseDoc: null as Document | null, classDocs: [] as (Document | null)[], schoolDocs: [] as (Document | null)[] };
-	}
-	const parser = new DOMParser();
-	const baseDoc = parser.parseFromString(baseHtml.text, "text/html");
-	const fetchDocs = async (slugs?: string[]) => {
-		if (!Array.isArray(slugs) || !slugs.length) return [] as (Document | null)[];
-		return Promise.all(
-			slugs.map(async (s) => {
-				try {
-					const h = await requestUrl({ url: `${base}/spells:${s}`, method: "GET" });
-					if (h.status < 200 || h.status >= 300) return null;
-					return parser.parseFromString(h.text, "text/html");
-				} catch {
-					return null;
-				}
-			})
-		);
-	};
-	const classDocs = await fetchDocs(classSlugs);
-	const schoolDocs = await fetchDocs(schoolSlugs);
-	return { baseDoc, classDocs, schoolDocs };
-}
-
-function applyClassSchoolFilters(names: string[], classDocs: (Document | null)[], schoolDocs: (Document | null)[]): string[] {
-	const classSet = classDocs.length ? unionNormalized(toNames(classDocs)) : null;
-	const schoolSet = schoolDocs.length ? unionNormalized(toNames(schoolDocs)) : null;
-	let filtered = names;
-	if (classSet) filtered = filtered.filter((n) => classSet.has(getPrimarySlug(n)));
-	if (schoolSet) filtered = filtered.filter((n) => schoolSet.has(getPrimarySlug(n)));
-	return filtered;
-}
-
-function applyLevelFilters(baseDoc: Document, names: string[], spellLevel?: number, spellLevels?: number[]): { ok: boolean; names: string[]; message?: string } {
-	if (Array.isArray(spellLevels) && spellLevels.length) {
-		const unionLevelSet = new Set<string>();
-		for (const lvl of spellLevels) {
-			const tabEl = baseDoc.querySelector(`#wiki-tab-0-${lvl}`);
-			if (!tabEl) continue;
-			const levelNames = extractTableNamesFromFirstCell(tabEl);
-			for (const n of levelNames) unionLevelSet.add(getPrimarySlug(n));
-		}
-		if (!unionLevelSet.size) {
-			return { ok: false, names: [], message: `No Spells found for levels ${spellLevels.join(",")}` };
-		}
-		return { ok: true, names: names.filter((n) => unionLevelSet.has(getPrimarySlug(n))) };
-	}
-	if (typeof spellLevel === "number" && !Number.isNaN(spellLevel)) {
-		const tabEl = baseDoc.querySelector(`#wiki-tab-0-${spellLevel}`);
-		if (!tabEl) {
-			return { ok: false, names: [], message: `No Spells found for level ${spellLevel}` };
-		}
-		const levelNames = extractTableNamesFromFirstCell(tabEl);
-		const setLevel = new Set(levelNames.map((n) => getPrimarySlug(n)));
-		return { ok: true, names: names.filter((n) => setLevel.has(getPrimarySlug(n))) };
-	}
-	return { ok: true, names };
-}
-
-function buildHeading(spellLevel: number | undefined, spellLevels: number[] | undefined, classSlugs?: string[], schoolSlugs?: string[]): string {
-	const headingParts: string[] = [];
-	if (Array.isArray(spellLevels) && spellLevels.length) headingParts.push(`Level ${spellLevels.join(", ")}`);
-	else if (typeof spellLevel === "number" && !Number.isNaN(spellLevel)) headingParts.push(`Level ${spellLevel}`);
-	if (Array.isArray(classSlugs) && classSlugs.length) headingParts.push(`Class ${classSlugs.map((s) => displayNameFromSlug(s)).join(", ")}`);
-	if (Array.isArray(schoolSlugs) && schoolSlugs.length) headingParts.push(`School ${schoolSlugs.map((s) => displayNameFromSlug(s)).join(", ")}`);
-	return headingParts.length ? `Spells ${headingParts.join(" · ")}` : "All Spells";
-}
-
-export async function renderSpellList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
+export async function renderSpellList(
+	source: string,
+	el: HTMLElement,
+	_ctx: MarkdownPostProcessorContext | undefined,
+	urlKey: string,
+	baseUrl: string,
+): Promise<void> {
 	el.empty();
 	if (!requireBaseUrl(el, baseUrl)) return;
 
-	const { levelDirective, classDirective, schoolDirective, addSpells, removeSpells } = parseDirectives(source);
-	const spellLevel = typeof levelDirective === "number" ? levelDirective : undefined;
-	const classSlugs = Array.isArray(classDirective) ? classDirective : undefined;
-	const schoolSlugs = Array.isArray(schoolDirective) ? schoolDirective : undefined;
-	const spellLevels = Array.isArray(levelDirective) ? levelDirective : undefined;
+	const directives = parseSpellListDirectives(source);
+	const cacheItem = new SpellListCacheItem(
+		directives.level,
+		directives.classDirective,
+		directives.schoolDirective,
+	);
 
-	// Cache key for exact filter combination
-	const cacheKey = buildCacheKey(urlKey, levelDirective, classSlugs, schoolSlugs);
-	let names = spellListCache.get(cacheKey);
-	if (!names) {
-		let { baseDoc, classDocs, schoolDocs } = await fetchIndexAndFilters(baseUrl, classSlugs, schoolSlugs);
-		if (!baseDoc) {
-			const msg = el.createDiv({ text: "Failed to load spells index. Retrying…" });
-			const start = Date.now();
-			await new Promise<void>((resolve) => {
-			const intervalId = window.setInterval(async () => {
-					const attempt = await fetchIndexAndFilters(baseUrl, classSlugs, schoolSlugs);
-					if (attempt.baseDoc) {
-						window.clearInterval(intervalId);
-						// Clear and proceed
-						el.empty();
-						baseDoc = attempt.baseDoc;
-						classDocs = attempt.classDocs;
-						schoolDocs = attempt.schoolDocs;
-						resolve();
-					} else {
-						const secs = Math.floor((Date.now() - start) / 1000);
-						if (secs >= 30) {
-							window.clearInterval(intervalId);
-							msg.textContent = "Failed to load spells index after 30s. Please check Base URL or network.";
-							resolve();
-						} else {
-							msg.textContent = `Failed to load spells index. Retrying (${secs}s)…`;
-						}
-					}
-				}, 1000);
-			});
-			if (!baseDoc) return;
-		}
-		let fetched = extractTableNamesFromFirstCell(baseDoc);
-		fetched = applyClassSchoolFilters(fetched, classDocs, schoolDocs);
-		const levelResult = applyLevelFilters(baseDoc, fetched, spellLevel, spellLevels);
-		if (!levelResult.ok) {
-			el.setText(levelResult.message || "No Spells found");
+	let names = spellListCache.get(urlKey, cacheItem);
+	if (names === null) {
+		const index = await loadSpellIndexWithRetry(
+			el,
+			baseUrl,
+			directives.classDirective,
+			directives.schoolDirective,
+		);
+		if (!index) return;
+
+		const filtered = getFilteredSpellNames(index, directives);
+		if (filtered.message) {
+			el.setText(filtered.message);
 			return;
 		}
-		names = levelResult.names;
-		// Merge matching custom spells according to filters
-		try {
-			const customs = await getCustomSpellEntries();
-			const wantAllLevels = levelDirective === 'all' || levelDirective === null;
-			const classSet = Array.isArray(classSlugs) && classSlugs.length ? new Set(classSlugs) : null;
-			const schoolSet = Array.isArray(schoolSlugs) && schoolSlugs.length ? new Set(schoolSlugs) : null;
-			const levelSet = Array.isArray(spellLevels) && spellLevels.length ? new Set(spellLevels) : null;
-			const singleLevel = typeof spellLevel === 'number' ? spellLevel : undefined;
-			const existingSlugs = new Set(names.map((n) => getPrimarySlug(n)));
-			for (const cs of customs) {
-				// Level filter
-				let ok = true;
-				if (!wantAllLevels) {
-					if (levelSet) ok = cs.level !== undefined && levelSet.has(cs.level);
-					else if (singleLevel !== undefined) ok = cs.level === singleLevel;
-				}
-				if (!ok) continue;
-				// Class filter
-				if (classDirective !== 'all' && classSet) {
-					const cls = cs.classes || [];
-					ok = cls.some((c) => classSet.has(c));
-				}
-				if (!ok) continue;
-				// School filter
-				if (schoolDirective !== 'all' && schoolSet) {
-					ok = !!(cs.school && schoolSet.has(cs.school));
-				}
-				if (!ok) continue;
-				const s = cs.id;
-				if (!existingSlugs.has(s)) {
-					names.push(cs.displayName);
-					existingSlugs.add(s);
-				}
-			}
-		} catch {
-			// ignore custom merge errors
-		}
-		spellListCache.set(cacheKey, names);
+
+		names = filtered.names;
+		spellListCache.set(urlKey, cacheItem, names);
 	}
-	// Merge in explicit addSpells (avoid duplicates by slug)
-	if (addSpells?.length) {
-		const existingSlugs = new Set(names.map((n) => getPrimarySlug(n)));
-		for (const slug of addSpells) {
-			if (!existingSlugs.has(slug)) {
-				names.push(slug);
-			}
-		}
-		// Normalize names array to display names for any slugs added
-		names = names.map((n) => {
-			const s = getPrimarySlug(n);
-			return s === n ? displayNameFromSlug(n) : n;
-		});
-	}
-	// Apply removespells after add: remove any matching slugs
-	if (removeSpells?.length) {
-		const removeSet = new Set(removeSpells);
-		names = names.filter((n) => !removeSet.has(getPrimarySlug(n)));
-	}
-	// Apply search filter
-	const searches = parseSearchDirective(source);
-	const searchMode = parseSearchModeDirective(source);
+
+	names = applyExplicitSpellChanges(names, directives.addSpells, directives.removeSpells);
 	if (!names.length) {
-		el.setText("No Spell Names found");
+		el.setText('No spell names found.');
 		return;
 	}
 
-	// Seed fetched names into the name cache so renderSingleSpell doesn't treat them as unknown
 	seedSpellNamesForKey(urlKey, names);
-
-	const heading = buildHeading(spellLevel, spellLevels, classSlugs, schoolSlugs);
-	const wrap = el.createDiv();
-	wrap.createEl('h2', { cls: 'dnd-wiki-list-heading', text: heading });
-	const container = wrap.createDiv();
-
-	const tasks = names.map(async (name) => {
-		const host = container.createDiv();
-		host.classList.add('dnd-wiki-card-spacer');
-		container.appendChild(host);
-		await renderSingleSpell(host, urlKey, baseUrl, name);
-		if (searches.length > 0) {
-			const text = host.textContent?.toLowerCase() || '';
-			const match = searchMode === 'and'
-				? searches.every(s => text.includes(s))
-				: searches.some(s => text.includes(s));
-			if (!match) host.classList.add('dnd-wiki-search-hidden');
-		}
+	const wrapper = el.createDiv();
+	wrapper.createEl('h2', {
+		cls: 'dnd-wiki-list-heading',
+		text: buildHeading(directives),
 	});
-	await Promise.all(tasks);
+	await renderSpellCards(
+		names,
+		wrapper.createDiv(),
+		urlKey,
+		baseUrl,
+		directives.searches,
+		directives.searchMode,
+	);
+}
+
+function parseSpellListDirectives(source: string): SpellListDirectives {
+	const properties = getTextProperties(source, [
+		'level',
+		'class',
+		'school',
+		'addspells',
+		'removespells',
+	]);
+
+	return {
+		level: parseLevelDirective(properties.get('level') ?? []),
+		classDirective: parseSlugDirective(properties.get('class') ?? []),
+		schoolDirective: parseSlugDirective(properties.get('school') ?? []),
+		addSpells: parseSpellNames(properties.get('addspells') ?? []),
+		removeSpells: parseSpellNames(properties.get('removespells') ?? []),
+		searches: parseSearchDirective(source),
+		searchMode: parseSearchModeDirective(source),
+	};
+}
+
+function parseLevelDirective(values: string[]): SpellLevelDirective {
+	const raw = values.join(',').trim();
+	if (!raw) return null;
+	if (/^all$/i.test(raw)) return 'all';
+
+	const levels: number[] = [];
+	for (const token of raw.split(',')) {
+		levels.push(...parseLevelToken(token));
+	}
+
+	const uniqueLevels = Array.from(new Set(levels)).sort((a, b) => a - b);
+	if (!uniqueLevels.length) return null;
+	return uniqueLevels.length === 1 ? uniqueLevels[0] : uniqueLevels;
+}
+
+function parseLevelToken(token: string): number[] {
+	const value = token.trim();
+	if (/^\d+$/.test(value)) {
+		const level = Number.parseInt(value, 10);
+		return level >= 0 && level <= 9 ? [level] : [];
+	}
+
+	const range = /^(\d+)\s*-\s*(\d+)$/.exec(value);
+	if (!range) return [];
+
+	const start = Number.parseInt(range[1], 10);
+	const end = Number.parseInt(range[2], 10);
+	return expandLevelRange(start, end);
+}
+
+function expandLevelRange(start: number, end: number): number[] {
+	const first = Math.max(0, Math.min(start, end));
+	const last = Math.min(9, Math.max(start, end));
+	if (first > last) return [];
+
+	const levels: number[] = [];
+	for (let level = first; level <= last; level++) levels.push(level);
+	return levels;
+}
+
+function parseSlugDirective(values: string[]): SpellFilterDirective {
+	const raw = values.join(',').trim();
+	if (!raw) return null;
+	if (/^all$/i.test(raw)) return 'all';
+
+	const slugs = raw
+		.split(',')
+		.map(value => getPrimarySlug(value.trim()))
+		.filter(Boolean);
+	return slugs.length ? Array.from(new Set(slugs)) : null;
+}
+
+function parseSpellNames(values: string[]): string[] {
+	const slugs: string[] = [];
+	for (const value of values.join(',').split(',')) {
+		const slug = getPrimarySlug(value.trim());
+		if (slug) slugs.push(slug);
+	}
+	return Array.from(new Set(slugs));
+}
+
+async function loadSpellIndexWithRetry(
+	el: HTMLElement,
+	baseUrl: string,
+	classDirective: SpellFilterDirective,
+	schoolDirective: SpellFilterDirective,
+): Promise<SpellIndexDocuments | null> {
+	let status: HTMLElement | null = null;
+	for (let attempt = 0; attempt <= 30; attempt++) {
+		const index = await fetchSpellIndex(
+			baseUrl,
+			Array.isArray(classDirective) ? classDirective : [],
+			Array.isArray(schoolDirective) ? schoolDirective : [],
+		);
+		if (index) {
+			status?.remove();
+			return index;
+		}
+
+		if (!status) {
+			status = el.createDiv({ text: 'Failed to load spells index. Retrying…' });
+		}
+		if (attempt === 30) {
+			status.setText('Failed to load spells index after 30 seconds.');
+			return null;
+		}
+		status.setText(`Failed to load spells index. Retrying (${attempt + 1}s)…`);
+		await new Promise<void>(resolve => window.setTimeout(resolve, 1000));
+	}
+	return null;
+}
+
+async function fetchSpellIndex(
+	baseUrl: string,
+	classSlugs: string[],
+	schoolSlugs: string[],
+): Promise<SpellIndexDocuments | null> {
+	const base = baseUrl.replace(/\/$/, '');
+	try {
+		const response = await requestUrl({ url: `${base}/spells`, method: 'GET' });
+		if (response.status < 200 || response.status >= 300) return null;
+
+		const parser = new DOMParser();
+		const baseDocument = parser.parseFromString(response.text, 'text/html');
+		const classes = await fetchFilterDocuments(base, parser, classSlugs);
+		const schools = await fetchFilterDocuments(base, parser, schoolSlugs);
+		return { base: baseDocument, classes, schools };
+	} catch {
+		return null;
+	}
+}
+
+async function fetchFilterDocuments(
+	baseUrl: string,
+	parser: DOMParser,
+	slugs: string[],
+): Promise<Document[]> {
+	const documents: Document[] = [];
+	for (const slug of slugs) {
+		try {
+			const response = await requestUrl({ url: `${baseUrl}/spells:${slug}`, method: 'GET' });
+			if (response.status >= 200 && response.status < 300) {
+				documents.push(parser.parseFromString(response.text, 'text/html'));
+			}
+		} catch {
+			// A missing class or school page simply contributes no matches.
+		}
+	}
+	return documents;
+}
+
+function getFilteredSpellNames(
+	index: SpellIndexDocuments,
+	directives: SpellListDirectives,
+): FilteredSpellNames {
+	let names = extractTableNamesFromFirstCell(index.base);
+	const classNames = unionDocumentNames(index.classes);
+	const schoolNames = unionDocumentNames(index.schools);
+	if (classNames) names = names.filter(name => classNames.has(getPrimarySlug(name)));
+	if (schoolNames) names = names.filter(name => schoolNames.has(getPrimarySlug(name)));
+
+	const levelResult = filterByLevel(index.base, names, directives.level);
+	if (levelResult.message) return levelResult;
+	return { names: uniqueNames(levelResult.names) };
+}
+
+function unionDocumentNames(documents: Document[]): Set<string> | null {
+	if (!documents.length) return null;
+	const names = new Set<string>();
+	for (const document of documents) {
+		for (const name of extractTableNamesFromFirstCell(document)) {
+			names.add(getPrimarySlug(name));
+		}
+	}
+	return names;
+}
+
+function filterByLevel(
+	document: Document,
+	names: string[],
+	level: SpellLevelDirective,
+): FilteredSpellNames {
+	const levels = typeof level === 'number' ? [level] : Array.isArray(level) ? level : [];
+	if (!levels.length) return { names };
+
+	const allowedNames = new Set<string>();
+	for (const spellLevel of levels) {
+		const tab = document.querySelector(`#wiki-tab-0-${spellLevel}`);
+		if (!tab) continue;
+		for (const name of extractTableNamesFromFirstCell(tab)) {
+			allowedNames.add(getPrimarySlug(name));
+		}
+	}
+
+	if (!allowedNames.size) {
+		return { names: [], message: `No spells found for levels ${levels.join(', ')}` };
+	}
+	return { names: names.filter(name => allowedNames.has(getPrimarySlug(name))) };
+}
+
+function uniqueNames(names: string[]): string[] {
+	return Array.from(new Map(names.map(name => [getPrimarySlug(name), name])).values());
+}
+
+function applyExplicitSpellChanges(
+	names: string[],
+	addSpells: string[],
+	removeSpells: string[],
+): string[] {
+	const result = names.slice();
+	const existing = new Set(result.map(getPrimarySlug));
+	for (const slug of addSpells) {
+		if (!existing.has(slug)) {
+			result.push(displayNameFromSlug(slug));
+			existing.add(slug);
+		}
+	}
+
+	const removed = new Set(removeSpells);
+	return result.filter(name => !removed.has(getPrimarySlug(name)));
+}
+
+function buildHeading(directives: SpellListDirectives): string {
+	const parts: string[] = [];
+	if (Array.isArray(directives.level)) parts.push(`Level ${directives.level.join(', ')}`);
+	else if (typeof directives.level === 'number') parts.push(`Level ${directives.level}`);
+	if (Array.isArray(directives.classDirective) && directives.classDirective.length) {
+		parts.push(`Class ${directives.classDirective.map(displayNameFromSlug).join(', ')}`);
+	}
+	if (Array.isArray(directives.schoolDirective) && directives.schoolDirective.length) {
+		parts.push(`School ${directives.schoolDirective.map(displayNameFromSlug).join(', ')}`);
+	}
+	return parts.length ? `Spells ${parts.join(' · ')}` : 'All spells';
+}
+
+async function renderSpellCards(
+	names: string[],
+	container: HTMLElement,
+	urlKey: string,
+	baseUrl: string,
+	searches: string[],
+	searchMode: SearchMode,
+): Promise<void> {
+	await Promise.all(names.map(async name => {
+		const host = container.createDiv('dnd-wiki-card-spacer');
+		const rendered = await renderSingleSpell(host, urlKey, baseUrl, name);
+		if (!rendered && searches.length) {
+			host.classList.add('dnd-wiki-search-hidden');
+			return;
+		}
+
+		if (searches.length) {
+			const cachedContent = {
+				title: host.querySelector('.dnd-wiki-card-title-text')?.textContent ?? '',
+				html: host.querySelector('.dnd-wiki-card-content')?.innerHTML ?? '',
+			};
+			if (!matchesSearch(cachedContent, searches, searchMode)) {
+				host.classList.add('dnd-wiki-search-hidden');
+			}
+		}
+	}));
 }

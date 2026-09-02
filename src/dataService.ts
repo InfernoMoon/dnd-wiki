@@ -1,7 +1,5 @@
 import { Plugin } from "obsidian";
 import { STATIC_CLASSES, STATIC_SCHOOLS, STATIC_ITEM_RARITY_WORD_TO_INDEX } from "./data/staticData";
-import { getCustomSpellEntries } from "./dnd/spells/spellUtils";
-import { displayNameFromSlug, nameToSlugs } from "./utils/text";
 
 /** Settings file structure */
 interface PluginSettingsJson {
@@ -113,45 +111,12 @@ export function initBaseUrlWatcher(plugin: Plugin) {
 
 /** Read classes.json from the plugin data folder */
 export async function getClassNames(): Promise<string[]> {
-	// Merge static classes with any classes referenced by custom spells
-	const base = STATIC_CLASSES.slice();
-	let customs: string[] = [];
-	try {
-		const entries = await getCustomSpellEntries();
-		const set = new Set<string>();
-		for (const e of entries) {
-			for (const c of e.classes || []) set.add(c);
-		}
-		customs = Array.from(set).map((s) => displayNameFromSlug(s));
-	} catch {
-		customs = [];
-	}
-	// Dedupe by slug, prefer nicely-cased display names
-	const bySlug = new Map<string, string>();
-	for (const n of base) for (const slug of nameToSlugs(n)) bySlug.set(slug, n);
-	for (const n of customs) for (const slug of nameToSlugs(n)) bySlug.set(slug, n);
-	return Array.from(bySlug.values()).sort((a, b) => a.localeCompare(b));
+	return STATIC_CLASSES.slice().sort((a, b) => a.localeCompare(b));
 }
 
 /** Read schools.json from the plugin data folder */
 export async function getSchoolNames(): Promise<string[]> {
-	// Merge static schools with any school referenced by custom spells
-	const base = STATIC_SCHOOLS.slice();
-	let customs: string[] = [];
-	try {
-		const entries = await getCustomSpellEntries();
-		const set = new Set<string>();
-		for (const e of entries) {
-			if (e.school) set.add(e.school);
-		}
-		customs = Array.from(set).map((s) => displayNameFromSlug(s));
-	} catch {
-		customs = [];
-	}
-	const bySlug = new Map<string, string>();
-	for (const n of base) for (const slug of nameToSlugs(n)) bySlug.set(slug, n);
-	for (const n of customs) for (const slug of nameToSlugs(n)) bySlug.set(slug, n);
-	return Array.from(bySlug.values()).sort((a, b) => a.localeCompare(b));
+	return STATIC_SCHOOLS.slice().sort((a, b) => a.localeCompare(b));
 }
 
 // In-memory caches used by suggesters for synchronous access

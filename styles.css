@@ -50,6 +50,10 @@
 	padding-left: 12px;
 }
 
+.dnd-wiki-source-url-content {
+	margin-left: 2em;
+}
+
 .dnd-wiki-url-input-row {
 	display: flex;
 	gap: 8px;

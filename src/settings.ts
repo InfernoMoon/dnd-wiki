@@ -8,6 +8,7 @@ import {
 } from './dataService';
 import { ensureHomebrewFolderPath } from './homebrew/homebrew';
 import { createHomebrewTemplateFolders } from './homebrew/homebrewTemplates';
+import { openHomebrewFileModal } from './homebrew/homebrewCommand';
 
 function displayUrlEntries(container: HTMLElement, urls: Record<string, string>): void {
   container.empty();
@@ -97,46 +98,39 @@ export class DndCardsSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
+    const homebrewContainer = containerEl.createDiv('dnd-wiki-homebrew-settings');
+    void this.displayHomebrewSettings(homebrewContainer).catch((error: unknown) => {
+      console.warn('DnD Wiki: Failed to load homebrew settings', error);
+    });
+
+    containerEl.createEl('hr');
+    this.displaySourceUrlSettings(containerEl);
+  }
+
+  private displaySourceUrlSettings(containerEl: HTMLElement): void {
     new Setting(containerEl)
       .setName('Source URLs')
       .setHeading();
-    containerEl.createEl('p', { text: 'Define multiple source URLs, like for 5e or 2024.' });
-    containerEl.createEl('p', { text: 'Obsidian might need to be restarted after adding or removing URLs.' });
+    const sourceUrlContent = containerEl.createDiv('dnd-wiki-source-url-content');
+    sourceUrlContent.createEl('p', { text: 'Define multiple source URLs, like for 5e or 2024.' });
+    sourceUrlContent.createEl('p', { text: 'Obsidian might need to be restarted after adding or removing URLs.' });
 
-    const urlsContainer = containerEl.createDiv('urls-container');
+    const urlsContainer = sourceUrlContent.createDiv('urls-container');
     void peekBaseUrls()
       .then((urls) => displayUrlEntries(urlsContainer, urls))
       .catch((error: unknown) => {
         console.warn('DnD Wiki: Failed to load source URLs', error);
       });
-
-    containerEl.createEl('hr');
-    void this.displayHomebrewSettings(containerEl).catch((error: unknown) => {
-      console.warn('DnD Wiki: Failed to load homebrew settings', error);
-    });
   }
 
   private async displayHomebrewSettings(containerEl: HTMLElement): Promise<void> {
     const settings = await getHomebrewSettings();
-    const homebrewContainer = containerEl.createDiv('dnd-wiki-homebrew-settings');
 
-    new Setting(homebrewContainer)
+    new Setting(containerEl)
       .setName('Homebrew templates')
       .setHeading();
 
-    new Setting(homebrewContainer)
-      .setName('Search the entire vault for homebrew templates')
-      .setDesc('Reserved for a future option to find homebrew files anywhere in the vault.')
-      .addToggle((toggle) => {
-        toggle.setValue(settings.searchEntireVault).onChange((value) => {
-          settings.searchEntireVault = value;
-          void setHomebrewSettings(settings).catch((error: unknown) => {
-            console.warn('DnD Wiki: Failed to save homebrew search setting', error);
-          });
-        });
-      });
-
-    new Setting(homebrewContainer)
+    new Setting(containerEl)
       .setName('Homebrew template folder')
       .setDesc('Folder path relative to the vault root.')
       .addText((text) => {
@@ -150,7 +144,19 @@ export class DndCardsSettingTab extends PluginSettingTab {
           });
       });
 
-    new Setting(homebrewContainer)
+    new Setting(containerEl)
+      .setName('Search the entire vault for homebrew templates')
+      .setDesc('Reserved for a future option to find homebrew files anywhere in the vault.')
+      .addToggle((toggle) => {
+        toggle.setValue(settings.searchEntireVault).onChange((value) => {
+          settings.searchEntireVault = value;
+          void setHomebrewSettings(settings).catch((error: unknown) => {
+            console.warn('DnD Wiki: Failed to save homebrew search setting', error);
+          });
+        });
+      });
+
+    new Setting(containerEl)
       .setName('Create homebrew templates')
       .setDesc('Create templates for spells, feats, backgrounds, lineages, and magic items.')
       .addButton((button) => {
@@ -170,6 +176,15 @@ export class DndCardsSettingTab extends PluginSettingTab {
                 new Notice('Failed to create homebrew template folders. See the console for details.');
               });
           });
+      });
+
+    new Setting(containerEl)
+      .setName('Add homebrew file')
+      .setDesc('Create and open a spell, feat, background, lineage, or magic item file. This is the same as the Create homebrew file command.')
+      .addButton((button) => {
+        button.setButtonText('Add file')
+          .setCta()
+          .onClick(() => openHomebrewFileModal(this.app));
       });
   }
 }

@@ -15,6 +15,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 type HomebrewFileDestination = 'homebrew' | 'current';
 
+export function openHomebrewFileModal(app: App): void {
+	new HomebrewFileModal(app).open();
+}
+
 export class HomebrewFileModal extends Modal {
 	private category = 'Spells';
 	private fileName = '';
@@ -240,6 +244,6 @@ export function registerHomebrewFileCommand(app: App, addCommand: (command: { id
 	addCommand({
 		id: 'create-homebrew-file',
 		name: 'Create homebrew file',
-		callback: () => new HomebrewFileModal(app).open(),
+		callback: () => openHomebrewFileModal(app),
 	});
 }

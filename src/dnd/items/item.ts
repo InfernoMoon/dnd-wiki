@@ -6,10 +6,10 @@
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
-import { getObsidianApp } from '../utils/obsidian';
-import { nameToSlug, displayNameFromSlug } from '../utils/text';
-import { fetchPageContent } from '../utils/fetcher';
-import { renderCollapsible, requireBaseUrl } from '../utils/renderer';
+import { getObsidianApp } from '../../utils/obsidian';
+import { nameToSlug, displayNameFromSlug } from '../../utils/text';
+import { fetchPageContent } from '../../utils/fetcher';
+import { renderCollapsible, requireBaseUrl } from '../../utils/renderer';
 
 // Cache for fetched item content: outer key = urlKey, inner key = item id
 const itemCache = new Map<string, Map<string, { title: string; html: string }>>();

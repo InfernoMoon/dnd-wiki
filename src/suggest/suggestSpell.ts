@@ -1,7 +1,7 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { App, EditorSuggestContext, EditorSuggestTriggerInfo } from 'obsidian';
 import { displayNameFromSlug } from '../utils/text';
-import { getKnownSpellIdsForKey } from '../spells/spellUtils';
+import { getKnownSpellIdsForKey } from '../dnd/spells/spellUtils';
 
 export class SpellNameSuggest extends EditorSuggest<{ slug: string; display: string }> {
   private currentUrlKey = '';

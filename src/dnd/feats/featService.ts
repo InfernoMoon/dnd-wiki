@@ -1,8 +1,8 @@
-import { IdCache } from '../cache/idCache';
-import { RenderCache } from '../cache/renderCache';
-import type { CachedRender } from '../cache/renderCache';
-import { fetchPageContent } from '../utils/fetcher';
-import { loadFromLinks, loadFromTable, LoaderConfig } from '../genericLoader';
+import { IdCache } from '../../cache/idCache';
+import { RenderCache } from '../../cache/renderCache';
+import type { CachedRender } from '../../cache/renderCache';
+import { fetchPageContent } from '../../utils/fetcher';
+import { loadFromLinks, loadFromTable, LoaderConfig } from '../../genericLoader';
 
 // In-memory set of known feat IDs per URL key.
 export const featIdCache = new IdCache();

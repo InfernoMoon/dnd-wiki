@@ -1,7 +1,7 @@
 import { TFolder, TFile, TAbstractFile } from 'obsidian';
-import { getObsidianApp } from '../utils/obsidian';
-import { nameToSlug } from '../utils/text';
-import { loadFromTable, LoaderConfig } from '../genericLoader';
+import { getObsidianApp } from '../../utils/obsidian';
+import { nameToSlug } from '../../utils/text';
+import { loadFromTable, LoaderConfig } from '../../genericLoader';
 
 // In-memory set of known item ids per URL key (normalized slugs)
 const itemIdCache: Map<string, Set<string>> = new Map();

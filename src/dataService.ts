@@ -1,6 +1,6 @@
 import { Plugin } from "obsidian";
 import { STATIC_CLASSES, STATIC_SCHOOLS, STATIC_ITEM_RARITY_WORD_TO_INDEX } from "./data/staticData";
-import { getCustomSpellEntries } from "./spells/spellUtils";
+import { getCustomSpellEntries } from "./dnd/spells/spellUtils";
 import { displayNameFromSlug, nameToSlug } from "./utils/text";
 
 /** Settings file structure */

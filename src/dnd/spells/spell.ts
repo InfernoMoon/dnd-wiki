@@ -6,7 +6,7 @@
  */
 import { MarkdownPostProcessorContext } from "obsidian";
 import { renderSingleSpell } from "./spellUtils";
-import { requireBaseUrl } from '../utils/renderer';
+import { requireBaseUrl } from '../../utils/renderer';
 
 /**
  * Render one or more spells inside a ```dnd-spell code block.

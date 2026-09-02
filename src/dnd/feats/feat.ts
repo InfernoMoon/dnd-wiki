@@ -1,6 +1,6 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { nameToSlug } from '../utils/text';
-import { prepareNameInput, renderCollapsible } from '../utils/renderer';
+import { nameToSlug } from '../../utils/text';
+import { prepareNameInput, renderCollapsible } from '../../utils/renderer';
 import { ensureFeatCached } from './featService';
 
 export async function renderFeat(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {

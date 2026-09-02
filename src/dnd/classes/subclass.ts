@@ -5,11 +5,11 @@
  * Fetches /{class}:{subinfo} and optionally renders only matching header sections.
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { nameToSlug, displayNameFromSlug } from '../utils/text';
-import { fetchPageAtUrl } from '../utils/fetcher';
-import { requireBaseUrl } from '../utils/renderer';
+import { nameToSlug, displayNameFromSlug } from '../../utils/text';
+import { fetchPageAtUrl } from '../../utils/fetcher';
+import { requireBaseUrl } from '../../utils/renderer';
 import { preloadSubclassIds } from './subclassUtils';
-import { parseSectionDirectives, renderWithSections } from '../sectionRenderer';
+import { parseSectionDirectives, renderWithSections } from '../../sectionRenderer';
 
 // Cache: outer key = urlKey, inner key = "classSlug:subclassSlug"
 const subclassRenderCache = new Map<string, Map<string, { title: string; html: string }>>();

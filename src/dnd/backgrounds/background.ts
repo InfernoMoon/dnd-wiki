@@ -6,10 +6,10 @@
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
-import { nameToSlug, escapeHtml } from '../utils/text';
-import { fetchPageContent } from '../utils/fetcher';
-import { renderCollapsible, extractCardContentHtml, requireBaseUrl } from '../utils/renderer';
-import { getObsidianApp, createUid } from '../utils/obsidian';
+import { nameToSlug, escapeHtml } from '../../utils/text';
+import { fetchPageContent } from '../../utils/fetcher';
+import { renderCollapsible, extractCardContentHtml, requireBaseUrl } from '../../utils/renderer';
+import { getObsidianApp, createUid } from '../../utils/obsidian';
 
 // In-memory cache: outer key = urlKey, inner key = background id/slug
 const backgroundCache = new Map<string, Map<string, { title: string; html: string }>>();

@@ -1,6 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
-import { getKnownItemIdsForKey } from '../items/itemUtils';
+import { getKnownItemIdsForKey } from '../dnd/items/itemUtils';
 import { displayNameFromSlug } from '../utils/text';
 
 export class ItemNameSuggest extends EditorSuggest<{ text: string }> {

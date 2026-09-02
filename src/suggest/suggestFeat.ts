@@ -1,6 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
-import { featIdCache } from '../feats/featService';
+import { featIdCache } from '../dnd/feats/featService';
 import { displayNameFromSlug } from '../utils/text';
 
 export class FeatNameSuggest extends EditorSuggest<{ text: string }> {

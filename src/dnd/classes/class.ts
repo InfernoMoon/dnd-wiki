@@ -4,9 +4,9 @@
  * Fetches the class page at /{classname} and renders it as a collapsible card.
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { nameToSlug, displayNameFromSlug } from '../utils/text';
-import { fetchPageAtUrl } from '../utils/fetcher';
-import { renderCollapsible, requireBaseUrl } from '../utils/renderer';
+import { nameToSlug, displayNameFromSlug } from '../../utils/text';
+import { fetchPageAtUrl } from '../../utils/fetcher';
+import { renderCollapsible, requireBaseUrl } from '../../utils/renderer';
 
 // Cache: outer key = urlKey, inner key = class slug
 const classCache = new Map<string, Map<string, { title: string; html: string }>>();

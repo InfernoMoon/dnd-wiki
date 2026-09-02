@@ -1,11 +1,11 @@
 
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { waitForCachedIds } from '../cache/idCache';
+import { waitForCachedIds } from '../../cache/idCache';
 import { ensureFeatCached, featIdCache } from './featService';
-import { displayNameFromSlug } from '../utils/text';
-import { matchesSearch, parseSearchDirective, parseSearchModeDirective } from '../utils/search';
-import type { SearchMode } from '../utils/search';
-import { renderCollapsible, requireBaseUrl } from '../utils/renderer';
+import { displayNameFromSlug } from '../../utils/text';
+import { matchesSearch, parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
+import type { SearchMode } from '../../utils/search';
+import { renderCollapsible, requireBaseUrl } from '../../utils/renderer';
 
 async function renderFeatCards(
 	ids: string[],

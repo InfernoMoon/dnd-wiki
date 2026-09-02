@@ -1,6 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
-import { getKnownLineageIdsForKey } from '../lineages/lineageUtils';
+import { getKnownLineageIdsForKey } from '../dnd/lineages/lineageUtils';
 import { displayNameFromSlug } from '../utils/text';
 
 export class LineageNameSuggest extends EditorSuggest<{ text: string }> {

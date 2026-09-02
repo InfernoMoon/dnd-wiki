@@ -6,11 +6,11 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { Component, MarkdownRenderer } from 'obsidian';
 import { getKnownLineageIdsForKey } from './lineageUtils';
 import { getCachedLineage, setCachedLineage, findCustomLineageById, buildCustomLineageHtmlStructured, cleanLineageTitle } from './lineage';
-import { fetchPageContent } from '../utils/fetcher';
-import { getObsidianApp } from '../utils/obsidian';
-import { renderCollapsible, requireBaseUrl } from '../utils/renderer';
-import { displayNameFromSlug } from '../utils/text';
-import { parseSearchDirective, parseSearchModeDirective } from '../utils/search';
+import { fetchPageContent } from '../../utils/fetcher';
+import { getObsidianApp } from '../../utils/obsidian';
+import { renderCollapsible, requireBaseUrl } from '../../utils/renderer';
+import { displayNameFromSlug } from '../../utils/text';
+import { parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
 
 export async function renderLineageList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();

@@ -6,10 +6,10 @@
  */
 import { MarkdownPostProcessorContext, requestUrl } from "obsidian";
 import { renderSingleSpell, getCustomSpellEntries, seedSpellNamesForKey } from "./spellUtils";
-import { nameToSlug, displayNameFromSlug } from '../utils/text';
-import { extractTableNamesFromFirstCell } from '../utils/dom';
-import { parseSearchDirective, parseSearchModeDirective } from '../utils/search';
-import { requireBaseUrl } from '../utils/renderer';
+import { nameToSlug, displayNameFromSlug } from '../../utils/text';
+import { extractTableNamesFromFirstCell } from '../../utils/dom';
+import { parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
+import { requireBaseUrl } from '../../utils/renderer';
 
 /**
  * Render a filtered list of spells based on directives provided in the block.

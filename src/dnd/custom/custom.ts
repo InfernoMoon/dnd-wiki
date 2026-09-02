@@ -1,16 +1,30 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
+import { RenderCache } from '../../cache/renderCache';
+import type { CachedRender } from '../../cache/renderCache';
 import { fetchPageAtUrl } from '../../utils/fetcher';
 import { requireBaseUrl } from '../../utils/renderer';
 import { parseSectionDirectives, renderWithSections } from '../../sectionRenderer';
 
-const customPageCache = new Map<string, Map<string, { title: string; html: string }>>();
+const customRenderCache = new RenderCache();
 
-function getCacheForKey(urlKey: string): Map<string, { title: string; html: string }> {
-  const existing = customPageCache.get(urlKey);
-  if (existing) return existing;
-  const cache = new Map<string, { title: string; html: string }>();
-  customPageCache.set(urlKey, cache);
-  return cache;
+async function ensureCustomCached(
+	pageSource: string,
+	urlKey: string,
+	baseUrl: string,
+): Promise<CachedRender | null> {
+	const existing = customRenderCache.get(urlKey, pageSource);
+	if (existing) return existing;
+
+	const base = baseUrl.replace(/\/$/, '');
+	const result = await fetchPageAtUrl(`${base}/${pageSource}`);
+	if (!result.ok) return null;
+
+	const cached: CachedRender = {
+		title: result.titleText || pageSource,
+		html: result.contentHtml,
+	};
+	customRenderCache.set(urlKey, pageSource, cached);
+	return cached;
 }
 
 export async function renderCustom(
@@ -39,33 +53,16 @@ export async function renderCustom(
   const sectionDirectives = parseSectionDirectives(source, sourceDirectiveOffset);
 
   const host = el.createDiv();
-
-  const cache = getCacheForKey(urlKey);
-  const cached = cache.get(pageSource);
-  if (cached) {
-    renderWithSections(
-      host,
-      cached.title,
-      cached.html,
-      sectionDirectives,
-      `No matching sections found in ${pageSource}`
-    );
-    return;
-  }
-
-  const base = baseUrl.replace(/\/$/, '');
-  const result = await fetchPageAtUrl(`${base}/${pageSource}`);
-  if (!result.ok) {
+  const cached = await ensureCustomCached(pageSource, urlKey, baseUrl);
+  if (!cached) {
     host.textContent = `Failed to load source: ${pageSource}`;
     return;
   }
 
-  const title = result.titleText || pageSource;
-  cache.set(pageSource, { title, html: result.contentHtml });
   renderWithSections(
     host,
-    title,
-    result.contentHtml,
+    cached.title,
+    cached.html,
     sectionDirectives,
     `No matching sections found in ${pageSource}`
   );

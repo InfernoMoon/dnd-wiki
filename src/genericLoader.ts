@@ -5,7 +5,7 @@
  * Highly customizable with parameters for different data types.
  */
 import { requestUrl } from 'obsidian';
-import { nameToSlugs } from './utils/text';
+import { getPrimarySlug } from './utils/text';
 
 export interface LoaderConfig {
   /** Base URL to fetch from */
@@ -71,7 +71,8 @@ export async function loadFromLinks(config: LoaderConfig): Promise<Set<string>> 
         // Apply custom filter
         if (config.filterFn && !config.filterFn(name)) continue;
         
-        for (const id of nameToSlugs(name)) results.add(id);
+        const id = getPrimarySlug(m[1]);
+        if (id) results.add(id);
       }
     }
   } catch (e) {
@@ -119,14 +120,27 @@ export async function loadFromTable(config: LoaderConfig): Promise<Set<string>> 
       // Apply custom filter
       if (config.filterFn && !config.filterFn(name)) continue;
 
-      const ids = nameToSlugs(name);
-      for (const id of ids) results.add(id);
-      if (ids.length && config.rowProcessor) config.rowProcessor(row, name);
+      const id = getIdFromTableRow(row, name);
+      if (id) results.add(id);
+      if (id && config.rowProcessor) config.rowProcessor(row, name);
     }
   } catch (e) {
     console.warn(`Failed to load data via table-based method from ${base}${config.indexPath}`, e);
   }
   
   return results;
+}
+
+function getIdFromTableRow(row: Element, name: string): string {
+  const href = row.querySelector('a[href]')?.getAttribute('href') || '';
+  const match = /:([^/:?#]+)(?:[?#].*)?$/.exec(href);
+  if (match?.[1]) {
+    try {
+      return getPrimarySlug(decodeURIComponent(match[1]));
+    } catch {
+      return getPrimarySlug(match[1]);
+    }
+  }
+  return getPrimarySlug(name);
 }
 

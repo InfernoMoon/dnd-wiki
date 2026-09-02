@@ -100,7 +100,7 @@ export abstract class DndDirectiveSuggest extends BaseTextSuggest {
 			let startCh = colonIndex + 1;
 			while (startCh < uptoCursor.length && /\s/.test(uptoCursor[startCh])) startCh++;
 			if (this.commaSeparatedKeys.includes(this.currentKey)) {
-				startCh = getCommaSeparatedStart(line, cursor);
+				startCh = getCommaSeparatedStart(line, cursor, startCh);
 			}
 
 			return {

@@ -21,9 +21,10 @@ export function findDndCodeBlock(
 }
 
 /** Return the start of the current comma-separated value, skipping whitespace. */
-export function getCommaSeparatedStart(line: string, cursor: EditorPosition): number {
+export function getCommaSeparatedStart(line: string, cursor: EditorPosition, fallbackStart = 0): number {
 	const uptoCursor = line.slice(0, cursor.ch);
-	let startCh = uptoCursor.lastIndexOf(',') + 1;
+	const commaIndex = uptoCursor.lastIndexOf(',');
+	let startCh = commaIndex >= 0 ? commaIndex + 1 : fallbackStart;
 	while (startCh < uptoCursor.length && /\s/.test(uptoCursor[startCh])) startCh++;
 	return startCh;
 }

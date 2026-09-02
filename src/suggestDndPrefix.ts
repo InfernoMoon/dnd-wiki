@@ -1,10 +1,10 @@
-import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
-import type { EditorSuggestTriggerInfo } from 'obsidian';
+import type { Editor, EditorPosition, EditorSuggestTriggerInfo, TFile } from 'obsidian';
 import { peekBaseUrls } from './settings/settingsService';
+import { BaseTextSuggest } from './suggest/baseSuggest';
 
 const BLOCK_SUFFIXES = ['-spell', '-spelllist', '-feat', '-featlist', '-magicitem', '-magicitemlist', '-background', '-backgroundlist', '-lineage', '-lineagelist', '-class', '-classinfo', '-custom'];
 
-export class DndPrefixSuggest extends EditorSuggest<{ text: string }> {
+export class DndPrefixSuggest extends BaseTextSuggest {
   constructor(appPlugin: { app: import('obsidian').App }) {
     super(appPlugin.app);
   }
@@ -62,18 +62,4 @@ export class DndPrefixSuggest extends EditorSuggest<{ text: string }> {
     this._cachedUrlKeys = Object.keys(urls).filter(k => k.trim());
   }
 
-  renderSuggestion(item: { text: string }, el: HTMLElement) {
-    el.textContent = item.text;
-  }
-
-  selectSuggestion(item: { text: string }) {
-    if (!this.context) return;
-    const ctx = this.context as { editor: Editor; start: EditorPosition; end: EditorPosition } | null;
-    if (!ctx) return;
-    const { editor, start, end } = ctx;
-    if (!editor) return;
-    editor.replaceRange(item.text, start, end);
-    editor.setCursor({ line: end.line, ch: start.ch + item.text.length });
-    this.close();
-  }
 }

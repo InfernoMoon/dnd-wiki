@@ -1,129 +1,83 @@
-import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
-import type { App, EditorSuggestContext, EditorSuggestTriggerInfo } from 'obsidian';
+import type { App, Editor, EditorPosition, EditorSuggestContext, EditorSuggestTriggerInfo, TFile } from 'obsidian';
 import { getClassNames } from '../data/staticData';
 import { getKnownSubclassNamesForParent, preloadSubclassIds } from '../dnd/classes/subclassUtils';
 import { getPrimarySlug } from '../utils/text';
+import { DndDirectiveSuggest } from './baseSuggest';
+import { getTextSuggestions } from './suggestHelpers';
 
-export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
-  private currentKey: string | null = null;
-  private currentUrlKey = '';
-  private currentBaseUrl = '';
+export class SubclassNameSuggest extends DndDirectiveSuggest {
+	private currentBaseUrl = '';
 
-  constructor(appPlugin: { app: App }, private getBaseUrlForKey: (urlKey: string) => string) {
-    super(appPlugin.app);
-  }
+	constructor(appPlugin: { app: App }, private readonly getBaseUrlForKey: (urlKey: string) => string) {
+		super(appPlugin, /^(?:```\s*dnd([a-z0-9]*)-classinfo\s*)$/i);
+	}
 
-  private detectSubclassBlock(cursor: EditorPosition, editor: Editor): boolean {
-    for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
-      const l = editor.getLine(i).trim();
-      if (l.startsWith('```')) {
-        const m = /^(?:```\s*dnd([a-z0-9]*)-classinfo\s*)$/i.exec(l);
-        if (m) { this.currentUrlKey = m[1].toLowerCase(); return true; }
-        return false;
-      }
-    }
-    return false;
-  }
+	onTrigger(cursor: EditorPosition, editor: Editor, file: TFile | null): EditorSuggestTriggerInfo | null {
+		const trigger = super.onTrigger(cursor, editor, file);
+		if (trigger) this.currentBaseUrl = this.getBaseUrlForKey(this.currentUrlKey);
+		return trigger;
+	}
 
-  /** Find the class: value already typed in the current block */
-  private getClassFromBlock(cursor: EditorPosition, editor: Editor): string {
-    for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
-      const l = editor.getLine(i).trim();
-      if (l.startsWith('```')) break;
-      const m = /^class:\s*(.+)$/i.exec(l);
-      if (m) return getPrimarySlug(m[1].trim());
-    }
-    return '';
-  }
+	/** Find the class value already typed in the current block. */
+	private getClassFromBlock(cursor: EditorPosition, editor: Editor): string {
+		for (let lineNumber = cursor.line; lineNumber >= Math.max(0, cursor.line - 50); lineNumber--) {
+			const line = editor.getLine(lineNumber).trim();
+			if (line.startsWith('```')) break;
+			const match = /^class:\s*(.+)$/i.exec(line);
+			if (match) return getPrimarySlug(match[1].trim());
+		}
+		return '';
+	}
 
-  /**
-   * Collect previously written subinfo values above the current cursor line.
-   * Used to recursively suggest from the most recent subinfo page.
-   */
-  private getPreviousSubinfosFromBlock(cursor: EditorPosition, editor: Editor): string[] {
-    const values: string[] = [];
-    for (let i = cursor.line - 1; i >= Math.max(0, cursor.line - 50); i--) {
-      const l = editor.getLine(i).trim();
-      if (l.startsWith('```')) break;
-      const m = /^subinfo:\s*(.+)$/i.exec(l);
-      if (m) {
-        const slug = getPrimarySlug(m[1].trim());
-        if (slug) values.push(slug);
-      }
-    }
-    values.reverse();
-    return values;
-  }
+	/** Collect subinfo values above the current cursor for nested subclass pages. */
+	private getPreviousSubinfosFromBlock(cursor: EditorPosition, editor: Editor): string[] {
+		const values: string[] = [];
+		for (let lineNumber = cursor.line - 1; lineNumber >= Math.max(0, cursor.line - 50); lineNumber--) {
+			const line = editor.getLine(lineNumber).trim();
+			if (line.startsWith('```')) break;
+			const match = /^subinfo:\s*(.+)$/i.exec(line);
+			if (match) {
+				const slug = getPrimarySlug(match[1].trim());
+				if (slug) values.push(slug);
+			}
+		}
+		values.reverse();
+		return values;
+	}
 
-  onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null): EditorSuggestTriggerInfo | null {
-    try {
-      const line = editor.getLine(cursor.line);
-      if (line.trim().startsWith('```')) return null;
-      if (!this.detectSubclassBlock(cursor, editor)) return null;
-      this.currentBaseUrl = this.getBaseUrlForKey(this.currentUrlKey);
+	getSuggestions(context: EditorSuggestContext): Array<{ text: string }> {
+		const query = context.query || '';
 
-      const uptoCursor = line.slice(0, cursor.ch);
-      const colonIdx = uptoCursor.indexOf(':');
-      if (colonIdx === -1) {
-        this.currentKey = null;
-        return { start: { line: cursor.line, ch: 0 }, end: { line: cursor.line, ch: cursor.ch }, query: uptoCursor.trim() };
-      }
-      this.currentKey = uptoCursor.slice(0, colonIdx).trim().toLowerCase();
-      let startCh = colonIdx + 1;
-      while (startCh < uptoCursor.length && /\s/.test(uptoCursor[startCh])) startCh++;
-      return { start: { line: cursor.line, ch: startCh }, end: { line: cursor.line, ch: cursor.ch }, query: uptoCursor.slice(startCh).trim() };
-    } catch { return null; }
-  }
+		if (!this.currentKey) {
+			const { editor, start } = context;
+			const classSlug = this.getClassFromBlock(start, editor);
+			const directives = classSlug
+				? ['class:', 'subinfo:', 'section:', 'sectionFrom:']
+				: ['class:'];
+			return getTextSuggestions(directives, query, 'startsWith');
+		}
 
-  getSuggestions(context: EditorSuggestContext): Array<{ text: string }> {
-    const q = (context.query || '').toLowerCase();
+		if (this.currentKey === 'class') {
+			return getTextSuggestions(getClassNames(), query);
+		}
 
-    if (!this.currentKey) {
-      const { editor, start } = context;
-        const classSlug = this.getClassFromBlock(start, editor);
-      const directives = classSlug
-        ? ['class:', 'subinfo:', 'section:', 'sectionFrom:']
-        : ['class:'];
-      return directives
-        .filter(d => d.toLowerCase().startsWith(q) || q.length === 0)
-        .map(d => ({ text: d }));
-    }
+		if (this.currentKey === 'subinfo') {
+			const { editor, start } = context;
+			const classSlug = this.getClassFromBlock(start, editor);
+			if (classSlug && this.currentBaseUrl) {
+				const previousSubinfos = this.getPreviousSubinfosFromBlock(start, editor);
+				const parentSubinfo = previousSubinfos.length
+					? previousSubinfos[previousSubinfos.length - 1]
+					: undefined;
+				void preloadSubclassIds(this.currentUrlKey, this.currentBaseUrl, classSlug, parentSubinfo)
+					.catch((error: unknown) => {
+						console.warn('DnD Wiki: Failed to preload subclass suggestions', error);
+					});
+				const names = getKnownSubclassNamesForParent(this.currentUrlKey, classSlug, parentSubinfo);
+				return getTextSuggestions(names, query);
+			}
+		}
 
-    if (this.currentKey === 'class') {
-      return getClassNames().filter(n => n.toLowerCase().includes(q)).slice(0, 50).map(n => ({ text: n }));
-    }
-
-    if (this.currentKey === 'subinfo') {
-      const { editor, start } = context;
-      const classSlug = this.getClassFromBlock(start, editor);
-      if (classSlug && this.currentBaseUrl) {
-        const prevSubinfos = this.getPreviousSubinfosFromBlock(start, editor);
-        const parentSubinfo = prevSubinfos.length ? prevSubinfos[prevSubinfos.length - 1] : undefined;
-        // Trigger preload if not yet cached (async, will populate on next keystroke)
-        void preloadSubclassIds(this.currentUrlKey, this.currentBaseUrl, classSlug, parentSubinfo)
-          .catch((error) => {
-            console.warn('DnD Wiki: Failed to preload subclass suggestions', error);
-          });
-        return getKnownSubclassNamesForParent(this.currentUrlKey, classSlug, parentSubinfo)
-          .filter(n => n.toLowerCase().includes(q))
-          .slice(0, 50)
-          .map(n => ({ text: n }));
-      }
-    }
-
-    if (this.currentKey === 'section' || this.currentKey === 'sectionfrom') {
-      return [];
-    }
-    return [];
-  }
-
-  renderSuggestion(item: { text: string }, el: HTMLElement) { el.textContent = item.text; }
-
-  selectSuggestion(item: { text: string }) {
-    if (!this.context) return;
-    const { editor, start, end } = this.context;
-    editor.replaceRange(item.text, start, end);
-    editor.setCursor({ line: end.line, ch: start.ch + item.text.length });
-    this.close();
-  }
+		return [];
+	}
 }

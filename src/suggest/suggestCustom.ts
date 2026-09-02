@@ -1,7 +1,8 @@
-import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
-import type { EditorSuggestTriggerInfo } from 'obsidian';
+import type { Editor, EditorPosition, EditorSuggestTriggerInfo, TFile } from 'obsidian';
+import { BaseTextSuggest } from './baseSuggest';
+import { findDndCodeBlock } from './suggestHelpers';
 
-export class CustomSuggest extends EditorSuggest<{ text: string }> {
+export class CustomSuggest extends BaseTextSuggest {
   private hasDirective = false;
 
   constructor(appPlugin: { app: import('obsidian').App }) {
@@ -9,11 +10,7 @@ export class CustomSuggest extends EditorSuggest<{ text: string }> {
   }
 
   private isInCustomBlock(cursor: EditorPosition, editor: Editor): boolean {
-    for (let i = cursor.line; i >= Math.max(0, cursor.line - 50); i--) {
-      const line = editor.getLine(i).trim();
-      if (line.startsWith('```')) return /^```\s*dnd[a-z0-9]*-custom\s*$/i.test(line);
-    }
-    return false;
+    return Boolean(findDndCodeBlock(cursor, editor, /^```\s*dnd[a-z0-9]*-custom\s*$/i));
   }
 
   onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null): EditorSuggestTriggerInfo | null {
@@ -39,15 +36,4 @@ export class CustomSuggest extends EditorSuggest<{ text: string }> {
       .map((text) => ({ text }));
   }
 
-  renderSuggestion(item: { text: string }, el: HTMLElement): void {
-    el.textContent = item.text;
-  }
-
-  selectSuggestion(item: { text: string }): void {
-    if (!this.context) return;
-    const context = this.context as { editor: Editor; start: EditorPosition; end: EditorPosition };
-    context.editor.replaceRange(item.text, context.start, context.end);
-    context.editor.setCursor({ line: context.end.line, ch: context.start.ch + item.text.length });
-    this.close();
-  }
 }

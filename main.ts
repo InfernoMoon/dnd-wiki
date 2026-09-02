@@ -20,7 +20,7 @@ import { SubclassNameSuggest } from './src/suggest/suggestSubclass';
 import { preloadAllFeatIds } from './src/dnd/feats/featService';
 import { preloadAllItemIds } from './src/dnd/items/itemUtils';
 import { preloadAllBackgroundIds } from './src/dnd/backgrounds/backgroundUtils';
-import { preloadAllLineageIds } from './src/dnd/lineages/lineageUtils';
+import { preloadAllLineageIds } from './src/dnd/lineages/lineageService';
 import { renderFeatList } from './src/dnd/feats/featList';
 import { renderItemList } from './src/dnd/items/itemList';
 import { renderBackground } from './src/dnd/backgrounds/background';

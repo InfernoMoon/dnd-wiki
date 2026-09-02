@@ -1,6 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
-import { getKnownLineageIdsForKey } from '../dnd/lineages/lineageUtils';
+import { lineageIdCache } from '../dnd/lineages/lineageService';
 import { displayNameFromSlug } from '../utils/text';
 
 export class LineageNameSuggest extends EditorSuggest<{ text: string }> {
@@ -36,7 +36,7 @@ export class LineageNameSuggest extends EditorSuggest<{ text: string }> {
 
   getSuggestions(context: { query: string }): Array<{ text: string }> {
     const q = (context.query || '').toLowerCase();
-    const ids = getKnownLineageIdsForKey(this.currentUrlKey);
+    const ids = lineageIdCache.get(this.currentUrlKey);
     return ids.map(s => ({ text: displayNameFromSlug(s) })).filter(it => it.text.toLowerCase().includes(q)).slice(0, 50);
   }
 

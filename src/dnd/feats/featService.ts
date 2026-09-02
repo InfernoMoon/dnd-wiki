@@ -4,13 +4,9 @@ import type { CachedRender } from '../../cache/renderCache';
 import { fetchPageContent } from '../../utils/fetcher';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../../genericLoader';
 
-// In-memory set of known feat IDs per URL key.
 export const featIdCache = new IdCache();
-
-// In-memory cache for rendered feat content, keyed by URL key and feat ID.
 const featRenderCache = new RenderCache();
 
-/** Ensure a feat is present in the cache by fetching it when necessary. */
 export async function ensureFeatCached(
 	featId: string,
 	urlKey: string,
@@ -30,7 +26,6 @@ export async function ensureFeatCached(
 	return cached;
 }
 
-/** Preload feat IDs for a URL key. */
 export async function preloadAllFeatIds(urlKey: string, baseUrl: string): Promise<void> {
 	const config: LoaderConfig = {
 		baseUrl,

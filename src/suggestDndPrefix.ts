@@ -55,7 +55,7 @@ export class DndPrefixSuggest extends EditorSuggest<{ text: string }> {
   }
 
   // Cache of URL keys for sync access in getSuggestions
-  private _cachedUrlKeys: string[] = ['5e', '2024'];
+  private _cachedUrlKeys: string[] = [];
 
   async refreshUrlKeys(): Promise<void> {
     const urls = await peekBaseUrls();

@@ -4,7 +4,7 @@ import { requestUrl } from 'obsidian';
 import { FilteredListCache } from '../../cache/filteredListCache';
 import { extractTableNamesFromFirstCell } from '../../utils/dom';
 import { getTextProperties } from '../../utils/directives';
-import { requireBaseUrl } from '../../utils/renderer';
+import { renderNoResultsMessage, requireBaseUrl } from '../../utils/renderer';
 import {
 	matchesSearch,
 	parseSearchDirective,
@@ -84,7 +84,7 @@ export async function renderSpellList(
 
 	names = applyExplicitSpellChanges(names, directives.addSpells, directives.removeSpells);
 	if (!names.length) {
-		el.setText('No spell names found.');
+		renderNoResultsMessage(el, 'spells');
 		return;
 	}
 
@@ -94,7 +94,7 @@ export async function renderSpellList(
 		cls: 'dnd-wiki-list-heading',
 		text: buildHeading(directives),
 	});
-	await renderSpellCards(
+	const visibleCount = await renderSpellCards(
 		names,
 		wrapper.createDiv(),
 		urlKey,
@@ -102,6 +102,7 @@ export async function renderSpellList(
 		directives.searches,
 		directives.searchMode,
 	);
+	if (!visibleCount) renderNoResultsMessage(wrapper, 'spells');
 }
 
 function parseSpellListDirectives(source: string): SpellListDirectives {
@@ -346,7 +347,8 @@ async function renderSpellCards(
 	baseUrl: string,
 	searches: string[],
 	searchMode: SearchMode,
-): Promise<void> {
+	): Promise<number> {
+	let visibleCount = 0;
 	await Promise.all(names.map(async name => {
 		const host = container.createDiv('dnd-wiki-card-spacer');
 		const rendered = await renderSingleSpell(host, urlKey, baseUrl, name);
@@ -362,7 +364,12 @@ async function renderSpellCards(
 			};
 			if (!matchesSearch(cachedContent, searches, searchMode)) {
 				host.classList.add('dnd-wiki-search-hidden');
+			} else {
+				visibleCount++;
 			}
+		} else if (rendered) {
+			visibleCount++;
 		}
 	}));
+	return visibleCount;
 }

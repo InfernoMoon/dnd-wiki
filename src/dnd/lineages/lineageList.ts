@@ -4,7 +4,7 @@ import { ensureLineageCached, lineageIdCache } from './lineageService';
 import { displayNameFromSlug } from '../../utils/text';
 import { matchesSearch, parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
-import { renderCollapsible, requireBaseUrl } from '../../utils/renderer';
+import { renderCollapsible, renderNoResultsMessage, requireBaseUrl } from '../../utils/renderer';
 
 async function renderLineageCards(
 	ids: string[],
@@ -13,7 +13,8 @@ async function renderLineageCards(
 	baseUrl: string,
 	searches: string[],
 	searchMode: SearchMode,
-): Promise<void> {
+	): Promise<number> {
+	let visibleCount = 0;
 	await Promise.all(ids.map(async id => {
 		const host = container.createDiv();
 		const lineage = await ensureLineageCached(id, urlKey, baseUrl);
@@ -22,11 +23,14 @@ async function renderLineageCards(
 			renderCollapsible(host, lineage.title, lineage.html);
 			if (!matchesSearch(lineage, searches, searchMode)) {
 				host.classList.add('dnd-wiki-search-hidden');
+			} else {
+				visibleCount++;
 			}
 		} else {
 			host.textContent = `Failed to load lineage: ${displayNameFromSlug(id)}`;
 		}
 	}));
+	return visibleCount;
 }
 
 export async function renderLineageList(
@@ -51,5 +55,6 @@ export async function renderLineageList(
 
 	el.empty();
 	const container = el.createDiv();
-	await renderLineageCards(ids, container, urlKey, baseUrl, searches, searchMode);
+	const visibleCount = await renderLineageCards(ids, container, urlKey, baseUrl, searches, searchMode);
+	if (!visibleCount) renderNoResultsMessage(container, 'lineages');
 }

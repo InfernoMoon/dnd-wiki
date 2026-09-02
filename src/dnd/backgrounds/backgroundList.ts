@@ -4,7 +4,7 @@ import { ensureBackgroundCached, backgroundIdCache } from './backgroundService';
 import { displayNameFromSlug } from '../../utils/text';
 import { matchesSearch, parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
-import { renderCollapsible, requireBaseUrl } from '../../utils/renderer';
+import { renderCollapsible, renderNoResultsMessage, requireBaseUrl } from '../../utils/renderer';
 
 async function renderBackgroundCards(
 	ids: string[],
@@ -13,7 +13,8 @@ async function renderBackgroundCards(
 	baseUrl: string,
 	searches: string[],
 	searchMode: SearchMode,
-): Promise<void> {
+	): Promise<number> {
+	let visibleCount = 0;
 	await Promise.all(ids.map(async id => {
 		const host = container.createDiv();
 		const background = await ensureBackgroundCached(id, urlKey, baseUrl);
@@ -22,11 +23,14 @@ async function renderBackgroundCards(
 			renderCollapsible(host, background.title, background.html);
 			if (!matchesSearch(background, searches, searchMode)) {
 				host.classList.add('dnd-wiki-search-hidden');
+			} else {
+				visibleCount++;
 			}
 		} else {
 			host.textContent = `Failed to load background: ${displayNameFromSlug(id)}`;
 		}
 	}));
+	return visibleCount;
 }
 
 export async function renderBackgroundList(
@@ -51,5 +55,6 @@ export async function renderBackgroundList(
 
 	el.empty();
 	const container = el.createDiv();
-	await renderBackgroundCards(ids, container, urlKey, baseUrl, searches, searchMode);
+	const visibleCount = await renderBackgroundCards(ids, container, urlKey, baseUrl, searches, searchMode);
+	if (!visibleCount) renderNoResultsMessage(container, 'backgrounds');
 }

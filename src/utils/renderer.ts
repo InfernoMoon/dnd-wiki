@@ -8,6 +8,11 @@ export function requireBaseUrl(el: HTMLElement, baseUrl: string): boolean {
 	return false;
 }
 
+/** Show a consistent message when a list has no visible results. */
+export function renderNoResultsMessage(el: HTMLElement, itemLabel: string): void {
+	el.createDiv({ text: `No ${itemLabel} found.` });
+}
+
 /** Prepare line-separated names or IDs for a renderer. */
 export function prepareNameInput(
 	el: HTMLElement,

@@ -2,7 +2,7 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { FilteredListCache } from '../../cache/filteredListCache';
 import { getTextProperties } from '../../utils/directives';
 import { extractTableNamesFromFirstCell } from '../../utils/dom';
-import { renderCollapsible, requireBaseUrl } from '../../utils/renderer';
+import { renderCollapsible, renderNoResultsMessage, requireBaseUrl } from '../../utils/renderer';
 import { matchesSearch, parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
 import { displayNameFromSlug, getPrimarySlug } from '../../utils/text';
@@ -81,7 +81,7 @@ export async function renderItemList(
 	}
 
 	if (!names.length) {
-		el.setText(`No ${getItemCollectionName(baseUrl)} found`);
+		renderNoResultsMessage(el, getItemCollectionName(baseUrl).toLowerCase());
 		return;
 	}
 
@@ -91,7 +91,7 @@ export async function renderItemList(
 	});
 
 	const container = el.createDiv();
-	await renderItemCards(
+	const visibleCount = await renderItemCards(
 		names,
 		container,
 		urlKey,
@@ -99,6 +99,7 @@ export async function renderItemList(
 		directives.searches,
 		directives.searchMode,
 	);
+	if (!visibleCount) renderNoResultsMessage(container, getItemCollectionName(baseUrl).toLowerCase());
 }
 
 function parseItemListDirectives(source: string): ItemListDirectives {
@@ -269,7 +270,8 @@ async function renderItemCards(
 	baseUrl: string,
 	searches: string[],
 	searchMode: SearchMode,
-): Promise<void> {
+	): Promise<number> {
+	let visibleCount = 0;
 	await Promise.all(names.map(async name => {
 		const host = container.createDiv('dnd-wiki-card-spacer');
 		const itemId = getPrimarySlug(name);
@@ -279,6 +281,8 @@ async function renderItemCards(
 			renderCollapsible(host, cached.title, cached.html);
 			if (!matchesSearch(cached, searches, searchMode)) {
 				host.classList.add('dnd-wiki-search-hidden');
+			} else {
+				visibleCount++;
 			}
 		} else {
 			host.textContent = `Failed to load item: ${displayNameFromSlug(itemId)}`;
@@ -287,4 +291,5 @@ async function renderItemCards(
 			}
 		}
 	}));
+	return visibleCount;
 }

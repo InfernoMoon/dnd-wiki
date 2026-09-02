@@ -5,7 +5,7 @@ import { ensureFeatCached, featIdCache } from './featService';
 import { displayNameFromSlug } from '../../utils/text';
 import { matchesSearch, parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
-import { renderCollapsible, requireBaseUrl } from '../../utils/renderer';
+import { renderCollapsible, renderNoResultsMessage, requireBaseUrl } from '../../utils/renderer';
 
 async function renderFeatCards(
 	ids: string[],
@@ -14,7 +14,8 @@ async function renderFeatCards(
 	baseUrl: string,
 	searches: string[],
 	searchMode: SearchMode,
-): Promise<void> {
+): Promise<number> {
+	let visibleCount = 0;
 	await Promise.all(ids.map(async (id) => {
 		const host = container.createDiv();
 		const feat = await ensureFeatCached(id, urlKey, baseUrl);
@@ -24,11 +25,14 @@ async function renderFeatCards(
 
 			if (!matchesSearch(feat, searches, searchMode)) {
 				host.classList.add('dnd-wiki-search-hidden');
+			} else {
+				visibleCount++;
 			}
 		} else {
 			host.textContent = `Failed to load feat: ${displayNameFromSlug(id)}`;
 		}
 	}));
+	return visibleCount;
 }
 
 export async function renderFeatList(
@@ -53,5 +57,6 @@ export async function renderFeatList(
 
 	el.empty();
 	const container = el.createDiv();
-	await renderFeatCards(ids, container, urlKey, baseUrl, searches, searchMode);
+	const visibleCount = await renderFeatCards(ids, container, urlKey, baseUrl, searches, searchMode);
+	if (!visibleCount) renderNoResultsMessage(container, 'feats');
 }

@@ -5,9 +5,29 @@ import { BaseTextSuggest } from './suggest/baseSuggest';
 const BLOCK_SUFFIXES = ['-spell', '-spelllist', '-feat', '-featlist', '-magicitem', '-magicitemlist', '-background', '-backgroundlist', '-lineage', '-lineagelist', '-class', '-classinfo', '-custom'];
 
 export class DndPrefixSuggest extends BaseTextSuggest {
+	private autoSuggestSuffixFor = '';
+
   constructor(appPlugin: { app: import('obsidian').App }) {
     super(appPlugin.app);
   }
+
+	selectSuggestion(item: { text: string }): void {
+		const context = this.context;
+		const expectedCursor = context
+			? { line: context.end.line, ch: context.start.ch + item.text.length }
+			: null;
+		const selectedUrlKey = this._cachedUrlKeys.some((key) => key.toLowerCase() === item.text.toLowerCase());
+
+		super.selectSuggestion(item);
+		if (!context || !expectedCursor || !selectedUrlKey) return;
+
+		this.autoSuggestSuffixFor = item.text.toLowerCase();
+		window.setTimeout(() => {
+			const cursor = context.editor.getCursor();
+			if (cursor.line !== expectedCursor.line || cursor.ch !== expectedCursor.ch) return;
+			this.openAtCursor(context.editor, context.file);
+		}, 0);
+	}
 
   private isAtDndPrefix(cursor: EditorPosition, editor: Editor): { startCh: number; fragment: string } | null {
     const line = editor.getLine(cursor.line);
@@ -35,6 +55,11 @@ export class DndPrefixSuggest extends BaseTextSuggest {
 
   getSuggestions(context: { query: string }): Array<{ text: string }> {
     const q = (context.query || '').toLowerCase();
+
+		if (this.autoSuggestSuffixFor === q && q) {
+			return BLOCK_SUFFIXES.map((suffix) => ({ text: q + suffix }));
+		}
+		this.autoSuggestSuffixFor = '';
 
     // If query contains a '-', the user has typed a key already — suggest suffixes
     const dashIdx = q.indexOf('-');

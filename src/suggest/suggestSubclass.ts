@@ -9,7 +9,7 @@ export class SubclassNameSuggest extends DndDirectiveSuggest {
 	private currentBaseUrl = '';
 
 	constructor(appPlugin: { app: App }, private readonly getBaseUrlForKey: (urlKey: string) => string) {
-		super(appPlugin, /^(?:```\s*dnd([a-z0-9]*)-classinfo\s*)$/i);
+		super(appPlugin, /^(?:```\s*dnd([a-z0-9]*)-classinfo\s*)$/i, [], ['class', 'subinfo']);
 	}
 
 	onTrigger(cursor: EditorPosition, editor: Editor, file: TFile | null): EditorSuggestTriggerInfo | null {

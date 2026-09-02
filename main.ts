@@ -33,6 +33,8 @@ import { DndPrefixSuggest } from './src/suggestDndPrefix';
 import { DndCardsSettingTab } from './src/settings/settings';
 import { renderCustom } from './src/dnd/custom/custom';
 import { CustomSuggest } from './src/suggest/suggestCustom';
+import { BaseTextSuggest } from './src/suggest/baseSuggest';
+import { isBlankLineInsideDndBlock } from './src/suggest/suggestHelpers';
 import { ensureHomebrewPropertyTypes } from './src/homebrew/homebrew';
 import { registerHomebrewFileCommand } from './src/homebrew/homebrewCommand';
 
@@ -45,27 +47,48 @@ export default class DndWiki extends Plugin {
 			console.warn('DnD Wiki: Failed to ensure homebrew property types', error);
 		});
 		await initializeDefaultUrls();
+		const editorSuggesters: BaseTextSuggest[] = [];
+		const registerSuggest = <T extends BaseTextSuggest>(suggest: T): T => {
+			this.registerEditorSuggest(suggest);
+			editorSuggesters.push(suggest);
+			return suggest;
+		};
+
 		const dndPrefixSuggest = new DndPrefixSuggest(this);
 		await dndPrefixSuggest.refreshUrlKeys();
-		this.registerEditorSuggest(dndPrefixSuggest);
+		registerSuggest(dndPrefixSuggest);
 
-		this.registerEditorSuggest(new SpellNameSuggest(this));
-		this.registerEditorSuggest(new SpellListSuggest(this));
-		this.registerEditorSuggest(new FeatNameSuggest(this));
-		this.registerEditorSuggest(new FeatListSuggest(this));
-		this.registerEditorSuggest(new ItemNameSuggest(this));
-		this.registerEditorSuggest(new ItemListSuggest(this));
-		this.registerEditorSuggest(new BackgroundNameSuggest(this));
-		this.registerEditorSuggest(new BackgroundListSuggest(this));
-		this.registerEditorSuggest(new LineageNameSuggest(this));
-		this.registerEditorSuggest(new LineageListSuggest(this));
+		registerSuggest(new SpellNameSuggest(this));
+		registerSuggest(new SpellListSuggest(this));
+		registerSuggest(new FeatNameSuggest(this));
+		registerSuggest(new FeatListSuggest(this));
+		registerSuggest(new ItemNameSuggest(this));
+		registerSuggest(new ItemListSuggest(this));
+		registerSuggest(new BackgroundNameSuggest(this));
+		registerSuggest(new BackgroundListSuggest(this));
+		registerSuggest(new LineageNameSuggest(this));
+		registerSuggest(new LineageListSuggest(this));
 
 		const classNameSuggest = new ClassNameSuggest(this);
 		await classNameSuggest.refreshClassNames();
-		this.registerEditorSuggest(classNameSuggest);
+		registerSuggest(classNameSuggest);
 		const urlsSnapshot = await peekBaseUrls();
-		this.registerEditorSuggest(new SubclassNameSuggest(this, (urlKey) => urlsSnapshot[urlKey] || ''));
-		this.registerEditorSuggest(new CustomSuggest(this));
+		registerSuggest(new SubclassNameSuggest(this, (urlKey) => urlsSnapshot[urlKey] || ''));
+		registerSuggest(new CustomSuggest(this));
+
+		this.registerEvent(this.app.workspace.on('editor-change', (editor, info) => {
+			const file = info.file;
+			const cursor = editor.getCursor();
+			if (!file || !isBlankLineInsideDndBlock(cursor, editor)) return;
+
+			window.setTimeout(() => {
+				const currentCursor = editor.getCursor();
+				if (currentCursor.line !== cursor.line || currentCursor.ch !== cursor.ch) return;
+				for (const suggest of editorSuggesters) {
+					if (suggest.openAtCursor(editor, file)) break;
+				}
+			}, 0);
+		}));
 		
 		this.app.workspace.onLayoutReady(async () => {
 			const urls = await peekBaseUrls();

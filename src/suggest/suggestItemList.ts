@@ -5,7 +5,12 @@ import { getTextSuggestions } from './suggestHelpers';
 
 export class ItemListSuggest extends DndDirectiveSuggest {
 	constructor(appPlugin: { app: App }) {
-		super(appPlugin, /^(?:```\s*dnd([a-z0-9]*)-magicitemlist\s*)$/i, ['type']);
+		super(
+			appPlugin,
+			/^(?:```\s*dnd([a-z0-9]*)-magicitemlist\s*)$/i,
+			['type'],
+			['level', 'type', 'attuned', 'searchmode'],
+		);
 	}
 
 	getSuggestions(context: EditorSuggestContext): Array<{ text: string }> {

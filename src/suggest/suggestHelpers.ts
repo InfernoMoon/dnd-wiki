@@ -4,6 +4,19 @@ export interface TextSuggestion {
 	text: string;
 }
 
+/** Return whether the cursor is on a blank line inside a D&D code block. */
+export function isBlankLineInsideDndBlock(cursor: EditorPosition, editor: Editor): boolean {
+	if (editor.getLine(cursor.line).trim()) return false;
+
+	for (let lineNumber = cursor.line - 1; lineNumber >= Math.max(0, cursor.line - 50); lineNumber--) {
+		const line = editor.getLine(lineNumber).trim();
+		if (!line.startsWith('```')) continue;
+		return /^```\s*dnd[a-z0-9]*(?:-[a-z]+)\s*$/i.test(line);
+	}
+
+	return false;
+}
+
 /** Find the nearest D&D code block above the cursor and return its match. */
 export function findDndCodeBlock(
 	cursor: EditorPosition,

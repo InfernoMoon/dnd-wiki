@@ -7,10 +7,11 @@ import { getTextSuggestions } from './suggestHelpers';
 
 export class SpellListSuggest extends DndDirectiveSuggest {
 	constructor(appPlugin: { app: App }) {
-		super(
+			super(
 			appPlugin,
 			/^(?:```\s*dnd([a-z0-9]*)-spelllist\s*)$/i,
 			['class', 'school', 'addspells', 'removespells'],
+			['level', 'class', 'school', 'addspells', 'removespells', 'searchmode'],
 		);
 	}
 

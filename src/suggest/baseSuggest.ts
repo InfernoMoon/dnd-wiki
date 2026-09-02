@@ -9,6 +9,17 @@ export abstract class BaseTextSuggest<T extends TextSuggestion = TextSuggestion>
 		super(app);
 	}
 
+	/** Open this suggester at the editor cursor when its trigger matches. */
+	openAtCursor(editor: Editor, file: TFile): boolean {
+		const cursor = editor.getCursor();
+		const trigger = this.onTrigger(cursor, editor, file);
+		if (!trigger) return false;
+
+		this.context = { ...trigger, editor, file };
+		this.open();
+		return true;
+	}
+
 	renderSuggestion(item: T, el: HTMLElement): void {
 		el.textContent = item.text;
 	}
@@ -72,8 +83,31 @@ export abstract class DndDirectiveSuggest extends BaseTextSuggest {
 		appPlugin: { app: App },
 		private readonly blockPattern: RegExp,
 		private readonly commaSeparatedKeys: readonly string[] = [],
+		private readonly autoOpenKeys: readonly string[] = [],
 	) {
 		super(appPlugin.app);
+	}
+
+	/** Return whether selecting this directive should immediately show its values. */
+	private shouldOpenValues(item: TextSuggestion): boolean {
+		const key = item.text.replace(/:\s*$/, '').toLowerCase();
+		return this.autoOpenKeys.includes(key);
+	}
+
+	selectSuggestion(item: TextSuggestion): void {
+		const context = this.context;
+		const expectedCursor = context
+			? { line: context.end.line, ch: context.start.ch + item.text.length }
+			: null;
+
+		super.selectSuggestion(item);
+		if (!context || !expectedCursor || !this.shouldOpenValues(item)) return;
+
+		window.setTimeout(() => {
+			const cursor = context.editor.getCursor();
+			if (cursor.line !== expectedCursor.line || cursor.ch !== expectedCursor.ch) return;
+			this.openAtCursor(context.editor, context.file);
+		}, 0);
 	}
 
 	onTrigger(cursor: EditorPosition, editor: Editor, _file: TFile | null): EditorSuggestTriggerInfo | null {
@@ -116,6 +150,10 @@ export abstract class DndDirectiveSuggest extends BaseTextSuggest {
 
 /** Shared directive suggester for simple list blocks. */
 export class SearchListSuggest extends DndDirectiveSuggest {
+	constructor(appPlugin: { app: App }, blockPattern: RegExp) {
+		super(appPlugin, blockPattern, [], ['searchmode']);
+	}
+
 	getSuggestions(context: EditorSuggestContext): TextSuggestion[] {
 		const query = context.query || '';
 		if (this.currentKey === 'searchmode') {

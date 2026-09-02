@@ -1,6 +1,6 @@
 import { App, Modal, Notice, Setting, TFile } from 'obsidian';
 import { getCachedClassNames, getCachedSchoolNames, getHomebrewSettings, getItemRarityNames } from '../dataService';
-import { getItemTypeSuggestions } from '../dnd/items/itemUtils';
+import { getItemTypeSuggestions } from '../dnd/items/itemService';
 import { ensureHomebrewFolderPath } from './homebrew';
 import { ensureHomebrewCategoryFolder, getHomebrewFileTemplate, HOMEBREW_CATEGORIES } from './homebrewTemplates';
 import type { HomebrewFileTemplateOptions } from './homebrewTemplates';

@@ -7,7 +7,7 @@ import { renderWithSections, parseSectionDirectives } from '../../sectionRendere
 import { requireBaseUrl } from '../../utils/renderer';
 import { preloadSubclassIds } from './subclassUtils';
 
-const subclassRenderCache = new RenderCache();
+const subclassRenderCache = new RenderCache<CachedRender>();
 
 async function ensureSubclassCached(
 	classSlug: string,

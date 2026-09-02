@@ -5,7 +5,7 @@ import { fetchPageContent } from '../../utils/fetcher';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../../genericLoader';
 
 export const backgroundIdCache = new IdCache();
-const backgroundRenderCache = new RenderCache();
+const backgroundRenderCache = new RenderCache<CachedRender>();
 
 function cleanBackgroundTitle(title: string): string {
 	return title.replace(/^Background:\s*/i, '');

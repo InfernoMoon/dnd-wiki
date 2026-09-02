@@ -18,7 +18,7 @@ import { LineageListSuggest } from './src/suggest/suggestLineageList';
 import { ClassNameSuggest } from './src/suggest/suggestClass';
 import { SubclassNameSuggest } from './src/suggest/suggestSubclass';
 import { preloadAllFeatIds } from './src/dnd/feats/featService';
-import { preloadAllItemIds } from './src/dnd/items/itemUtils';
+import { preloadAllItemIds } from './src/dnd/items/itemService';
 import { preloadAllBackgroundIds } from './src/dnd/backgrounds/backgroundService';
 import { preloadAllLineageIds } from './src/dnd/lineages/lineageService';
 import { renderFeatList } from './src/dnd/feats/featList';

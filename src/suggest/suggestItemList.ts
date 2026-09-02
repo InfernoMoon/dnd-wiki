@@ -1,6 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
-import { getItemTypeSuggestions } from '../dnd/items/itemUtils';
+import { getItemTypeSuggestions } from '../dnd/items/itemService';
 
 export class ItemListSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;

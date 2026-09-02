@@ -5,7 +5,7 @@ import { fetchPageContent } from '../../utils/fetcher';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../../genericLoader';
 
 export const lineageIdCache = new IdCache();
-const lineageRenderCache = new RenderCache();
+const lineageRenderCache = new RenderCache<CachedRender>();
 
 function cleanLineageTitle(title: string): string {
 	return title.replace(/^Lineage:\s*/i, '');

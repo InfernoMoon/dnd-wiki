@@ -5,7 +5,7 @@ import { fetchPageAtUrl } from '../../utils/fetcher';
 import { requireBaseUrl } from '../../utils/renderer';
 import { parseSectionDirectives, renderWithSections } from '../../sectionRenderer';
 
-const customRenderCache = new RenderCache();
+const customRenderCache = new RenderCache<CachedRender>();
 
 async function ensureCustomCached(
 	pageSource: string,

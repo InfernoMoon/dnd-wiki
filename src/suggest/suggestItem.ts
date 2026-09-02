@@ -1,6 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
-import { getKnownItemIdsForKey } from '../dnd/items/itemUtils';
+import { itemIdCache } from '../dnd/items/itemService';
 import { displayNameFromSlug } from '../utils/text';
 
 export class ItemNameSuggest extends EditorSuggest<{ text: string }> {
@@ -46,7 +46,7 @@ export class ItemNameSuggest extends EditorSuggest<{ text: string }> {
 
   getSuggestions(context: { query: string }): Array<{ text: string }> {
     const q = (context.query || '').toLowerCase();
-    const ids = getKnownItemIdsForKey(this.currentUrlKey);
+    const ids = itemIdCache.get(this.currentUrlKey);
     const items = ids.map((s) => ({ text: displayNameFromSlug(s) }));
     return items.filter(it => it.text.toLowerCase().includes(q)).slice(0, 50);
   }

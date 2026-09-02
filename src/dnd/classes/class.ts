@@ -5,7 +5,7 @@ import { nameToSlug, displayNameFromSlug } from '../../utils/text';
 import { fetchPageAtUrl } from '../../utils/fetcher';
 import { prepareNameInput, renderCollapsible } from '../../utils/renderer';
 
-const classRenderCache = new RenderCache();
+const classRenderCache = new RenderCache<CachedRender>();
 
 async function ensureClassCached(
 	classId: string,

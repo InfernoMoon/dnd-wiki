@@ -5,7 +5,7 @@ import { fetchPageContent } from '../../utils/fetcher';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../../genericLoader';
 
 export const featIdCache = new IdCache();
-const featRenderCache = new RenderCache();
+const featRenderCache = new RenderCache<CachedRender>();
 
 export async function ensureFeatCached(
 	featId: string,

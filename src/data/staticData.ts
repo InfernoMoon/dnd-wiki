@@ -26,10 +26,18 @@ export const STATIC_SCHOOLS: string[] = [
   "Transmutation"
 ];
 
-/**
- * Mapping of item rarity words to tab indices used by the Wondrous Items page.
- * Keys are lowercase, spaces normalized with hyphens.
- */
+export const STATIC_ITEM_TYPES: string[] = [
+  "Armor",
+  "Potion",
+  "Ring",
+  "Rod",
+  "Scroll",
+  "Staff",
+  "Wand",
+  "Weapon",
+  "Wondrous Item"
+];
+
 export const STATIC_ITEM_RARITY_WORD_TO_INDEX: Record<string, number> = {
   common: 0,
   uncommon: 1,

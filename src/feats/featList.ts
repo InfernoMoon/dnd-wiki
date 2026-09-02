@@ -1,10 +1,6 @@
-/**
- * featList.ts
- * Waits for the known feat IDs, then renders each feat as a collapsible card.
- */
+
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { ensureFeatCached } from './feat';
-import { getKnownFeatIdsForKey } from './featService';
+import { ensureFeatCached, getKnownFeatIdsForKey } from './featService';
 import { displayNameFromSlug } from '../utils/text';
 import { parseSearchDirective, parseSearchModeDirective } from '../utils/search';
 import { renderCollapsible } from '../utils/renderer';

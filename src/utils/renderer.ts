@@ -1,5 +1,27 @@
 import { createUid } from './obsidian';
 
+/** Prepare line-separated names or IDs for a renderer. */
+export function prepareNameInput(
+	el: HTMLElement,
+	source: string,
+	baseUrl: string,
+	emptySourceMessage: string,
+): string[] | null {
+	el.empty();
+	if (!baseUrl) {
+		el.createDiv({ text: 'Base URL is not configured.' });
+		return null;
+	}
+
+	const lines = source.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+	if (!lines.length) {
+		el.createDiv({ text: emptySourceMessage });
+		return null;
+	}
+
+	return lines;
+}
+
 function appendHtmlFragment(container: HTMLElement, html: string): void {
 	const parsed = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
 	const root = parsed.body.firstElementChild;

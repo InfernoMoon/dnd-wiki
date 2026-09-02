@@ -1,12 +1,4 @@
-/**
- * featService.ts
- * Manages feat IDs and rendered feat content.
- * - Preloads known feat IDs from the configured base URL and custom vault files
- * - Caches rendered feat cards by URL key and feat ID
- */
-import { TFile, TFolder, TAbstractFile } from 'obsidian';
-import { getObsidianApp } from '../utils/obsidian';
-import { nameToSlug } from '../utils/text';
+import { fetchPageContent } from '../utils/fetcher';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../genericLoader';
 
 interface CachedFeat {
@@ -43,7 +35,27 @@ export function getKnownFeatIdsForKey(urlKey: string): string[] {
 	return Array.from(featIdCache.get(urlKey) ?? []).sort((a, b) => a.localeCompare(b));
 }
 
-/** Preload feat IDs for a URL key and include custom feats from the vault. */
+/** Ensure a feat is present in the cache by fetching it when necessary. */
+export async function ensureFeatCached(
+	featId: string,
+	urlKey: string,
+	baseUrl: string,
+): Promise<CachedFeat | null> {
+	const existing = getCachedFeat(urlKey, featId);
+	if (existing) return existing;
+
+	const fetched = await fetchPageContent(baseUrl, 'feat', featId);
+	if (!fetched.ok) return null;
+
+	const cached: CachedFeat = {
+		title: fetched.titleText || featId,
+		html: fetched.contentHtml,
+	};
+	setCachedFeat(urlKey, featId, cached);
+	return cached;
+}
+
+/** Preload feat IDs for a URL key. */
 export async function preloadAllFeatIds(urlKey: string, baseUrl: string): Promise<void> {
 	let cache = featIdCache.get(urlKey);
 	if (!cache) {
@@ -66,22 +78,4 @@ export async function preloadAllFeatIds(urlKey: string, baseUrl: string): Promis
 		? await loadFromTable(config)
 		: await loadFromLinks(config);
 	for (const id of featIds) cache.add(id);
-
-	try {
-		const app = getObsidianApp();
-		const vault = app?.vault;
-		const folder = vault?.getAbstractFileByPath('DnD-Cards/Feats');
-		if (folder instanceof TFolder) {
-			const children: TAbstractFile[] = folder.children;
-			for (const child of children) {
-				if (child instanceof TFile && child.extension?.toLowerCase() === 'md') {
-					const baseName: string = child.basename || child.name.replace(/\.md$/i, '');
-					const idSlug = nameToSlug(baseName);
-					if (idSlug) cache.add(idSlug);
-				}
-			}
-		}
-	} catch (err) {
-		console.warn('Unable to include custom feats during preload', err);
-	}
 }

@@ -1,6 +1,6 @@
 import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { EditorSuggestTriggerInfo } from 'obsidian';
-import { getKnownBackgroundIdsForKey } from '../dnd/backgrounds/backgroundUtils';
+import { backgroundIdCache } from '../dnd/backgrounds/backgroundService';
 import { displayNameFromSlug } from '../utils/text';
 
 export class BackgroundNameSuggest extends EditorSuggest<{ text: string }> {
@@ -46,7 +46,7 @@ export class BackgroundNameSuggest extends EditorSuggest<{ text: string }> {
 
   getSuggestions(context: { query: string }): Array<{ text: string }> {
     const q = (context.query || '').toLowerCase();
-    const ids = getKnownBackgroundIdsForKey(this.currentUrlKey);
+    const ids = backgroundIdCache.get(this.currentUrlKey);
     const items = ids.map((s) => ({ text: displayNameFromSlug(s) }));
     return items.filter(it => it.text.toLowerCase().includes(q)).slice(0, 50);
   }

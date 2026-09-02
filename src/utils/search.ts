@@ -1,3 +1,7 @@
+import type { CachedRender } from '../cache/renderCache';
+
+export type SearchMode = 'and' | 'or';
+
 /** Parse all `search:` directives from a code block. */
 export function parseSearchDirective(source: string): string[] {
 	const results: string[] = [];
@@ -11,16 +15,24 @@ export function parseSearchDirective(source: string): string[] {
 }
 
 /** Parse `searchMode:` and default to `or`. */
-export function parseSearchModeDirective(source: string): 'and' | 'or' {
+export function parseSearchModeDirective(source: string): SearchMode {
 	const match = /^searchMode:\s*(.+)$/im.exec(source);
 	return match && match[1].trim().toLowerCase() === 'and' ? 'and' : 'or';
 }
 
-/** Test whether a name or optional cached HTML contains a search term. */
-export function matchesSearch(name: string, search: string, cachedHtml?: string): boolean {
-	if (!search) return true;
-	if (name.toLowerCase().includes(search)) return true;
-	if (!cachedHtml) return false;
-	const text = cachedHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').toLowerCase();
-	return text.includes(search);
+/** Test whether cached rendered content matches the requested search terms. */
+export function matchesSearch(
+	cached: CachedRender,
+	searches: string[],
+	searchMode: SearchMode,
+): boolean {
+	if (!searches.length) return true;
+
+	const text = `${cached.title} ${cached.html
+		.replace(/<[^>]*>/g, ' ')
+		.replace(/\s+/g, ' ')}`.toLowerCase();
+
+	return searchMode === 'and'
+		? searches.every(search => text.includes(search))
+		: searches.some(search => text.includes(search));
 }

@@ -1,36 +1,11 @@
 
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { ensureFeatCached, getKnownFeatIdsForKey } from './featService';
+import { waitForCachedIds } from '../cache/idCache';
+import { ensureFeatCached, featIdCache } from './featService';
 import { displayNameFromSlug } from '../utils/text';
-import { parseSearchDirective, parseSearchModeDirective } from '../utils/search';
+import { matchesSearch, parseSearchDirective, parseSearchModeDirective } from '../utils/search';
+import type { SearchMode } from '../utils/search';
 import { renderCollapsible } from '../utils/renderer';
-
-type SearchMode = 'and' | 'or';
-
-/** Wait for startup preloading to populate the IDs, or stop after 30 seconds. */
-async function waitForFeatIds(urlKey: string): Promise<string[]> {
-	const timeoutAt = Date.now() + 30_000;
-
-	while (Date.now() < timeoutAt) {
-		const ids = getKnownFeatIdsForKey(urlKey);
-		if (ids.length) return ids;
-
-		await new Promise<void>((resolve) => {
-			window.setTimeout(resolve, 1000);
-		});
-	}
-
-	return getKnownFeatIdsForKey(urlKey);
-}
-
-function matchesSearch(host: HTMLElement, searches: string[], searchMode: SearchMode): boolean {
-	if (!searches.length) return true;
-
-	const text = host.textContent?.toLowerCase() ?? '';
-	return searchMode === 'and'
-		? searches.every((search) => text.includes(search))
-		: searches.some((search) => text.includes(search));
-}
 
 async function renderFeatCards(
 	ids: string[],
@@ -46,12 +21,12 @@ async function renderFeatCards(
 
 		if (feat?.html) {
 			renderCollapsible(host, feat.title, feat.html);
+
+			if (!matchesSearch(feat, searches, searchMode)) {
+				host.classList.add('dnd-wiki-search-hidden');
+			}
 		} else {
 			host.textContent = `Failed to load feat: ${displayNameFromSlug(id)}`;
-		}
-
-		if (!matchesSearch(host, searches, searchMode)) {
-			host.classList.add('dnd-wiki-search-hidden');
 		}
 	}));
 }
@@ -72,7 +47,7 @@ export async function renderFeatList(
 	const searches = parseSearchDirective(source);
 	const searchMode = parseSearchModeDirective(source);
 	const status = el.createDiv({ text: 'Waiting for feat data…' });
-	const ids = await waitForFeatIds(urlKey);
+	const ids = await waitForCachedIds(() => featIdCache.get(urlKey));
 
 	if (!ids.length) {
 		status.setText('No feats found after 30 seconds. Please reload the plugin.');

@@ -8,13 +8,13 @@ import { getKnownLineageIdsForKey } from './lineageUtils';
 import { getCachedLineage, setCachedLineage, findCustomLineageById, buildCustomLineageHtmlStructured, cleanLineageTitle } from './lineage';
 import { fetchPageContent } from '../utils/fetcher';
 import { getObsidianApp } from '../utils/obsidian';
-import { renderCollapsible } from '../utils/renderer';
+import { renderCollapsible, requireBaseUrl } from '../utils/renderer';
 import { displayNameFromSlug } from '../utils/text';
 import { parseSearchDirective, parseSearchModeDirective } from '../utils/search';
 
 export async function renderLineageList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
-  if (!baseUrl) { el.createDiv({ text: 'Base URL is not configured.' }); return; }
+  if (!requireBaseUrl(el, baseUrl)) return;
   const searches = parseSearchDirective(source);
   const searchMode = parseSearchModeDirective(source);
 

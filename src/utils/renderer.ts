@@ -1,5 +1,13 @@
 import { createUid } from './obsidian';
 
+/** Check that a renderer has a configured base URL. */
+export function requireBaseUrl(el: HTMLElement, baseUrl: string): boolean {
+	if (baseUrl) return true;
+
+	el.createDiv({ text: 'Base URL is not configured.' });
+	return false;
+}
+
 /** Prepare line-separated names or IDs for a renderer. */
 export function prepareNameInput(
 	el: HTMLElement,
@@ -8,10 +16,7 @@ export function prepareNameInput(
 	emptySourceMessage: string,
 ): string[] | null {
 	el.empty();
-	if (!baseUrl) {
-		el.createDiv({ text: 'Base URL is not configured.' });
-		return null;
-	}
+	if (!requireBaseUrl(el, baseUrl)) return null;
 
 	const lines = source.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
 	if (!lines.length) {

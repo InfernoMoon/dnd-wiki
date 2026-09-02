@@ -9,7 +9,7 @@ import { TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsi
 import { getObsidianApp } from '../utils/obsidian';
 import { nameToSlug, displayNameFromSlug } from '../utils/text';
 import { fetchPageContent } from '../utils/fetcher';
-import { renderCollapsible } from '../utils/renderer';
+import { renderCollapsible, requireBaseUrl } from '../utils/renderer';
 
 // Cache for fetched item content: outer key = urlKey, inner key = item id
 const itemCache = new Map<string, Map<string, { title: string; html: string }>>();
@@ -57,10 +57,7 @@ function renderItemCard(container: HTMLElement, title: string, html: string) {
  */
 export async function renderItem(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
-  if (!baseUrl) {
-    el.createDiv({ text: 'Base URL is not configured.' });
-    return;
-  }
+  if (!requireBaseUrl(el, baseUrl)) return;
 
   const lines = source.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (!lines.length) {

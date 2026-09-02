@@ -9,6 +9,7 @@ import { renderSingleSpell, getCustomSpellEntries, seedSpellNamesForKey } from "
 import { nameToSlug, displayNameFromSlug } from '../utils/text';
 import { extractTableNamesFromFirstCell } from '../utils/dom';
 import { parseSearchDirective, parseSearchModeDirective } from '../utils/search';
+import { requireBaseUrl } from '../utils/renderer';
 
 /**
  * Render a filtered list of spells based on directives provided in the block.
@@ -208,10 +209,7 @@ function buildHeading(spellLevel: number | undefined, spellLevels: number[] | un
 
 export async function renderSpellList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
 	el.empty();
-	if (!baseUrl) {
-		el.createDiv({ text: "Base URL is not configured." });
-		return;
-	}
+	if (!requireBaseUrl(el, baseUrl)) return;
 
 	const { levelDirective, classDirective, schoolDirective, addSpells, removeSpells } = parseDirectives(source);
 	const spellLevel = typeof levelDirective === "number" ? levelDirective : undefined;

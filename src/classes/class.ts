@@ -6,7 +6,7 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { nameToSlug, displayNameFromSlug } from '../utils/text';
 import { fetchPageAtUrl } from '../utils/fetcher';
-import { renderCollapsible } from '../utils/renderer';
+import { renderCollapsible, requireBaseUrl } from '../utils/renderer';
 
 // Cache: outer key = urlKey, inner key = class slug
 const classCache = new Map<string, Map<string, { title: string; html: string }>>();
@@ -29,7 +29,7 @@ export function setCachedClass(urlKey: string, id: string, data: { title: string
 
 export async function renderClass(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
-  if (!baseUrl) { el.createDiv({ text: 'Base URL is not configured.' }); return; }
+  if (!requireBaseUrl(el, baseUrl)) return;
   const lines = source.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (!lines.length) { el.createDiv({ text: 'Provide one or more class names.' }); return; }
 

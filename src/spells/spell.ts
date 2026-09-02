@@ -6,6 +6,7 @@
  */
 import { MarkdownPostProcessorContext } from "obsidian";
 import { renderSingleSpell } from "./spellUtils";
+import { requireBaseUrl } from '../utils/renderer';
 
 /**
  * Render one or more spells inside a ```dnd-spell code block.
@@ -26,10 +27,7 @@ export async function renderSpell(source: string, el: HTMLElement, _ctx: Markdow
     return;
   }
 
-  if (!baseUrl) {
-    el.createDiv({ text: "Base URL is not configured." });
-    return;
-  }
+  if (!requireBaseUrl(el, baseUrl)) return;
 
   // Container for multiple cards
   const containerId = `spell-multi-${Math.random().toString(36).slice(2, 11)}`;

@@ -8,7 +8,7 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from 'obsidian';
 import { nameToSlug, escapeHtml } from '../utils/text';
 import { fetchPageContent } from '../utils/fetcher';
-import { renderCollapsible, extractCardContentHtml } from '../utils/renderer';
+import { renderCollapsible, extractCardContentHtml, requireBaseUrl } from '../utils/renderer';
 import { getObsidianApp, createUid } from '../utils/obsidian';
 
 // In-memory cache: outer key = urlKey, inner key = background id/slug
@@ -37,10 +37,7 @@ function renderBackgroundCard(container: HTMLElement, title: string, html: strin
 
 export async function renderBackground(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
-  if (!baseUrl) {
-    el.createDiv({ text: 'Base URL is not configured.' });
-    return;
-  }
+  if (!requireBaseUrl(el, baseUrl)) return;
 
   const lines = source.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (!lines.length) {

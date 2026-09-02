@@ -5,7 +5,7 @@ import { ensureFeatCached, featIdCache } from './featService';
 import { displayNameFromSlug } from '../utils/text';
 import { matchesSearch, parseSearchDirective, parseSearchModeDirective } from '../utils/search';
 import type { SearchMode } from '../utils/search';
-import { renderCollapsible } from '../utils/renderer';
+import { renderCollapsible, requireBaseUrl } from '../utils/renderer';
 
 async function renderFeatCards(
 	ids: string[],
@@ -39,10 +39,7 @@ export async function renderFeatList(
 	baseUrl: string,
 ): Promise<void> {
 	el.empty();
-	if (!baseUrl) {
-		el.createDiv({ text: 'Base URL is not configured.' });
-		return;
-	}
+	if (!requireBaseUrl(el, baseUrl)) return;
 
 	const searches = parseSearchDirective(source);
 	const searchMode = parseSearchModeDirective(source);

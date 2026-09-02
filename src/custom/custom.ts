@@ -1,5 +1,6 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { fetchPageAtUrl } from '../utils/fetcher';
+import { requireBaseUrl } from '../utils/renderer';
 import { parseSectionDirectives, renderWithSections } from '../sectionRenderer';
 
 const customPageCache = new Map<string, Map<string, { title: string; html: string }>>();
@@ -20,10 +21,7 @@ export async function renderCustom(
   baseUrl: string
 ): Promise<void> {
   el.empty();
-  if (!baseUrl) {
-    el.createDiv({ text: 'Base URL is not configured.' });
-    return;
-  }
+  if (!requireBaseUrl(el, baseUrl)) return;
 
   const sourceMatch = /^source:\s*(.+)$/im.exec(source);
   if (!sourceMatch) {

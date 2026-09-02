@@ -3,7 +3,7 @@ import { requestUrl, TFolder, TAbstractFile, TFile, MarkdownRenderer, Component 
 import { getObsidianApp } from '../utils/obsidian';
 import { nameToSlug, displayNameFromSlug } from '../utils/text';
 import { fetchPageContent } from '../utils/fetcher';
-import { renderCollapsible } from '../utils/renderer';
+import { renderCollapsible, requireBaseUrl } from '../utils/renderer';
 import { extractTableNamesFromFirstCell } from '../utils/dom';
 import { parseSearchDirective, parseSearchModeDirective } from '../utils/search';
 import { STATIC_ITEM_RARITY_WORD_TO_INDEX } from '../data/staticData';
@@ -329,10 +329,7 @@ function parseAttunedDirective(sourceText: string): 'all' | boolean | null {
 
 export async function renderItemList(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
-  if (!baseUrl) {
-    el.createDiv({ text: 'Base URL is not configured.' });
-    return;
-  }
+  if (!requireBaseUrl(el, baseUrl)) return;
         /**
          * Convert a rarity index to a display name (Title-Case, hyphenated).
          */

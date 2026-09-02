@@ -7,6 +7,7 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { nameToSlug, displayNameFromSlug } from '../utils/text';
 import { fetchPageAtUrl } from '../utils/fetcher';
+import { requireBaseUrl } from '../utils/renderer';
 import { preloadSubclassIds } from './subclassUtils';
 import { parseSectionDirectives, renderWithSections } from '../sectionRenderer';
 
@@ -23,7 +24,7 @@ function getCacheForKey(urlKey: string): Map<string, { title: string; html: stri
 
 export async function renderSubclass(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
   el.empty();
-  if (!baseUrl) { el.createDiv({ text: 'Base URL is not configured.' }); return; }
+  if (!requireBaseUrl(el, baseUrl)) return;
 
   const classMatch = /^class:\s*(.+)$/im.exec(source);
   const subinfoMatches: RegExpExecArray[] = [];

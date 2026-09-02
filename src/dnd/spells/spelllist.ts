@@ -6,7 +6,7 @@
  */
 import { MarkdownPostProcessorContext, requestUrl } from "obsidian";
 import { renderSingleSpell, getCustomSpellEntries, seedSpellNamesForKey } from "./spellUtils";
-import { nameToSlug, displayNameFromSlug } from '../../utils/text';
+import { getPrimarySlug, displayNameFromSlug } from '../../utils/text';
 import { extractTableNamesFromFirstCell } from '../../utils/dom';
 import { parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
 import { requireBaseUrl } from '../../utils/renderer';
@@ -89,7 +89,7 @@ function parseDirectives(source: string): {
 			const raw = mClass[1].trim();
 			classDirective = /^all$/i.test(raw)
 				? "all"
-				: raw.split(",").map((s) => s.trim()).filter(Boolean).map((p) => nameToSlug(p)).filter(Boolean);
+				: raw.split(",").map((s) => s.trim()).filter(Boolean).map((p) => getPrimarySlug(p)).filter(Boolean);
 			continue;
 		}
 		const mSchool = /^school:\s*(.+)$/i.exec(line);
@@ -97,7 +97,7 @@ function parseDirectives(source: string): {
 			const raw = mSchool[1].trim();
 			schoolDirective = /^all$/i.test(raw)
 				? "all"
-				: raw.split(",").map((s) => s.trim()).filter(Boolean).map((p) => nameToSlug(p)).filter(Boolean);
+				: raw.split(",").map((s) => s.trim()).filter(Boolean).map((p) => getPrimarySlug(p)).filter(Boolean);
 			continue;
 		}
 		const mAdd = /^addspells:\s*(.+)$/i.exec(line);
@@ -105,7 +105,7 @@ function parseDirectives(source: string): {
 			const raw = mAdd[1].trim();
 			const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
 			for (const p of parts) {
-				const slug = nameToSlug(p);
+				const slug = getPrimarySlug(p);
 				if (slug) addSpells.push(slug);
 			}
 			continue;
@@ -115,7 +115,7 @@ function parseDirectives(source: string): {
 			const raw = mRemove[1].trim();
 			const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
 			for (const p of parts) {
-				const slug = nameToSlug(p);
+				const slug = getPrimarySlug(p);
 				if (slug) removeSpells.push(slug);
 			}
 			continue;
@@ -131,7 +131,7 @@ function toNames(docs: (Document | null)[]): string[][] {
 function unionNormalized(listOfNameArrays: string[][]): Set<string> {
 	const set = new Set<string>();
 	for (const arr of listOfNameArrays) {
-		for (const n of arr) set.add(nameToSlug(n));
+		for (const n of arr) set.add(getPrimarySlug(n));
 	}
 	return set;
 }
@@ -167,8 +167,8 @@ function applyClassSchoolFilters(names: string[], classDocs: (Document | null)[]
 	const classSet = classDocs.length ? unionNormalized(toNames(classDocs)) : null;
 	const schoolSet = schoolDocs.length ? unionNormalized(toNames(schoolDocs)) : null;
 	let filtered = names;
-	if (classSet) filtered = filtered.filter((n) => classSet.has(nameToSlug(n)));
-	if (schoolSet) filtered = filtered.filter((n) => schoolSet.has(nameToSlug(n)));
+	if (classSet) filtered = filtered.filter((n) => classSet.has(getPrimarySlug(n)));
+	if (schoolSet) filtered = filtered.filter((n) => schoolSet.has(getPrimarySlug(n)));
 	return filtered;
 }
 
@@ -179,12 +179,12 @@ function applyLevelFilters(baseDoc: Document, names: string[], spellLevel?: numb
 			const tabEl = baseDoc.querySelector(`#wiki-tab-0-${lvl}`);
 			if (!tabEl) continue;
 			const levelNames = extractTableNamesFromFirstCell(tabEl);
-			for (const n of levelNames) unionLevelSet.add(nameToSlug(n));
+			for (const n of levelNames) unionLevelSet.add(getPrimarySlug(n));
 		}
 		if (!unionLevelSet.size) {
 			return { ok: false, names: [], message: `No Spells found for levels ${spellLevels.join(",")}` };
 		}
-		return { ok: true, names: names.filter((n) => unionLevelSet.has(nameToSlug(n))) };
+		return { ok: true, names: names.filter((n) => unionLevelSet.has(getPrimarySlug(n))) };
 	}
 	if (typeof spellLevel === "number" && !Number.isNaN(spellLevel)) {
 		const tabEl = baseDoc.querySelector(`#wiki-tab-0-${spellLevel}`);
@@ -192,8 +192,8 @@ function applyLevelFilters(baseDoc: Document, names: string[], spellLevel?: numb
 			return { ok: false, names: [], message: `No Spells found for level ${spellLevel}` };
 		}
 		const levelNames = extractTableNamesFromFirstCell(tabEl);
-		const setLevel = new Set(levelNames.map((n) => nameToSlug(n)));
-		return { ok: true, names: names.filter((n) => setLevel.has(nameToSlug(n))) };
+		const setLevel = new Set(levelNames.map((n) => getPrimarySlug(n)));
+		return { ok: true, names: names.filter((n) => setLevel.has(getPrimarySlug(n))) };
 	}
 	return { ok: true, names };
 }
@@ -266,7 +266,7 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx: Mar
 			const schoolSet = Array.isArray(schoolSlugs) && schoolSlugs.length ? new Set(schoolSlugs) : null;
 			const levelSet = Array.isArray(spellLevels) && spellLevels.length ? new Set(spellLevels) : null;
 			const singleLevel = typeof spellLevel === 'number' ? spellLevel : undefined;
-			const existingSlugs = new Set(names.map((n) => nameToSlug(n)));
+			const existingSlugs = new Set(names.map((n) => getPrimarySlug(n)));
 			for (const cs of customs) {
 				// Level filter
 				let ok = true;
@@ -299,7 +299,7 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx: Mar
 	}
 	// Merge in explicit addSpells (avoid duplicates by slug)
 	if (addSpells?.length) {
-		const existingSlugs = new Set(names.map((n) => nameToSlug(n)));
+		const existingSlugs = new Set(names.map((n) => getPrimarySlug(n)));
 		for (const slug of addSpells) {
 			if (!existingSlugs.has(slug)) {
 				names.push(slug);
@@ -307,14 +307,14 @@ export async function renderSpellList(source: string, el: HTMLElement, _ctx: Mar
 		}
 		// Normalize names array to display names for any slugs added
 		names = names.map((n) => {
-			const s = nameToSlug(n);
+			const s = getPrimarySlug(n);
 			return s === n ? displayNameFromSlug(n) : n;
 		});
 	}
 	// Apply removespells after add: remove any matching slugs
 	if (removeSpells?.length) {
 		const removeSet = new Set(removeSpells);
-		names = names.filter((n) => !removeSet.has(nameToSlug(n)));
+		names = names.filter((n) => !removeSet.has(getPrimarySlug(n)));
 	}
 	// Apply search filter
 	const searches = parseSearchDirective(source);

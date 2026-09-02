@@ -1,4 +1,5 @@
 import { requestUrl } from 'obsidian';
+import { nameToSlugs } from './text';
 
 export interface FetchedPage {
 	ok: boolean;
@@ -9,6 +10,33 @@ export interface FetchedPage {
 /** Fetch a page by kind and ID, such as `/feat:alert`. */
 export async function fetchPageContent(baseUrl: string, kind: string, id: string): Promise<FetchedPage> {
 	return fetchPageAtUrl(`${baseUrl.replace(/\/$/, '')}/${kind}:${id}`);
+}
+
+/** Fetch a page by trying each compatible slug form until one succeeds. */
+export async function fetchPageContentWithSlugFallbacks(
+	baseUrl: string,
+	kind: string,
+	name: string,
+): Promise<FetchedPage> {
+	for (const slug of nameToSlugs(name)) {
+		const fetched = await fetchPageContent(baseUrl, kind, slug);
+		if (fetched.ok) return fetched;
+	}
+
+	return { ok: false, titleText: '', contentHtml: '' };
+}
+
+/** Fetch a page from slug-generated URLs until one compatible slug succeeds. */
+export async function fetchPageAtUrlWithSlugFallbacks(
+	name: string,
+	buildUrl: (slug: string) => string,
+): Promise<FetchedPage> {
+	for (const slug of nameToSlugs(name)) {
+		const fetched = await fetchPageAtUrl(buildUrl(slug));
+		if (fetched.ok) return fetched;
+	}
+
+	return { ok: false, titleText: '', contentHtml: '' };
 }
 
 /** Fetch a page by a direct URL and extract its title and content. */

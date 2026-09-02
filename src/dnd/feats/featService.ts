@@ -1,28 +1,33 @@
 import { IdCache } from '../../cache/idCache';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
-import { fetchPageContent } from '../../utils/fetcher';
+import { fetchPageContentWithSlugFallbacks } from '../../utils/fetcher';
+import { nameToSlugs } from '../../utils/text';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../../genericLoader';
 
 export const featIdCache = new IdCache();
 const featRenderCache = new RenderCache<CachedRender>();
 
 export async function ensureFeatCached(
-	featId: string,
+	featName: string,
 	urlKey: string,
 	baseUrl: string,
 ): Promise<CachedRender | null> {
-	const existing = featRenderCache.get(urlKey, featId);
-	if (existing) return existing;
+	const featIds = nameToSlugs(featName);
+	if (!featIds.length) return null;
+	for (const featId of featIds) {
+		const existing = featRenderCache.get(urlKey, featId);
+		if (existing) return existing;
+	}
 
-	const fetched = await fetchPageContent(baseUrl, 'feat', featId);
+	const fetched = await fetchPageContentWithSlugFallbacks(baseUrl, 'feat', featName);
 	if (!fetched.ok) return null;
 
 	const cached: CachedRender = {
-		title: fetched.titleText || featId,
+		title: fetched.titleText || featName,
 		html: fetched.contentHtml,
 	};
-	featRenderCache.set(urlKey, featId, cached);
+	for (const featId of featIds) featRenderCache.set(urlKey, featId, cached);
 	return cached;
 }
 

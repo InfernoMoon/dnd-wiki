@@ -1,30 +1,36 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
-import { nameToSlug, displayNameFromSlug } from '../../utils/text';
-import { fetchPageAtUrl } from '../../utils/fetcher';
+import { getPrimarySlug, nameToSlugs, displayNameFromSlug } from '../../utils/text';
+import { fetchPageAtUrlWithSlugFallbacks } from '../../utils/fetcher';
 import { prepareNameInput, renderCollapsible } from '../../utils/renderer';
 
 const classRenderCache = new RenderCache<CachedRender>();
 
 async function ensureClassCached(
-	classId: string,
+	className: string,
 	urlKey: string,
 	baseUrl: string,
 ): Promise<CachedRender | null> {
-	const existing = classRenderCache.get(urlKey, classId);
-	if (existing) return existing;
+	const classIds = nameToSlugs(className);
+	if (!classIds.length) return null;
+	for (const classId of classIds) {
+		const existing = classRenderCache.get(urlKey, classId);
+		if (existing) return existing;
+	}
 
 	const base = baseUrl.replace(/\/$/, '');
-	const path = baseUrl.includes('2024') ? `${base}/${classId}:main` : `${base}/${classId}`;
-	const fetched = await fetchPageAtUrl(path);
+	const fetched = await fetchPageAtUrlWithSlugFallbacks(
+		className,
+		slug => baseUrl.includes('2024') ? `${base}/${slug}:main` : `${base}/${slug}`,
+	);
 	if (!fetched.ok) return null;
 
 	const cached: CachedRender = {
-		title: fetched.titleText || displayNameFromSlug(classId),
+		title: fetched.titleText || displayNameFromSlug(classIds[0]),
 		html: fetched.contentHtml,
 	};
-	classRenderCache.set(urlKey, classId, cached);
+	for (const classId of classIds) classRenderCache.set(urlKey, classId, cached);
 	return cached;
 }
 
@@ -39,9 +45,11 @@ export async function renderClass(
 	if (!lines) return;
 
 	const container = el.createDiv();
-	for (const classId of lines.map(line => nameToSlug(line)).filter(Boolean)) {
+	for (const className of lines) {
+		const classId = getPrimarySlug(className);
+		if (!classId) continue;
 		const host = container.createDiv();
-		const cached = await ensureClassCached(classId, urlKey, baseUrl);
+		const cached = await ensureClassCached(className, urlKey, baseUrl);
 
 		if (cached?.html) {
 			renderCollapsible(host, cached.title, cached.html);

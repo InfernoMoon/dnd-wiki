@@ -1,5 +1,5 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { nameToSlug } from '../../utils/text';
+import { getPrimarySlug } from '../../utils/text';
 import { prepareNameInput, renderCollapsible } from '../../utils/renderer';
 import { ensureBackgroundCached } from './backgroundService';
 
@@ -14,8 +14,10 @@ export async function renderBackground(
 	if (!lines) return;
 
 	const container = el.createDiv();
-	for (const backgroundId of lines.map(line => nameToSlug(line)).filter(Boolean)) {
-		const cached = await ensureBackgroundCached(backgroundId, urlKey, baseUrl);
+	for (const backgroundName of lines) {
+		const backgroundId = getPrimarySlug(backgroundName);
+		if (!backgroundId) continue;
+		const cached = await ensureBackgroundCached(backgroundName, urlKey, baseUrl);
 		if (cached?.html) {
 			const host = container.createDiv();
 			renderCollapsible(host, cached.title, cached.html);

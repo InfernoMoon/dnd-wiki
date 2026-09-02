@@ -1,5 +1,5 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { nameToSlug } from '../../utils/text';
+import { getPrimarySlug } from '../../utils/text';
 import { prepareNameInput, renderCollapsible } from '../../utils/renderer';
 import { ensureLineageCached } from './lineageService';
 
@@ -14,8 +14,10 @@ export async function renderLineage(
 	if (!lines) return;
 
 	const container = el.createDiv();
-	for (const lineageId of lines.map(line => nameToSlug(line)).filter(Boolean)) {
-		const cached = await ensureLineageCached(lineageId, urlKey, baseUrl);
+	for (const lineageName of lines) {
+		const lineageId = getPrimarySlug(lineageName);
+		if (!lineageId) continue;
+		const cached = await ensureLineageCached(lineageName, urlKey, baseUrl);
 		if (cached?.html) {
 			const host = container.createDiv();
 			renderCollapsible(host, cached.title, cached.html);

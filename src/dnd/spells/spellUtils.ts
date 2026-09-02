@@ -8,7 +8,7 @@
  */
 import { TFile, TFolder, TAbstractFile, MarkdownRenderer, Component } from "obsidian";
 import { getObsidianApp } from '../../utils/obsidian';
-import { nameToSlug, displayNameFromSlug } from '../../utils/text';
+import { getPrimarySlug, nameToSlugs, displayNameFromSlug } from '../../utils/text';
 import { fetchPageContent } from '../../utils/fetcher';
 import { renderCollapsible } from '../../utils/renderer';
 import { loadFromTable, LoaderConfig } from "../../genericLoader";
@@ -47,7 +47,7 @@ export function getKnownSpellIdsForKey(urlKey: string): string[] {
 export function seedSpellNamesForKey(urlKey: string, names: string[]): void {
   const cache = getNameCacheForKey(urlKey);
   for (const n of names) {
-    const id = nameToSlug(n);
+    const id = getPrimarySlug(n);
     if (id) cache.add(id);
   }
 }
@@ -83,7 +83,7 @@ export async function preloadAllSpellNames(urlKey: string, baseUrl: string): Pro
       for (const child of children) {
         if (child instanceof TFile && child.extension?.toLowerCase() === 'md') {
           const baseName: string = child.basename || child.name.replace(/\.md$/i, '');
-          const idSlug = nameToSlug(baseName);
+          const idSlug = getPrimarySlug(baseName);
           if (idSlug) cache.add(idSlug);
         }
       }
@@ -97,13 +97,18 @@ export async function preloadAllSpellNames(urlKey: string, baseUrl: string): Pro
 export async function renderSingleSpell(host: HTMLElement, urlKey: string, baseUrl: string, name: string) {
   const nameCache = getNameCacheForKey(urlKey);
   const renderCache = getRenderCacheForKey(urlKey);
-  const id = nameToSlug(name);
+  const spellIds = nameToSlugs(name);
+  const id = spellIds[0] ?? '';
   if (!id) {
     host.createDiv({ text: 'No spell name provided' });
     return;
   }
   // Check for a custom spell file first
-  const custom = await findCustomSpellById(id);
+  let custom: { file: TFile; title: string; content: string } | null = null;
+  for (const spellId of spellIds) {
+    custom = await findCustomSpellById(spellId);
+    if (custom) break;
+  }
   if (custom) {
     const { file, title, content } = custom;
     const uid = Math.random().toString(36).slice(2, 11);
@@ -136,10 +141,10 @@ export async function renderSingleSpell(host: HTMLElement, urlKey: string, baseU
     return;
   }
   // If not known, check UA variant; otherwise report unknown without requesting
-  let effectiveId = id;
-  if (!nameCache.has(id)) {
-    const uaId = `${id}-ua`;
-    if (nameCache.has(uaId)) {
+  let effectiveId = spellIds.find(spellId => nameCache.has(spellId)) ?? '';
+  if (!effectiveId) {
+    const uaId = spellIds.map(spellId => `${spellId}-ua`).find(spellId => nameCache.has(spellId));
+    if (uaId) {
       effectiveId = uaId;
     } else {
       renderCollapsible(
@@ -157,7 +162,7 @@ export async function renderSingleSpell(host: HTMLElement, urlKey: string, baseU
     return;
   }
   try {
-    const result = await fetchSpellPageWithFallback(baseUrl, effectiveId);
+    const result = await fetchSpellPageWithFallback(baseUrl, name);
     if (!result.ok) {
       if (!renderCache.has(effectiveId)) {
         renderCollapsible(host, displayNameFromSlug(effectiveId) + ' (Error)', 'Error loading this spell');
@@ -171,7 +176,9 @@ export async function renderSingleSpell(host: HTMLElement, urlKey: string, baseU
       }
       return;
     }
-    renderCache.set(effectiveId, { titleText: result.titleText, contentHtml: result.contentHtml });
+    const cachedSpell = { titleText: result.titleText, contentHtml: result.contentHtml };
+    for (const spellId of spellIds) renderCache.set(spellId, cachedSpell);
+    renderCache.set(effectiveId, cachedSpell);
     renderCollapsible(host, result.titleText, result.contentHtml);
   } catch {
     renderCollapsible(host, displayNameFromSlug(effectiveId) + ' (Error)', 'Error getting this spell.');
@@ -185,14 +192,14 @@ async function fetchSpellPage(baseUrl: string, id: string): Promise<{ ok: boolea
 
 // Try standard id first; if missing, retry once with "-ua" suffix
 async function fetchSpellPageWithFallback(baseUrl: string, id: string): Promise<{ ok: boolean; titleText: string; contentHtml: string }> {
-  try {
-    const first = await fetchSpellPage(baseUrl, id);
+  for (const spellId of nameToSlugs(id)) {
+    const first = await fetchSpellPage(baseUrl, spellId);
     if (first.ok) return first;
-  } catch {
-    // Ignore error and try fallback
+
+    const uaVariant = await fetchSpellPage(baseUrl, `${spellId}-ua`);
+    if (uaVariant.ok) return uaVariant;
   }
-  const second = await fetchSpellPage(baseUrl, `${id}-ua`);
-  return second;
+  return { ok: false, titleText: '', contentHtml: '' };
 }
 
 // renderCollapsible moved to utils.ts and imported
@@ -210,7 +217,7 @@ async function findCustomSpellById(id: string): Promise<{ file: TFile; title: st
     for (const child of children) {
       if (child instanceof TFile && child.extension?.toLowerCase() === 'md') {
         const baseName: string = child.basename || child.name.replace(/\.md$/i, '');
-        if (nameToSlug(baseName) === id) {
+        if (nameToSlugs(baseName).includes(id)) {
           if (!vault) return null;
           const content = await vault.read(child);
           const title = baseName; // Use md file name as the title
@@ -399,15 +406,15 @@ export async function getCustomSpellEntries(): Promise<CustomSpellEntry[]> {
     for (const child of folder.children) {
       if (child instanceof TFile && child.extension?.toLowerCase() === 'md') {
         const baseName: string = child.basename || child.name.replace(/\.md$/i, '');
-        const id = nameToSlug(baseName);
+        const id = getPrimarySlug(baseName);
         const raw = await vault.read(child);
         const meta = parseCustomSpellMeta(raw);
         const levelRaw = meta['level'];
         const level = levelRaw !== undefined ? Number.parseInt(String(levelRaw).trim(), 10) : undefined;
         const classes = meta['spell-lists']
-          ? meta['spell-lists'].split(',').map(s => s.trim()).filter(Boolean).map(nameToSlug)
+          ? meta['spell-lists'].split(',').map(s => s.trim()).filter(Boolean).map(getPrimarySlug)
           : undefined;
-        const school = meta['school'] ? nameToSlug(meta['school']) : undefined;
+        const school = meta['school'] ? getPrimarySlug(meta['school']) : undefined;
         out.push({ id, displayName: baseName, level: level === undefined || Number.isNaN(level) ? undefined : level, classes, school });
       }
     }

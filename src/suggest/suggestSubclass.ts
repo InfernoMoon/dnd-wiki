@@ -2,7 +2,7 @@ import { EditorSuggest, Editor, EditorPosition, TFile } from 'obsidian';
 import type { App, EditorSuggestContext, EditorSuggestTriggerInfo } from 'obsidian';
 import { getCachedClassNames } from '../dataService';
 import { getKnownSubclassNamesForParent, preloadSubclassIds } from '../dnd/classes/subclassUtils';
-import { nameToSlug } from '../utils/text';
+import { getPrimarySlug } from '../utils/text';
 
 export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
   private currentKey: string | null = null;
@@ -31,7 +31,7 @@ export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
       const l = editor.getLine(i).trim();
       if (l.startsWith('```')) break;
       const m = /^class:\s*(.+)$/i.exec(l);
-      if (m) return nameToSlug(m[1].trim());
+      if (m) return getPrimarySlug(m[1].trim());
     }
     return '';
   }
@@ -47,7 +47,7 @@ export class SubclassNameSuggest extends EditorSuggest<{ text: string }> {
       if (l.startsWith('```')) break;
       const m = /^subinfo:\s*(.+)$/i.exec(l);
       if (m) {
-        const slug = nameToSlug(m[1].trim());
+        const slug = getPrimarySlug(m[1].trim());
         if (slug) values.push(slug);
       }
     }

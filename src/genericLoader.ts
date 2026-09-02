@@ -5,7 +5,7 @@
  * Highly customizable with parameters for different data types.
  */
 import { requestUrl } from 'obsidian';
-import { nameToSlug } from './utils/text';
+import { nameToSlugs } from './utils/text';
 
 export interface LoaderConfig {
   /** Base URL to fetch from */
@@ -71,8 +71,7 @@ export async function loadFromLinks(config: LoaderConfig): Promise<Set<string>> 
         // Apply custom filter
         if (config.filterFn && !config.filterFn(name)) continue;
         
-        const id = nameToSlug(name);
-        if (id) results.add(id);
+        for (const id of nameToSlugs(name)) results.add(id);
       }
     }
   } catch (e) {
@@ -120,11 +119,9 @@ export async function loadFromTable(config: LoaderConfig): Promise<Set<string>> 
       // Apply custom filter
       if (config.filterFn && !config.filterFn(name)) continue;
 
-      const id = nameToSlug(name);
-      if (id) {
-        results.add(id);
-        if (config.rowProcessor) config.rowProcessor(row, name);
-      }
+      const ids = nameToSlugs(name);
+      for (const id of ids) results.add(id);
+      if (ids.length && config.rowProcessor) config.rowProcessor(row, name);
     }
   } catch (e) {
     console.warn(`Failed to load data via table-based method from ${base}${config.indexPath}`, e);

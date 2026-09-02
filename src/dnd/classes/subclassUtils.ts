@@ -1,6 +1,6 @@
 import { requestUrl } from 'obsidian';
 import { GroupedIdCache } from '../../cache/idCache';
-import { nameToSlug, displayNameFromSlug } from '../../utils/text';
+import { getPrimarySlug, displayNameFromSlug } from '../../utils/text';
 
 const subclassIdCache = new GroupedIdCache();
 const ROOT_PARENT = '__root__';
@@ -47,7 +47,7 @@ export async function preloadSubclassIds(urlKey: string, baseUrl: string, classS
       if (/spells:|spell-list/i.test(href)) continue;
       const m = pattern.exec(href);
       if (m) {
-        const id = nameToSlug(m[1]);
+        const id = getPrimarySlug(m[1]);
         if (!id) continue;
         if (id === 'main') continue;
         if (/toc\d+$/i.test(id)) continue;

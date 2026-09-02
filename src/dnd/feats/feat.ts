@@ -1,5 +1,5 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { nameToSlug } from '../../utils/text';
+import { getPrimarySlug } from '../../utils/text';
 import { prepareNameInput, renderCollapsible } from '../../utils/renderer';
 import { ensureFeatCached } from './featService';
 
@@ -7,11 +7,12 @@ export async function renderFeat(source: string, el: HTMLElement, _ctx: Markdown
   const lines = prepareNameInput(el, source, baseUrl, 'Provide one or more feat IDs or names.');
   if (!lines) return;
 
-  const feats = lines.map(l => nameToSlug(l)).filter(Boolean);
   const container = el.createDiv();
 
-  for (const featId of feats) {
-    const cached = await ensureFeatCached(featId, urlKey, baseUrl);
+  for (const featName of lines) {
+    const featId = getPrimarySlug(featName);
+    if (!featId) continue;
+    const cached = await ensureFeatCached(featName, urlKey, baseUrl);
     if (cached?.html) {
       const host = container.createDiv();
       renderCollapsible(host, cached.title, cached.html);

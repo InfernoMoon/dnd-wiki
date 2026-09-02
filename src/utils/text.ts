@@ -1,5 +1,4 @@
-/** Convert a formatted name into a normalized slug. */
-export function nameToSlug(name: string): string {
+function normalizeSlug(name: string): string {
 	if (!name) return '';
 	let id = name.trim().toLowerCase();
 	id = id.split('(ua)').join('');
@@ -11,6 +10,21 @@ export function nameToSlug(name: string): string {
 	while (id.startsWith('-')) id = id.slice(1);
 	while (id.endsWith('-')) id = id.slice(0, -1);
 	return id;
+}
+
+/** Return the canonical slug and compatible alternate slug forms. */
+export function nameToSlugs(name: string): string[] {
+	if (!name) return [];
+
+	const canonicalSlug = normalizeSlug(name);
+	const separatedApostropheSlug = normalizeSlug(name.replace(/[\u0027\u2019]/g, '-'));
+
+	return Array.from(new Set([canonicalSlug, separatedApostropheSlug].filter(Boolean)));
+}
+
+/** Return the first, canonical slug for APIs that require one stable key. */
+export function getPrimarySlug(name: string): string {
+	return nameToSlugs(name)[0] ?? '';
 }
 
 const UPPERCASE_WORDS = new Set(['ua']);

@@ -1,6 +1,6 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { ensureItemCached } from './itemService';
-import { nameToSlug, displayNameFromSlug } from '../../utils/text';
+import { getPrimarySlug, displayNameFromSlug } from '../../utils/text';
 import { prepareNameInput, renderCollapsible } from '../../utils/renderer';
 
 export async function renderItem(
@@ -14,9 +14,12 @@ export async function renderItem(
 	if (!lines) return;
 
 	const container = el.createDiv();
-	for (const itemId of lines.map(line => nameToSlug(line)).filter(Boolean)) {
+	for (const line of lines) {
+		const itemId = getPrimarySlug(line);
+		if (!itemId) continue;
+
 		const host = container.createDiv('dnd-wiki-card-spacer');
-		const cached = await ensureItemCached(itemId, urlKey, baseUrl);
+		const cached = await ensureItemCached(line, urlKey, baseUrl);
 
 		if (cached?.html) {
 			renderCollapsible(host, cached.title, cached.html);

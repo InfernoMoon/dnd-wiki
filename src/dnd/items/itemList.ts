@@ -5,7 +5,7 @@ import { extractTableNamesFromFirstCell } from '../../utils/dom';
 import { renderCollapsible, requireBaseUrl } from '../../utils/renderer';
 import { matchesSearch, parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
-import { displayNameFromSlug, nameToSlug } from '../../utils/text';
+import { displayNameFromSlug, getPrimarySlug } from '../../utils/text';
 import { STATIC_ITEM_RARITY_WORD_TO_INDEX } from '../../data/staticData';
 import {
 	ensureItemCached,
@@ -222,7 +222,7 @@ function filterItemsByLevel(
 		if (!tab) continue;
 
 		for (const name of extractTableNamesFromFirstCell(tab)) {
-			allowedNames.add(nameToSlug(name));
+			allowedNames.add(getPrimarySlug(name));
 		}
 	}
 
@@ -234,7 +234,7 @@ function filterItemsByLevel(
 	}
 
 	return {
-		items: index.items.filter(item => allowedNames.has(nameToSlug(item.name))),
+		items: index.items.filter(item => allowedNames.has(getPrimarySlug(item.name))),
 	};
 }
 
@@ -244,7 +244,7 @@ function normalizeType(type: string): string {
 
 function uniqueItemNames(items: ItemIndexEntry[]): string[] {
 	return Array.from(new Map(
-		items.map(item => [nameToSlug(item.name), item.name]),
+		items.map(item => [getPrimarySlug(item.name), item.name]),
 	).values());
 }
 
@@ -272,8 +272,8 @@ async function renderItemCards(
 ): Promise<void> {
 	await Promise.all(names.map(async name => {
 		const host = container.createDiv('dnd-wiki-card-spacer');
-		const itemId = nameToSlug(name);
-		const cached = await ensureItemCached(itemId, urlKey, baseUrl);
+		const itemId = getPrimarySlug(name);
+		const cached = await ensureItemCached(name, urlKey, baseUrl);
 
 		if (cached?.html) {
 			renderCollapsible(host, cached.title, cached.html);
@@ -282,6 +282,9 @@ async function renderItemCards(
 			}
 		} else {
 			host.textContent = `Failed to load item: ${displayNameFromSlug(itemId)}`;
+			if (searches.length) {
+				host.classList.add('dnd-wiki-search-hidden');
+			}
 		}
 	}));
 }

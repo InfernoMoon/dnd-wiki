@@ -1,7 +1,8 @@
 import { IdCache } from '../../cache/idCache';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
-import { fetchPageContent } from '../../utils/fetcher';
+import { fetchPageContentWithSlugFallbacks } from '../../utils/fetcher';
+import { nameToSlugs } from '../../utils/text';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../../genericLoader';
 
 export const backgroundIdCache = new IdCache();
@@ -12,21 +13,25 @@ function cleanBackgroundTitle(title: string): string {
 }
 
 export async function ensureBackgroundCached(
-	backgroundId: string,
+	backgroundName: string,
 	urlKey: string,
 	baseUrl: string,
 ): Promise<CachedRender | null> {
-	const existing = backgroundRenderCache.get(urlKey, backgroundId);
-	if (existing) return existing;
+	const backgroundIds = nameToSlugs(backgroundName);
+	if (!backgroundIds.length) return null;
+	for (const backgroundId of backgroundIds) {
+		const existing = backgroundRenderCache.get(urlKey, backgroundId);
+		if (existing) return existing;
+	}
 
-	const fetched = await fetchPageContent(baseUrl, 'background', backgroundId);
+	const fetched = await fetchPageContentWithSlugFallbacks(baseUrl, 'background', backgroundName);
 	if (!fetched.ok) return null;
 
 	const cached: CachedRender = {
-		title: cleanBackgroundTitle(fetched.titleText || backgroundId),
+		title: cleanBackgroundTitle(fetched.titleText || backgroundName),
 		html: fetched.contentHtml,
 	};
-	backgroundRenderCache.set(urlKey, backgroundId, cached);
+	for (const backgroundId of backgroundIds) backgroundRenderCache.set(urlKey, backgroundId, cached);
 	return cached;
 }
 

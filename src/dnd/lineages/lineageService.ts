@@ -1,7 +1,8 @@
 import { IdCache } from '../../cache/idCache';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
-import { fetchPageContent } from '../../utils/fetcher';
+import { fetchPageContentWithSlugFallbacks } from '../../utils/fetcher';
+import { nameToSlugs } from '../../utils/text';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../../genericLoader';
 
 export const lineageIdCache = new IdCache();
@@ -12,22 +13,26 @@ function cleanLineageTitle(title: string): string {
 }
 
 export async function ensureLineageCached(
-	lineageId: string,
+	lineageName: string,
 	urlKey: string,
 	baseUrl: string,
 ): Promise<CachedRender | null> {
-	const existing = lineageRenderCache.get(urlKey, lineageId);
-	if (existing) return existing;
+	const lineageIds = nameToSlugs(lineageName);
+	if (!lineageIds.length) return null;
+	for (const lineageId of lineageIds) {
+		const existing = lineageRenderCache.get(urlKey, lineageId);
+		if (existing) return existing;
+	}
 
 	const lineagePageType = baseUrl.includes('2024') ? 'species' : 'lineage';
-	const fetched = await fetchPageContent(baseUrl, lineagePageType, lineageId);
+	const fetched = await fetchPageContentWithSlugFallbacks(baseUrl, lineagePageType, lineageName);
 	if (!fetched.ok) return null;
 
 	const cached: CachedRender = {
-		title: cleanLineageTitle(fetched.titleText || lineageId),
+		title: cleanLineageTitle(fetched.titleText || lineageName),
 		html: fetched.contentHtml,
 	};
-	lineageRenderCache.set(urlKey, lineageId, cached);
+	for (const lineageId of lineageIds) lineageRenderCache.set(urlKey, lineageId, cached);
 	return cached;
 }
 

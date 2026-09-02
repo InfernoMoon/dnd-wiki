@@ -2,8 +2,8 @@ import { IdCache } from '../../cache/idCache';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
 import { requestUrl } from 'obsidian';
-import { displayNameFromSlug } from '../../utils/text';
-import { fetchPageContent } from '../../utils/fetcher';
+import { displayNameFromSlug, nameToSlugs } from '../../utils/text';
+import { fetchPageContentWithSlugFallbacks } from '../../utils/fetcher';
 import { loadFromTable, LoaderConfig } from '../../genericLoader';
 import { STATIC_ITEM_TYPES } from '../../data/staticData';
 
@@ -33,22 +33,29 @@ export function getItemCollectionName(baseUrl: string): string {
 }
 
 export async function ensureItemCached(
-	itemId: string,
+	itemName: string,
 	urlKey: string,
 	baseUrl: string,
 ): Promise<CachedRender | null> {
-	const existing = itemRenderCache.get(urlKey, itemId);
-	if (existing) return existing;
+	const itemIds = nameToSlugs(itemName);
+	if (!itemIds.length) return null;
+
+	for (const itemId of itemIds) {
+		const existing = itemRenderCache.get(urlKey, itemId);
+		if (existing) return existing;
+	}
 
 	const itemPageType = baseUrl.includes('2024') ? 'magic-item' : 'wondrous-items';
-	const fetched = await fetchPageContent(baseUrl, itemPageType, itemId);
+	const fetched = await fetchPageContentWithSlugFallbacks(baseUrl, itemPageType, itemName);
 	if (!fetched.ok) return null;
 
 	const cached: CachedRender = {
-		title: fetched.titleText || displayNameFromSlug(itemId),
+		title: fetched.titleText || displayNameFromSlug(itemIds[0]),
 		html: fetched.contentHtml,
 	};
-	itemRenderCache.set(urlKey, itemId, cached);
+	for (const itemId of itemIds) {
+		itemRenderCache.set(urlKey, itemId, cached);
+	}
 	return cached;
 }
 

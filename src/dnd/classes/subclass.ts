@@ -1,7 +1,7 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
-import { nameToSlug, displayNameFromSlug } from '../../utils/text';
+import { getPrimarySlug, nameToSlugs, displayNameFromSlug } from '../../utils/text';
 import { fetchPageAtUrl } from '../../utils/fetcher';
 import { renderWithSections, parseSectionDirectives } from '../../sectionRenderer';
 import { requireBaseUrl } from '../../utils/renderer';
@@ -10,25 +10,42 @@ import { preloadSubclassIds } from './subclassUtils';
 const subclassRenderCache = new RenderCache<CachedRender>();
 
 async function ensureSubclassCached(
-	classSlug: string,
-	subinfoSlug: string,
+	className: string,
+	subinfoName: string,
 	urlKey: string,
 	baseUrl: string,
 ): Promise<CachedRender | null> {
-	const cacheKey = `${classSlug}:${subinfoSlug}`;
-	const existing = subclassRenderCache.get(urlKey, cacheKey);
-	if (existing) return existing;
+	const classSlugs = nameToSlugs(className);
+	const subinfoSlugs = nameToSlugs(subinfoName);
+	if (!classSlugs.length || !subinfoSlugs.length) return null;
+
+	for (const classSlug of classSlugs) {
+		for (const subinfoSlug of subinfoSlugs) {
+			const existing = subclassRenderCache.get(urlKey, `${classSlug}:${subinfoSlug}`);
+			if (existing) return existing;
+		}
+	}
 
 	const base = baseUrl.replace(/\/$/, '');
-	const fetched = await fetchPageAtUrl(`${base}/${cacheKey}`);
-	if (!fetched.ok) return null;
+	for (const classSlug of classSlugs) {
+		for (const subinfoSlug of subinfoSlugs) {
+			const fetched = await fetchPageAtUrl(`${base}/${classSlug}:${subinfoSlug}`);
+			if (!fetched.ok) continue;
 
-	const cached: CachedRender = {
-		title: fetched.titleText || `${displayNameFromSlug(classSlug)}: ${displayNameFromSlug(subinfoSlug)}`,
-		html: fetched.contentHtml,
-	};
-	subclassRenderCache.set(urlKey, cacheKey, cached);
-	return cached;
+			const cached: CachedRender = {
+				title: fetched.titleText || `${displayNameFromSlug(classSlugs[0])}: ${displayNameFromSlug(subinfoSlugs[0])}`,
+				html: fetched.contentHtml,
+			};
+			for (const cachedClassSlug of classSlugs) {
+				for (const cachedSubinfoSlug of subinfoSlugs) {
+					subclassRenderCache.set(urlKey, `${cachedClassSlug}:${cachedSubinfoSlug}`, cached);
+				}
+			}
+			return cached;
+		}
+	}
+
+	return null;
 }
 
 export async function renderSubclass(
@@ -58,7 +75,7 @@ export async function renderSubclass(
 		return;
 	}
 
-	const classSlug = nameToSlug(classMatch[1].trim());
+	const classSlug = getPrimarySlug(classMatch[1].trim());
 	const classDirectiveOffset = classMatch.index ?? Number.MAX_SAFE_INTEGER;
 	const rawSubinfos = subinfoMatches
 		.filter(match => (match.index ?? Number.MAX_SAFE_INTEGER) > classDirectiveOffset)
@@ -75,15 +92,16 @@ export async function renderSubclass(
 		return;
 	}
 
-	const subinfoSlugs = rawSubinfos.map(nameToSlug).filter(Boolean);
+	const subinfoSlugs = rawSubinfos.map(getPrimarySlug).filter(Boolean);
 	if (!subinfoSlugs.length) {
 		el.createDiv({ text: 'Invalid subinfo name(s).' });
 		return;
 	}
 
-	const subinfoSlug = subinfoSlugs[subinfoSlugs.length - 1];
+	const subinfoName = rawSubinfos[rawSubinfos.length - 1];
+	const subinfoSlug = getPrimarySlug(subinfoName);
 	const host = el.createDiv();
-	const cached = await ensureSubclassCached(classSlug, subinfoSlug, urlKey, baseUrl);
+	const cached = await ensureSubclassCached(classMatch[1].trim(), subinfoName, urlKey, baseUrl);
 
 	if (!cached) {
 		host.textContent = `Failed to load subclass: ${displayNameFromSlug(classSlug)} / ${displayNameFromSlug(subinfoSlug)}`;

@@ -4,7 +4,7 @@
  */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { ensureFeatCached } from './feat';
-import { getKnownFeatIdsForKey } from './featUtils';
+import { getKnownFeatIdsForKey } from './featService';
 import { displayNameFromSlug } from '../utils/text';
 import { parseSearchDirective, parseSearchModeDirective } from '../utils/search';
 import { renderCollapsible } from '../utils/renderer';

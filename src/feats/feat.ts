@@ -12,17 +12,10 @@ import { nameToSlug, escapeHtml } from '../utils/text';
 import { fetchPageContent } from '../utils/fetcher';
 import { renderCollapsible, extractCardContentHtml } from '../utils/renderer';
 import { getObsidianApp, createUid } from '../utils/obsidian';
+import { getCachedFeat, setCachedFeat } from './featService';
 
-// In-memory cache for fetched feat content: outer key = urlKey, inner key = feat id/slug
-const featCache = new Map<string, Map<string, { title: string; html: string }>>();
-
-function getCacheForKey(urlKey: string): Map<string, { title: string; html: string }> {
-  const existing = featCache.get(urlKey);
-  if (existing) return existing;
-  const cache = new Map<string, { title: string; html: string }>();
-  featCache.set(urlKey, cache);
-  return cache;
-}
+// Feat cache is managed by featService.ts.
+ 
 
 /**
  * Get a cached feat render by URL key and ID.
@@ -30,20 +23,12 @@ function getCacheForKey(urlKey: string): Map<string, { title: string; html: stri
  * @param id Feat slug/ID to look up.
  * @returns Cached title and HTML if present, otherwise null.
  */
-export function getCachedFeat(urlKey: string, id: string): { title: string; html: string } | null {
-  return getCacheForKey(urlKey).get(id) ?? null;
-}
-
 /**
  * Store a rendered feat in the cache.
  * @param urlKey The URL key the feat belongs to.
  * @param id Feat slug/ID to cache under.
  * @param data Object containing card title and HTML.
  */
-export function setCachedFeat(urlKey: string, id: string, data: { title: string; html: string }): void {
-  getCacheForKey(urlKey).set(id, data);
-}
-
 /**
  * Append a collapsible feat card to a container.
  * @param container Parent element to receive the card.

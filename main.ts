@@ -17,7 +17,7 @@ import { LineageNameSuggest } from './src/suggest/suggestLineage';
 import { LineageListSuggest } from './src/suggest/suggestLineageList';
 import { ClassNameSuggest } from './src/suggest/suggestClass';
 import { SubclassNameSuggest } from './src/suggest/suggestSubclass';
-import { preloadAllFeatIds } from './src/feats/featUtils';
+import { preloadAllFeatIds } from './src/feats/featService';
 import { preloadAllItemIds } from './src/items/itemUtils';
 import { preloadAllBackgroundIds } from './src/backgrounds/backgroundUtils';
 import { preloadAllLineageIds } from './src/lineages/lineageUtils';

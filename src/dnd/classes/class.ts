@@ -1,57 +1,52 @@
-/**
- * class.ts
- * Markdown code block processor for ```dnd-class blocks.
- * Fetches the class page at /{classname} and renders it as a collapsible card.
- */
 import type { MarkdownPostProcessorContext } from 'obsidian';
+import { RenderCache } from '../../cache/renderCache';
+import type { CachedRender } from '../../cache/renderCache';
 import { nameToSlug, displayNameFromSlug } from '../../utils/text';
 import { fetchPageAtUrl } from '../../utils/fetcher';
-import { renderCollapsible, requireBaseUrl } from '../../utils/renderer';
+import { prepareNameInput, renderCollapsible } from '../../utils/renderer';
 
-// Cache: outer key = urlKey, inner key = class slug
-const classCache = new Map<string, Map<string, { title: string; html: string }>>();
+const classRenderCache = new RenderCache();
 
-function getCacheForKey(urlKey: string): Map<string, { title: string; html: string }> {
-  const existing = classCache.get(urlKey);
-  if (existing) return existing;
-  const cache = new Map<string, { title: string; html: string }>();
-  classCache.set(urlKey, cache);
-  return cache;
+async function ensureClassCached(
+	classId: string,
+	urlKey: string,
+	baseUrl: string,
+): Promise<CachedRender | null> {
+	const existing = classRenderCache.get(urlKey, classId);
+	if (existing) return existing;
+
+	const base = baseUrl.replace(/\/$/, '');
+	const path = baseUrl.includes('2024') ? `${base}/${classId}:main` : `${base}/${classId}`;
+	const fetched = await fetchPageAtUrl(path);
+	if (!fetched.ok) return null;
+
+	const cached: CachedRender = {
+		title: fetched.titleText || displayNameFromSlug(classId),
+		html: fetched.contentHtml,
+	};
+	classRenderCache.set(urlKey, classId, cached);
+	return cached;
 }
 
-export function getCachedClass(urlKey: string, id: string): { title: string; html: string } | null {
-  return getCacheForKey(urlKey).get(id) ?? null;
-}
+export async function renderClass(
+	source: string,
+	el: HTMLElement,
+	_ctx: MarkdownPostProcessorContext | undefined,
+	urlKey: string,
+	baseUrl: string,
+): Promise<void> {
+	const lines = prepareNameInput(el, source, baseUrl, 'Provide one or more class names.');
+	if (!lines) return;
 
-export function setCachedClass(urlKey: string, id: string, data: { title: string; html: string }): void {
-  getCacheForKey(urlKey).set(id, data);
-}
+	const container = el.createDiv();
+	for (const classId of lines.map(line => nameToSlug(line)).filter(Boolean)) {
+		const host = container.createDiv();
+		const cached = await ensureClassCached(classId, urlKey, baseUrl);
 
-export async function renderClass(source: string, el: HTMLElement, _ctx: MarkdownPostProcessorContext | undefined, urlKey: string, baseUrl: string) {
-  el.empty();
-  if (!requireBaseUrl(el, baseUrl)) return;
-  const lines = source.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  if (!lines.length) { el.createDiv({ text: 'Provide one or more class names.' }); return; }
-
-  const base = baseUrl.replace(/\/$/, '');
-  const container = el.createDiv();
-
-  for (const line of lines) {
-    const id = nameToSlug(line);
-    if (!id) continue;
-    const host = container.createDiv();
-
-    const cached = getCachedClass(urlKey, id);
-    if (cached?.html) { renderCollapsible(host, cached.title, cached.html); continue; }
-
-    const path = baseUrl.includes('2024') ? `${base}/${id}:main` : `${base}/${id}`;
-    const res = await fetchPageAtUrl(path);
-    if (res.ok) {
-      const title = res.titleText || displayNameFromSlug(id);
-      setCachedClass(urlKey, id, { title, html: res.contentHtml });
-      renderCollapsible(host, title, res.contentHtml);
-    } else {
-      host.textContent = `Failed to load class: ${displayNameFromSlug(id)}`;
-    }
-  }
+		if (cached?.html) {
+			renderCollapsible(host, cached.title, cached.html);
+		} else {
+			host.textContent = `Failed to load class: ${displayNameFromSlug(classId)}`;
+		}
+	}
 }

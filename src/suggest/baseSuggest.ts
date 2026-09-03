@@ -40,6 +40,8 @@ export interface NameSuggestConfig {
 	getIds: (urlKey: string) => string[];
 }
 
+export type AdditionalPropertiesProvider = (context: EditorSuggestContext) => readonly string[];
+
 /** Shared suggester for comma-separated names backed by an ID cache. */
 export class DndNameSuggest extends BaseTextSuggest {
 	private currentUrlKey = '';
@@ -84,8 +86,22 @@ export abstract class DndDirectiveSuggest extends BaseTextSuggest {
 		private readonly blockPattern: RegExp,
 		private readonly commaSeparatedKeys: readonly string[] = [],
 		private readonly autoOpenKeys: readonly string[] = [],
+		private readonly additionalPropertiesProvider?: AdditionalPropertiesProvider,
 	) {
 		super(appPlugin.app);
+	}
+
+	/** Suggest the base properties plus any properties valid for the current block. */
+	protected getDirectiveSuggestions(
+		context: EditorSuggestContext,
+		properties: readonly string[],
+	): TextSuggestion[] {
+		const additionalProperties = this.additionalPropertiesProvider?.(context) ?? [];
+		return getTextSuggestions(
+			[...properties, ...additionalProperties],
+			context.query,
+			'startsWith',
+		);
 	}
 
 	/** Return whether selecting this directive should immediately show its values. */

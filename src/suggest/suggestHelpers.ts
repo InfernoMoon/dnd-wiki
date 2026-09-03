@@ -1,7 +1,21 @@
-import type { Editor, EditorPosition } from 'obsidian';
+import type { Editor, EditorPosition, EditorSuggestContext } from 'obsidian';
+import { getTextProperties } from '../utils/directives';
 
 export interface TextSuggestion {
 	text: string;
+}
+
+/** Read selected properties from the current D&D code block. */
+export function getBlockPropertyValues(context: EditorSuggestContext, property: string): string[] {
+	const lines: string[] = [];
+	for (let lineNumber = context.end.line - 1; lineNumber >= 0; lineNumber--) {
+		const line = context.editor.getLine(lineNumber);
+		if (line.trim().startsWith('```')) break;
+		lines.push(line);
+	}
+
+	lines.reverse();
+	return getTextProperties(lines.join('\n'), [property]).get(property) ?? [];
 }
 
 /** Return whether the cursor is on a blank line inside a D&D code block. */

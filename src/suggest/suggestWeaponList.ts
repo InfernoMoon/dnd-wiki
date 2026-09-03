@@ -13,7 +13,7 @@ export class WeaponListSuggest extends DndDirectiveSuggest {
 			appPlugin,
 			/^(?:```\s*dnd([a-z0-9]*)-weaponlist\s*)$/i,
 			['type', 'property', 'mastery'],
-			['type', 'property', 'mastery', 'searchmode'],
+			['type', 'property', 'mastery', 'showpropertytable', 'searchmode'],
 		);
 	}
 
@@ -30,12 +30,15 @@ export class WeaponListSuggest extends DndDirectiveSuggest {
 				? getTextSuggestions(STATIC_WEAPON_MASTERY, query, 'startsWith')
 				: [];
 		}
+		if (this.currentKey === 'showpropertytable') {
+			return getTextSuggestions(['Show', 'Hide', 'Only'], query, 'startsWith');
+		}
 
 		if (this.currentKey === 'searchmode') {
 			return getTextSuggestions(['Or', 'And'], query, 'startsWith');
 		}
 
-		const properties = ['type:', 'property:', 'search:', 'searchMode:'];
+		const properties = ['type:', 'property:', 'showPropertyTable:', 'search:', 'searchMode:'];
 		if (is2024Source(this.getBaseUrl(this.currentUrlKey))) properties.splice(2, 0, 'mastery:');
 		return this.getDirectiveSuggestions(context, properties);
 	}

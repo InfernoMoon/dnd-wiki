@@ -1,8 +1,8 @@
 import { requestUrl } from 'obsidian';
 import { STATIC_EQUIPMENT_TYPES } from '../../data/staticData';
 import type { EquipmentFetchSettings, EquipmentIndex, EquipmentIndexEntry } from './equipmentService';
-import { getWikiContentTables } from '../../utils/wikiTable';
-import type { WikiTableData } from '../../utils/wikiTable';
+import { getWikiContentTables, getWikiTablesByFirstHeader } from '../../utils/wikiTable';
+import type { WikiCellTableData, WikiTableData } from '../../utils/wikiTable';
 
 /** Fetch all requested equipment categories and combine their entries. */
 export async function fetchEquipmentIndex(
@@ -17,6 +17,13 @@ export async function fetchEquipmentIndex(
 	const items: EquipmentIndexEntry[] = [];
 	for (const result of results) items.push(...result);
 	return { items };
+}
+
+/** Fetch the property table from the shared weapons page. */
+export async function fetchWeaponPropertyTable(baseUrl: string): Promise<WikiCellTableData | null> {
+	const document = await fetchDocument(baseUrl, 'weapons');
+	if (!document) return null;
+	return getWikiTablesByFirstHeader(document, 'Property')[0] ?? null;
 }
 
 /** Fetch and parse the armor and shields equipment page. */

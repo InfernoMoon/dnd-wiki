@@ -1,4 +1,5 @@
 import { createUid } from './obsidian';
+import type { WikiCellTableData } from './wikiTable';
 
 /** Check that a renderer has a configured base URL. */
 export function requireBaseUrl(el: HTMLElement, baseUrl: string): boolean {
@@ -29,6 +30,19 @@ export function renderTable(
 		const tableRow = body.createEl('tr');
 		for (let index = 0; index < headers.length; index++) {
 			tableRow.createEl('td', { text: row[index] ?? '' });
+		}
+	}
+}
+
+/** Render a table whose rows retain whether each source cell was a header cell. */
+export function renderCellTable(el: HTMLElement, table: WikiCellTableData): void {
+	const renderedTable = el.createEl('table', { cls: 'dnd-wiki-table' });
+	const body = renderedTable.createEl('tbody');
+
+	for (const row of table.rows) {
+		const renderedRow = body.createEl('tr');
+		for (const cell of row) {
+			renderedRow.createEl(cell.isHeader ? 'th' : 'td', { text: cell.text });
 		}
 	}
 }

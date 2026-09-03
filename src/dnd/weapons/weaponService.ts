@@ -4,9 +4,12 @@ import type { EquipmentIndex, EquipmentIndexEntry } from '../equipment/equipment
 import { getPrimarySlug, nameToSlugs } from '../../utils/text';
 import { matchesSearchText } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
+import { fetchWeaponPropertyTable as fetchPropertyTable } from '../equipment/equipmentFetcher';
+import type { WikiCellTableData } from '../../utils/wikiTable';
 import type { WeaponTypeDirective } from './weaponListCacheItem';
 
 export const weaponIdCache = new IdCache();
+const weaponPropertyTableCache = new Map<string, WikiCellTableData | null>();
 
 /** Return the preloaded weapon IDs for a source URL. */
 export function getKnownWeaponIdsForKey(urlKey: string): string[] {
@@ -107,6 +110,17 @@ export function findWeaponEntry(
 export interface WeaponTableGroup {
 	headers: string[];
 	rows: string[][];
+}
+
+/** Fetch and cache the property table from the weapons page. */
+export async function getWeaponPropertyTable(baseUrl: string): Promise<WikiCellTableData | null> {
+	if (weaponPropertyTableCache.has(baseUrl)) {
+		return weaponPropertyTableCache.get(baseUrl) ?? null;
+	}
+
+	const table = await fetchPropertyTable(baseUrl);
+	weaponPropertyTableCache.set(baseUrl, table);
+	return table;
 }
 
 /** Group weapon rows by their source table layout so columns stay aligned. */

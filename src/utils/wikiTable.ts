@@ -5,6 +5,15 @@ export interface WikiTableData {
 	rows: string[][];
 }
 
+export interface WikiTableCell {
+	text: string;
+	isHeader: boolean;
+}
+
+export interface WikiCellTableData {
+	rows: WikiTableCell[][];
+}
+
 export function getWikiContentTables(
 	root: Document | Element,
 	headerMatcher?: WikiTableHeaderMatcher,
@@ -32,6 +41,33 @@ export function getWikiContentTables(
 			.filter(row => row.length > 0);
 
 		tables.push({ headers: headerRow.headers, rows });
+	}
+	return tables;
+}
+
+/** Find complete wiki tables by matching the first header cell. */
+export function getWikiTablesByFirstHeader(
+	root: Document | Element,
+	firstHeaderMatcher: WikiTableHeaderMatcher,
+): WikiCellTableData[] {
+	const tables: WikiCellTableData[] = [];
+	for (const table of Array.from(root.querySelectorAll('table.wiki-content-table'))) {
+		const firstHeader = table.querySelector('th')?.textContent?.trim() ?? '';
+		if (!matchesHeader(firstHeader, firstHeaderMatcher)) continue;
+
+		const rows = Array.from(table.querySelectorAll('tr'))
+			.map(row => Array.from(row.children)
+				.filter(cell => {
+					const tagName = cell.tagName.toLowerCase();
+					return tagName === 'th' || tagName === 'td';
+				})
+				.map(cell => ({
+					text: cell.textContent?.trim() ?? '',
+					isHeader: cell.tagName.toLowerCase() === 'th',
+				})))
+			.filter(row => row.length > 0);
+
+		if (rows.length) tables.push({ rows });
 	}
 	return tables;
 }

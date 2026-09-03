@@ -2,7 +2,7 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { FilteredListCache } from '../../cache/filteredListCache';
 import type { EquipmentIndexEntry } from '../equipment/equipmentService';
 import { getTextProperties } from '../../utils/directives';
-import { renderNoResultsMessage, renderTable, requireBaseUrl } from '../../utils/renderer';
+import { renderCellTable, renderNoResultsMessage, renderTable, requireBaseUrl } from '../../utils/renderer';
 import { parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
 import { displayNameFromSlug } from '../../utils/text';
@@ -12,6 +12,7 @@ import {
 	findWeaponEntry,
 	getWeaponCollectionName,
 	getWeaponIndex,
+	getWeaponPropertyTable,
 	groupWeaponTableRows,
 	normalizeWeaponType,
 } from './weaponService';
@@ -24,9 +25,12 @@ interface WeaponListDirectives {
 	type: WeaponTypeDirective;
 	properties: string[];
 	mastery: string[];
+	propertyTableMode: PropertyTableMode;
 	searches: string[];
 	searchMode: SearchMode;
 }
+
+type PropertyTableMode = 'hide' | 'show' | 'only';
 
 const weaponListCache = new FilteredListCache<WeaponListCacheItem, string[]>();
 
@@ -55,10 +59,12 @@ export async function renderWeaponList(
 		return;
 	}
 
-	el.createEl('h2', {
-		cls: 'dnd-wiki-list-heading',
-		text: buildHeading(directives.type),
-	});
+	if (directives.propertyTableMode !== 'only') {
+		el.createEl('h2', {
+			cls: 'dnd-wiki-list-heading',
+			text: buildHeading(directives.type),
+		});
+	}
 
 	const entries = names
 		.map(name => findWeaponEntry(index, name))
@@ -72,24 +78,36 @@ export async function renderWeaponList(
 	);
 	const missingNames = names.filter(name => !findWeaponEntry(index, name));
 	const container = el.createDiv();
-	for (const group of groupWeaponTableRows(filteredEntries)) {
-		renderTable(container, group.headers, group.rows);
+	const tableGroups = groupWeaponTableRows(filteredEntries);
+	if (directives.propertyTableMode !== 'only') {
+		for (const group of tableGroups) {
+			renderTable(container, group.headers, group.rows);
+		}
 	}
-	for (const name of directives.searches.length ? [] : missingNames) {
-		container.createDiv({ text: `Failed to load weapon: ${displayNameFromSlug(name)}` });
+	if (directives.propertyTableMode !== 'hide') {
+		const propertyTable = await getWeaponPropertyTable(baseUrl);
+		if (propertyTable) renderCellTable(container, propertyTable);
+	}
+	if (directives.propertyTableMode !== 'only') {
+		for (const name of directives.searches.length ? [] : missingNames) {
+			container.createDiv({ text: `Failed to load weapon: ${displayNameFromSlug(name)}` });
+		}
 	}
 
-	if (!filteredEntries.length) renderNoResultsMessage(container, 'weapons');
+	if (directives.propertyTableMode !== 'only' && !filteredEntries.length) {
+		renderNoResultsMessage(container, 'weapons');
+	}
 }
 
 function parseWeaponListDirectives(source: string, baseUrl: string): WeaponListDirectives {
-	const properties = getTextProperties(source, ['type', 'property', 'mastery']);
+	const properties = getTextProperties(source, ['type', 'property', 'mastery', 'showPropertyTable']);
 	return {
 		type: parseWeaponTypeDirective(properties.get('type') ?? []),
 		properties: parsePropertyDirective(properties.get('property') ?? []),
 		mastery: is2024Source(baseUrl)
 			? parseMasteryDirective(properties.get('mastery') ?? [])
 			: [],
+		propertyTableMode: parsePropertyTableMode(properties.get('showPropertyTable') ?? []),
 		searches: parseSearchDirective(source),
 		searchMode: parseSearchModeDirective(source),
 	};
@@ -116,6 +134,12 @@ function parsePropertyDirective(values: string[]): string[] {
 
 function parseMasteryDirective(values: string[]): string[] {
 	return parseCommaSeparatedValues(values);
+}
+
+function parsePropertyTableMode(values: string[]): PropertyTableMode {
+	const value = values[0]?.trim().toLowerCase();
+	if (value === 'show' || value === 'only') return value;
+	return 'hide';
 }
 
 function parseCommaSeparatedValues(values: string[]): string[] {

@@ -8,7 +8,7 @@ export class ItemListSuggest extends DndDirectiveSuggest {
 		super(
 			appPlugin,
 			/^(?:```\s*dnd([a-z0-9]*)-magicitemlist\s*)$/i,
-			['type'],
+			['level', 'type'],
 			['level', 'type', 'attuned', 'searchmode'],
 		);
 	}

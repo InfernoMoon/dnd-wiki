@@ -28,8 +28,8 @@ export function getItemIndexPath(baseUrl: string): string {
 	return baseUrl.includes('2024') ? '/magic-item:all' : '/wondrous-items';
 }
 
-export function getItemCollectionName(baseUrl: string): string {
-	return baseUrl.includes('2024') ? 'Magic Items' : 'Wondrous Items';
+export function getItemCollectionName(_baseUrl: string): string {
+	return 'Magic Items';
 }
 
 export async function ensureItemCached(

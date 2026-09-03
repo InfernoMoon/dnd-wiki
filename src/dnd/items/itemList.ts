@@ -87,7 +87,12 @@ export async function renderItemList(
 
 	el.createEl('h2', {
 		cls: 'dnd-wiki-list-heading',
-		text: buildHeading(getItemCollectionName(baseUrl), directives.level),
+		text: buildHeading(
+			getItemCollectionName(baseUrl),
+			directives.level,
+			directives.type,
+			directives.attuned,
+		),
 	});
 
 	const container = el.createDiv();
@@ -249,14 +254,44 @@ function uniqueItemNames(items: ItemIndexEntry[]): string[] {
 	).values());
 }
 
-function buildHeading(collectionName: string, level: LevelDirective): string {
+
+function buildHeading(
+	collectionName: string,
+	level: LevelDirective,
+	type: TypeDirective,
+	attuned: AttunedDirective,
+): string {
+	let levelText = '';
 	if (Array.isArray(level) && level.length) {
-		return `${collectionName} ${level.map(levelIndexToName).join(', ')}`;
+		levelText = level.map(levelIndexToName).join(', ');
+	} else if (typeof level === 'number') {
+		levelText = levelIndexToName(level);
 	}
-	if (typeof level === 'number') {
-		return `${collectionName} ${levelIndexToName(level)}`;
+
+	const typeText = Array.isArray(type) && type.length
+		? type.map(formatItemTypeForHeading).join(', ')
+		: '';
+	const collectionPrefix = collectionName.replace(/\s+Items$/i, '');
+	let heading: string;
+	if (typeText) {
+		heading = levelText
+			? `${levelText} ${collectionPrefix} ${typeText}`
+			: `${collectionPrefix} ${typeText}`;
+	} else if (levelText) {
+		heading = `${levelText} ${collectionName}`;
+	} else {
+		heading = `All ${collectionName}`;
 	}
-	return `All ${collectionName}`;
+
+	if (attuned === true) return `${heading} that require attunement`;
+	if (attuned === false) return `${heading} that do not require attunement`;
+	return heading;
+}
+
+function formatItemTypeForHeading(type: string): string {
+	const displayName = displayNameFromSlug(type);
+	if (displayName.toLowerCase() === 'armor' || displayName.endsWith('s')) return displayName;
+	return `${displayName}s`;
 }
 
 function levelIndexToName(index: number): string {

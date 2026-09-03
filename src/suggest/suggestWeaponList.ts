@@ -1,5 +1,6 @@
 import type { App, EditorSuggestContext } from 'obsidian';
-import { STATIC_WEAPON_MASTERY, STATIC_WEAPON_PROPERTIES, STATIC_WEAPON_TYPES } from '../data/staticData';
+import { getKnownWeaponPropertiesForKey } from '../dnd/weapons/weaponService';
+import { STATIC_WEAPON_MASTERY, STATIC_WEAPON_TYPES } from '../data/staticData';
 import { is2024Source } from '../utils/wikiPageFetcher';
 import { DndDirectiveSuggest } from './baseSuggest';
 import { getTextSuggestions } from './suggestHelpers';
@@ -23,7 +24,11 @@ export class WeaponListSuggest extends DndDirectiveSuggest {
 			return getTextSuggestions(WEAPON_TYPES, query, 'startsWith');
 		}
 		if (this.currentKey === 'property') {
-			return getTextSuggestions(STATIC_WEAPON_PROPERTIES, query, 'startsWith');
+			return getTextSuggestions(
+				getKnownWeaponPropertiesForKey(this.currentUrlKey),
+				query,
+				'startsWith',
+			);
 		}
 		if (this.currentKey === 'mastery') {
 			return is2024Source(this.getBaseUrl(this.currentUrlKey))

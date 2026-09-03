@@ -5,10 +5,12 @@ import { getPrimarySlug, nameToSlugs } from '../../utils/text';
 import { matchesSearchText } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
 import { fetchWeaponPropertyTable as fetchPropertyTable } from '../equipment/equipmentFetcher';
+import { getWikiTableColumnValues } from '../../utils/wikiTable';
 import type { WikiCellTableData } from '../../utils/wikiTable';
 import type { WeaponTypeDirective } from './weaponListCacheItem';
 
 export const weaponIdCache = new IdCache();
+const weaponPropertyCache = new IdCache();
 const weaponPropertyTableCache = new Map<string, WikiCellTableData | null>();
 
 /** Return the preloaded weapon IDs for a source URL. */
@@ -16,10 +18,21 @@ export function getKnownWeaponIdsForKey(urlKey: string): string[] {
 	return weaponIdCache.get(urlKey);
 }
 
-/** Load all weapon names and make them available to the weapon suggester. */
-export async function preloadAllWeaponNames(urlKey: string, baseUrl: string): Promise<void> {
-	const index = await getWeaponIndex(urlKey, baseUrl, 'all');
+/** Return the fetched weapon properties for a source URL. */
+export function getKnownWeaponPropertiesForKey(urlKey: string): string[] {
+	return weaponPropertyCache.get(urlKey);
+}
+
+/** Load weapon names and properties for the weapon suggesters. */
+export async function preloadWeaponData(urlKey: string, baseUrl: string): Promise<void> {
+	const [index, propertyTable] = await Promise.all([
+		getWeaponIndex(urlKey, baseUrl, 'all'),
+		getWeaponPropertyTable(baseUrl),
+	]);
 	weaponIdCache.addMany(urlKey, index.items.map(item => getPrimarySlug(item.name)).filter(Boolean));
+	if (propertyTable) {
+		weaponPropertyCache.addMany(urlKey, getWikiTableColumnValues(propertyTable, 0));
+	}
 }
 
 /** Return the weapon index through the shared equipment table fetcher. */

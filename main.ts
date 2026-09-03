@@ -28,7 +28,7 @@ import { preloadAllFeatIds } from './src/dnd/feats/featService';
 import { preloadAllItemIds } from './src/dnd/items/itemService';
 import { preloadAllBackgroundIds } from './src/dnd/backgrounds/backgroundService';
 import { preloadAllLineageIds } from './src/dnd/lineages/lineageService';
-import { preloadAllWeaponNames } from './src/dnd/weapons/weaponService';
+import { preloadWeaponData } from './src/dnd/weapons/weaponService';
 import { renderFeatList } from './src/dnd/feats/featList';
 import { renderItemList } from './src/dnd/items/itemList';
 import { renderBackground } from './src/dnd/backgrounds/background';
@@ -171,7 +171,7 @@ export default class DndWiki extends Plugin {
 					await preloadAllItemIds(urlKey, url);
 					await preloadAllBackgroundIds(urlKey, url);
 					await preloadAllLineageIds(urlKey, url);
-					await preloadAllWeaponNames(urlKey, url);
+					await preloadWeaponData(urlKey, url);
 				}
 			} catch (e) {
 				console.warn('Failed to preload data', e);

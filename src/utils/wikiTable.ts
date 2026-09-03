@@ -72,6 +72,14 @@ export function getWikiTablesByFirstHeader(
 	return tables;
 }
 
+/** Return values from one table column, excluding its header row. */
+export function getWikiTableColumnValues(table: WikiCellTableData, columnIndex: number): string[] {
+	return table.rows
+		.slice(1)
+		.map(row => row[columnIndex]?.text.trim() ?? '')
+		.filter(Boolean);
+}
+
 function matchesHeader(header: string, matcher: WikiTableHeaderMatcher): boolean {
 	if (typeof matcher === 'function') return matcher(header);
 	return header.trim().toLowerCase() === matcher.trim().toLowerCase();

@@ -10,6 +10,9 @@ import { SpellListSuggest } from './src/suggest/suggestSpellList';
 import { FeatNameSuggest } from './src/suggest/suggestFeat';
 import { ItemNameSuggest } from './src/suggest/suggestItem';
 import { ItemListSuggest } from './src/suggest/suggestItemList';
+import { EquipmentListSuggest } from './src/suggest/suggestEquipmentList';
+import { renderEquipment } from './src/dnd/equipment/equipment';
+import { renderEquipmentList } from './src/dnd/equipment/equipmentList';
 import { BackgroundNameSuggest } from './src/suggest/suggestBackground';
 import { FeatListSuggest } from './src/suggest/suggestFeatList';
 import { BackgroundListSuggest } from './src/suggest/suggestBackgroundList';
@@ -64,6 +67,7 @@ export default class DndWiki extends Plugin {
 		registerSuggest(new FeatListSuggest(this));
 		registerSuggest(new ItemNameSuggest(this));
 		registerSuggest(new ItemListSuggest(this));
+		registerSuggest(new EquipmentListSuggest(this));
 		registerSuggest(new BackgroundNameSuggest(this));
 		registerSuggest(new BackgroundListSuggest(this));
 		registerSuggest(new LineageNameSuggest(this));
@@ -111,6 +115,12 @@ export default class DndWiki extends Plugin {
 				});
 				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-magicitemlist`, async (source, el, ctx) => {
 					await renderItemList(source, el, ctx, urlKey, baseUrl);
+				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-equipment`, async (source, el, ctx) => {
+					await renderEquipment(source, el, ctx, urlKey, baseUrl);
+				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-equipmentlist`, async (source, el, ctx) => {
+					await renderEquipmentList(source, el, ctx, urlKey, baseUrl);
 				});
 				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-background`, async (source, el, ctx) => {
 					await renderBackground(source, el, ctx, urlKey, baseUrl);

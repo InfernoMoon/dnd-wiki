@@ -38,6 +38,11 @@ export const STATIC_ITEM_TYPES: string[] = [
   "Wondrous Item"
 ];
 
+export const STATIC_EQUIPMENT_TYPES: string[] = [
+  "Armor and Shields",
+  "Weapons"
+];
+
 export const STATIC_ITEM_RARITY_WORD_TO_INDEX: Record<string, number> = {
   common: 0,
   uncommon: 1,

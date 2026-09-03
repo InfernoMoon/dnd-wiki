@@ -7,6 +7,11 @@ export interface FetchedPage {
 	contentHtml: string;
 }
 
+/** Return whether a configured source uses the 2024 D&D data format. */
+export function is2024Source(baseUrl: string): boolean {
+	return baseUrl.toLowerCase().includes('2024');
+}
+
 /** Fetch a page by kind and ID, such as `/feat:alert`. */
 export async function fetchPageContent(baseUrl: string, kind: string, id: string): Promise<FetchedPage> {
 	return fetchPageAtUrl(`${baseUrl.replace(/\/$/, '')}/${kind}:${id}`);

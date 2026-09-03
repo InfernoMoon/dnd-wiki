@@ -1,7 +1,7 @@
 import { IdCache } from '../../cache/idCache';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
-import { fetchPageContentWithSlugFallbacks } from '../../utils/wikiPageFetcher';
+import { fetchPageContentWithSlugFallbacks, is2024Source } from '../../utils/wikiPageFetcher';
 import { nameToSlugs } from '../../utils/text';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../../utils/wikiIndexLoader';
 
@@ -46,7 +46,7 @@ export async function preloadAllBackgroundIds(urlKey: string, baseUrl: string): 
 		filterFn: (name: string) => !name.toLowerCase().endsWith('toc1'),
 	};
 
-	const backgroundIds = baseUrl.includes('2024')
+	const backgroundIds = is2024Source(baseUrl)
 		? await loadFromTable(config)
 		: await loadFromLinks(config);
 	backgroundIdCache.addMany(urlKey, backgroundIds);

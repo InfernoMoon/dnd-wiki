@@ -3,7 +3,7 @@ import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
 import { requestUrl } from 'obsidian';
 import { displayNameFromSlug, nameToSlugs } from '../../utils/text';
-import { fetchPageContentWithSlugFallbacks } from '../../utils/wikiPageFetcher';
+import { fetchPageContentWithSlugFallbacks, is2024Source } from '../../utils/wikiPageFetcher';
 import { loadFromTable, LoaderConfig } from '../../utils/wikiIndexLoader';
 import { STATIC_ITEM_TYPES } from '../../data/staticData';
 
@@ -25,7 +25,7 @@ export interface ItemIndex {
 const itemIndexCache = new Map<string, ItemIndex>();
 
 export function getItemIndexPath(baseUrl: string): string {
-	return baseUrl.includes('2024') ? '/magic-item:all' : '/wondrous-items';
+	return is2024Source(baseUrl) ? '/magic-item:all' : '/wondrous-items';
 }
 
 export function getItemCollectionName(_baseUrl: string): string {
@@ -45,7 +45,7 @@ export async function ensureItemCached(
 		if (existing) return existing;
 	}
 
-	const itemPageType = baseUrl.includes('2024') ? 'magic-item' : 'wondrous-items';
+	const itemPageType = is2024Source(baseUrl) ? 'magic-item' : 'wondrous-items';
 	const fetched = await fetchPageContentWithSlugFallbacks(baseUrl, itemPageType, itemName);
 	if (!fetched.ok) return null;
 

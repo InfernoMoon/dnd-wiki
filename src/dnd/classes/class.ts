@@ -2,7 +2,7 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
 import { getPrimarySlug, nameToSlugs, displayNameFromSlug } from '../../utils/text';
-import { fetchPageAtUrlWithSlugFallbacks } from '../../utils/wikiPageFetcher';
+import { fetchPageAtUrlWithSlugFallbacks, is2024Source } from '../../utils/wikiPageFetcher';
 import { prepareNameInput, renderCollapsible } from '../../utils/renderer';
 
 const classRenderCache = new RenderCache<CachedRender>();
@@ -22,7 +22,7 @@ async function ensureClassCached(
 	const base = baseUrl.replace(/\/$/, '');
 	const fetched = await fetchPageAtUrlWithSlugFallbacks(
 		className,
-		slug => baseUrl.includes('2024') ? `${base}/${slug}:main` : `${base}/${slug}`,
+		slug => is2024Source(baseUrl) ? `${base}/${slug}:main` : `${base}/${slug}`,
 	);
 	if (!fetched.ok) return null;
 

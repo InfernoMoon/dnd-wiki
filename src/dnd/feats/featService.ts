@@ -1,7 +1,7 @@
 import { IdCache } from '../../cache/idCache';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
-import { fetchPageContentWithSlugFallbacks } from '../../utils/wikiPageFetcher';
+import { fetchPageContentWithSlugFallbacks, is2024Source } from '../../utils/wikiPageFetcher';
 import { nameToSlugs } from '../../utils/text';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../../utils/wikiIndexLoader';
 
@@ -42,7 +42,7 @@ export async function preloadAllFeatIds(urlKey: string, baseUrl: string): Promis
 		filterFn: (name: string) => !name.includes('Alltoc'),
 	};
 
-	const is2024 = baseUrl.includes('2024');
+	const is2024 = is2024Source(baseUrl);
 	const featIds = is2024
 		? await loadFromTable(config)
 		: await loadFromLinks(config);

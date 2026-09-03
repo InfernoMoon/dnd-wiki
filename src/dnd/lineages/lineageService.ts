@@ -1,7 +1,7 @@
 import { IdCache } from '../../cache/idCache';
 import { RenderCache } from '../../cache/renderCache';
 import type { CachedRender } from '../../cache/renderCache';
-import { fetchPageContentWithSlugFallbacks } from '../../utils/wikiPageFetcher';
+import { fetchPageContentWithSlugFallbacks, is2024Source } from '../../utils/wikiPageFetcher';
 import { nameToSlugs } from '../../utils/text';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../../utils/wikiIndexLoader';
 
@@ -24,7 +24,7 @@ export async function ensureLineageCached(
 		if (existing) return existing;
 	}
 
-	const lineagePageType = baseUrl.includes('2024') ? 'species' : 'lineage';
+	const lineagePageType = is2024Source(baseUrl) ? 'species' : 'lineage';
 	const fetched = await fetchPageContentWithSlugFallbacks(baseUrl, lineagePageType, lineageName);
 	if (!fetched.ok) return null;
 
@@ -37,7 +37,7 @@ export async function ensureLineageCached(
 }
 
 export async function preloadAllLineageIds(urlKey: string, baseUrl: string): Promise<void> {
-	const is2024 = baseUrl.includes('2024');
+	const is2024 = is2024Source(baseUrl);
 
 	if (is2024) {
 		const tableConfig: Omit<LoaderConfig, 'indexPath'> = {

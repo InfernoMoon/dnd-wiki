@@ -1,6 +1,7 @@
 import { requestUrl } from 'obsidian';
 import { GroupedIdCache } from '../../cache/idCache';
 import { getPrimarySlug, displayNameFromSlug } from '../../utils/text';
+import { is2024Source } from '../../utils/wikiPageFetcher';
 
 const subclassIdCache = new GroupedIdCache();
 const ROOT_PARENT = '__root__';
@@ -32,7 +33,7 @@ export async function preloadSubclassIds(urlKey: string, baseUrl: string, classS
   const base = baseUrl.replace(/\/$/, '');
   const pageUrl = parentSubinfoSlug
     ? `${base}/${classSlug}:${parentSubinfoSlug}`
-    : (baseUrl.includes('2024') ? `${base}/${classSlug}:main` : `${base}/${classSlug}`);
+    : (is2024Source(baseUrl) ? `${base}/${classSlug}:main` : `${base}/${classSlug}`);
 
   try {
     const res = await requestUrl({ url: pageUrl, method: 'GET' });

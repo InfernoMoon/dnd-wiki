@@ -56,6 +56,7 @@ export default class DndWiki extends Plugin {
 		});
 		await initializeDefaultUrls();
 		const editorSuggesters: BaseTextSuggest[] = [];
+		const urlsSnapshot = await peekBaseUrls();
 		const registerSuggest = <T extends BaseTextSuggest>(suggest: T): T => {
 			this.registerEditorSuggest(suggest);
 			editorSuggesters.push(suggest);
@@ -74,7 +75,7 @@ export default class DndWiki extends Plugin {
 		registerSuggest(new ItemListSuggest(this));
 		registerSuggest(new EquipmentListSuggest(this));
 		registerSuggest(new WeaponNameSuggest(this));
-		registerSuggest(new WeaponListSuggest(this));
+		registerSuggest(new WeaponListSuggest(this, (urlKey) => urlsSnapshot[urlKey] || ''));
 		registerSuggest(new BackgroundNameSuggest(this));
 		registerSuggest(new BackgroundListSuggest(this));
 		registerSuggest(new LineageNameSuggest(this));
@@ -83,7 +84,6 @@ export default class DndWiki extends Plugin {
 		const classNameSuggest = new ClassNameSuggest(this);
 		await classNameSuggest.refreshClassNames();
 		registerSuggest(classNameSuggest);
-		const urlsSnapshot = await peekBaseUrls();
 		registerSuggest(new SubclassNameSuggest(this, (urlKey) => urlsSnapshot[urlKey] || ''));
 		registerSuggest(new CustomSuggest(this));
 

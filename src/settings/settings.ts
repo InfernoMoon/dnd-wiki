@@ -98,8 +98,7 @@ export class DndCardsSettingTab extends PluginSettingTab {
       console.warn('DnD Wiki: Failed to load homebrew settings', error);
     });
 
-    containerEl.createEl('hr');
-    this.displaySourceUrlSettings(containerEl);
+    // Source URL settings are kept for later, but are currently hidden from the UI.
   }
 
   private displaySourceUrlSettings(containerEl: HTMLElement): void {

@@ -228,25 +228,11 @@ DnD-Cards/
 
 `DnD-Cards/Backgrounds/` and `DnD-Cards/Lineages/` can be created manually. A Markdown filename becomes its card name, and a local card overrides a remote card with the same normalized name. Restart Obsidian if new files do not appear in autocomplete or lists.
 
-## Configure sources
-
-Open **Settings → DnD Wiki → Source URLs** to add, rename, or remove wiki sources. The defaults are:
-
-| Key | Base URL |
-|---|---|
-| `5e` | `url` |
-| `2024` | `url` |
-
-The key becomes the version in the block name. A source with the key `homebrew`, for example, provides blocks such as `dndhomebrew-spell`. Use keys made from letters and numbers, and restart Obsidian after changing them.
-
-Note that this plugin expects wikis that follow the same structure as wikidot wikis.
-So adding more sources will likely not work correctly.
-
 ## Data and privacy
 
 DnD Wiki does not collect telemetry, analytics, usage statistics, vault filenames, or note contents.
 
-The plugin sends network requests only to the source URLs configured under **Settings → DnD Wiki → Source URLs**. It downloads the index and content pages needed to render cards and lists.
+The plugin sends network requests only to its configured D&D wiki sources. It downloads the index and content pages needed to render cards and lists.
 
 Downloaded content is cached only in memory. It is not saved permanently and is discarded when Obsidian or the plugin restarts. The plugin permanently stores only its settings, such as configured source URLs. Local custom cards remain ordinary files in the user's vault.
 

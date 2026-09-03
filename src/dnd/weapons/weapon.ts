@@ -3,7 +3,6 @@ import { findWeaponEntry, getWeaponIndex, groupWeaponTableRows } from './weaponS
 import { prepareNameInput, renderNoResultsMessage, renderTable } from '../../utils/renderer';
 import { displayNameFromSlug, getPrimarySlug } from '../../utils/text';
 
-/** Render one or more weapons by name. */
 export async function renderWeapon(
 	source: string,
 	el: HTMLElement,

@@ -3,14 +3,17 @@ import { FilteredListCache } from '../../cache/filteredListCache';
 import type { EquipmentIndexEntry } from '../equipment/equipmentService';
 import { getTextProperties } from '../../utils/directives';
 import { renderNoResultsMessage, renderTable, requireBaseUrl } from '../../utils/renderer';
-import { matchesSearchText, parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
+import { parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
 import { displayNameFromSlug } from '../../utils/text';
 import {
+	filterWeaponEntries,
+	filterWeaponNames,
 	findWeaponEntry,
 	getWeaponCollectionName,
 	getWeaponIndex,
 	groupWeaponTableRows,
+	normalizeWeaponType,
 } from './weaponService';
 import { is2024Source } from '../../utils/wikiPageFetcher';
 import { WeaponListCacheItem } from './weaponListCacheItem';
@@ -59,20 +62,24 @@ export async function renderWeaponList(
 
 	const entries = names
 		.map(name => findWeaponEntry(index, name))
-		.filter((entry): entry is EquipmentIndexEntry => entry !== null)
-		.filter(entry => matchesWeaponProperties(entry, directives.properties))
-		.filter(entry => matchesWeaponMastery(entry, directives.mastery))
-		.filter(entry => matchesWeaponSearch(entry, directives.searches, directives.searchMode));
+		.filter((entry): entry is EquipmentIndexEntry => entry !== null);
+	const filteredEntries = filterWeaponEntries(
+		entries,
+		directives.properties,
+		directives.mastery,
+		directives.searches,
+		directives.searchMode,
+	);
 	const missingNames = names.filter(name => !findWeaponEntry(index, name));
 	const container = el.createDiv();
-	for (const group of groupWeaponTableRows(entries)) {
+	for (const group of groupWeaponTableRows(filteredEntries)) {
 		renderTable(container, group.headers, group.rows);
 	}
 	for (const name of directives.searches.length ? [] : missingNames) {
 		container.createDiv({ text: `Failed to load weapon: ${displayNameFromSlug(name)}` });
 	}
 
-	if (!entries.length) renderNoResultsMessage(container, 'weapons');
+	if (!filteredEntries.length) renderNoResultsMessage(container, 'weapons');
 }
 
 function parseWeaponListDirectives(source: string, baseUrl: string): WeaponListDirectives {
@@ -99,24 +106,6 @@ function parseWeaponTypeDirective(values: string[]): WeaponTypeDirective {
 	return types.length ? Array.from(new Set(types)) : 'all';
 }
 
-function filterWeaponNames(items: EquipmentIndexEntry[], type: WeaponTypeDirective): string[] {
-	const filteredItems = Array.isArray(type) && type.length
-		? items.filter(item => item.weaponType !== undefined
-			&& type.includes(normalizeWeaponType(item.weaponType)))
-		: items;
-
-	return Array.from(new Set(filteredItems.map(item => item.name).filter(Boolean)));
-}
-
-function matchesWeaponSearch(
-	entry: EquipmentIndexEntry,
-	searches: string[],
-	searchMode: SearchMode,
-): boolean {
-	const tableValues = entry.table?.values ?? [];
-	return matchesSearchText([entry.name, ...tableValues].join(' '), searches, searchMode);
-}
-
 function parsePropertyDirective(values: string[]): string[] {
 	return Array.from(new Set(values
 		.join(',')
@@ -125,32 +114,8 @@ function parsePropertyDirective(values: string[]): string[] {
 		.filter(Boolean)));
 }
 
-function matchesWeaponProperties(entry: EquipmentIndexEntry, properties: string[]): boolean {
-	if (!properties.length) return true;
-
-	const propertyColumnIndex = entry.table?.headers.findIndex(header =>
-		header.trim().toLowerCase() === 'properties',
-	) ?? -1;
-	if (propertyColumnIndex === -1) return false;
-
-	const propertyText = entry.table?.values[propertyColumnIndex]?.toLowerCase() ?? '';
-	return properties.some(property => propertyText.includes(property));
-}
-
 function parseMasteryDirective(values: string[]): string[] {
 	return parseCommaSeparatedValues(values);
-}
-
-function matchesWeaponMastery(entry: EquipmentIndexEntry, mastery: string[]): boolean {
-	if (!mastery.length) return true;
-
-	const masteryColumnIndex = entry.table?.headers.findIndex(header =>
-		header.trim().toLowerCase() === 'mastery',
-	) ?? -1;
-	if (masteryColumnIndex === -1) return false;
-
-	const masteryText = entry.table?.values[masteryColumnIndex]?.toLowerCase() ?? '';
-	return mastery.some(value => masteryText.includes(value));
 }
 
 function parseCommaSeparatedValues(values: string[]): string[] {
@@ -159,10 +124,6 @@ function parseCommaSeparatedValues(values: string[]): string[] {
 		.split(',')
 		.map(value => value.trim().toLowerCase())
 		.filter(Boolean)));
-}
-
-function normalizeWeaponType(value: string): string {
-	return value.trim().toLowerCase().replace(/\s+/g, '-');
 }
 
 function buildHeading(type: WeaponTypeDirective): string {

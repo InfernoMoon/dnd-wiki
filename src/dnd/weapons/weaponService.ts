@@ -2,6 +2,8 @@ import { IdCache } from '../../cache/idCache';
 import { getEquipmentIndex } from '../equipment/equipmentService';
 import type { EquipmentIndex, EquipmentIndexEntry } from '../equipment/equipmentService';
 import { getPrimarySlug, nameToSlugs } from '../../utils/text';
+import { matchesSearchText } from '../../utils/search';
+import type { SearchMode } from '../../utils/search';
 import type { WeaponTypeDirective } from './weaponListCacheItem';
 
 export const weaponIdCache = new IdCache();
@@ -24,6 +26,71 @@ export async function getWeaponIndex(
 	typeDirective: WeaponTypeDirective,
 ): Promise<EquipmentIndex> {
 	return getEquipmentIndex(urlKey, baseUrl, ['weapons'], typeDirective);
+}
+
+/** Return unique weapon names after applying the type filter. */
+export function filterWeaponNames(
+	items: EquipmentIndexEntry[],
+	type: WeaponTypeDirective,
+): string[] {
+	const filteredItems = Array.isArray(type) && type.length
+		? items.filter(item => item.weaponType !== undefined
+			&& type.includes(normalizeWeaponType(item.weaponType)))
+		: items;
+
+	return Array.from(new Set(filteredItems.map(item => item.name).filter(Boolean)));
+}
+
+/** Apply weapon property, mastery, and full-text search filters. */
+export function filterWeaponEntries(
+	entries: EquipmentIndexEntry[],
+	properties: string[],
+	mastery: string[],
+	searches: string[],
+	searchMode: SearchMode,
+): EquipmentIndexEntry[] {
+	return entries
+		.filter(entry => matchesWeaponProperties(entry, properties))
+		.filter(entry => matchesWeaponMastery(entry, mastery))
+		.filter(entry => matchesWeaponSearch(entry, searches, searchMode));
+}
+
+function matchesWeaponProperties(entry: EquipmentIndexEntry, properties: string[]): boolean {
+	if (!properties.length) return true;
+
+	const propertyColumnIndex = entry.table?.headers.findIndex(header =>
+		header.trim().toLowerCase() === 'properties',
+	) ?? -1;
+	if (propertyColumnIndex === -1) return false;
+
+	const propertyText = entry.table?.values[propertyColumnIndex]?.toLowerCase() ?? '';
+	return properties.some(property => propertyText.includes(property));
+}
+
+function matchesWeaponMastery(entry: EquipmentIndexEntry, mastery: string[]): boolean {
+	if (!mastery.length) return true;
+
+	const masteryColumnIndex = entry.table?.headers.findIndex(header =>
+		header.trim().toLowerCase() === 'mastery',
+	) ?? -1;
+	if (masteryColumnIndex === -1) return false;
+
+	const masteryText = entry.table?.values[masteryColumnIndex]?.toLowerCase() ?? '';
+	return mastery.some(value => masteryText.includes(value));
+}
+
+function matchesWeaponSearch(
+	entry: EquipmentIndexEntry,
+	searches: string[],
+	searchMode: SearchMode,
+): boolean {
+	const tableValues = entry.table?.values ?? [];
+	return matchesSearchText([entry.name, ...tableValues].join(' '), searches, searchMode);
+}
+
+/** Normalize a weapon type for comparisons and headings. */
+export function normalizeWeaponType(value: string): string {
+	return value.trim().toLowerCase().replace(/\s+/g, '-');
 }
 
 /** Find a weapon entry by any compatible slug generated from its name. */

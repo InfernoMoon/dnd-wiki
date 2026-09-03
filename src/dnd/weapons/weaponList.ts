@@ -6,12 +6,14 @@ import { renderCellTable, renderNoResultsMessage, renderTable, requireBaseUrl } 
 import { parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
 import { displayNameFromSlug } from '../../utils/text';
+import { renameFirstHeader } from '../../utils/wikiTable';
 import {
 	filterWeaponEntries,
 	filterWeaponNames,
 	findWeaponEntry,
 	getWeaponCollectionName,
 	getWeaponIndex,
+	getWeaponMasteryTable,
 	getWeaponPropertyTable,
 	groupWeaponTableRows,
 	normalizeWeaponType,
@@ -26,6 +28,7 @@ interface WeaponListDirectives {
 	properties: string[];
 	mastery: string[];
 	propertyTableMode: PropertyTableMode;
+	masteryTableMode: PropertyTableMode;
 	searches: string[];
 	searchMode: SearchMode;
 }
@@ -46,6 +49,8 @@ export async function renderWeaponList(
 	if (!requireBaseUrl(el, baseUrl)) return;
 
 	const directives = parseWeaponListDirectives(source, baseUrl);
+	const hideWeaponTable = directives.propertyTableMode === 'only'
+		|| directives.masteryTableMode === 'only';
 	const cacheItem = new WeaponListCacheItem(directives.type);
 	const index = await getWeaponIndex(urlKey, baseUrl, directives.type);
 	let names = weaponListCache.get(urlKey, cacheItem);
@@ -59,7 +64,7 @@ export async function renderWeaponList(
 		return;
 	}
 
-	if (directives.propertyTableMode !== 'only') {
+	if (!hideWeaponTable) {
 		el.createEl('h2', {
 			cls: 'dnd-wiki-list-heading',
 			text: buildHeading(directives.type),
@@ -79,7 +84,7 @@ export async function renderWeaponList(
 	const missingNames = names.filter(name => !findWeaponEntry(index, name));
 	const container = el.createDiv();
 	const tableGroups = groupWeaponTableRows(filteredEntries);
-	if (directives.propertyTableMode !== 'only') {
+	if (!hideWeaponTable) {
 		for (const group of tableGroups) {
 			renderTable(container, group.headers, group.rows);
 		}
@@ -88,26 +93,40 @@ export async function renderWeaponList(
 		const propertyTable = await getWeaponPropertyTable(baseUrl);
 		if (propertyTable) renderCellTable(container, propertyTable);
 	}
-	if (directives.propertyTableMode !== 'only') {
+	if (directives.masteryTableMode !== 'hide') {
+		const masteryTable = await getWeaponMasteryTable(baseUrl);
+		if (masteryTable) renderCellTable(container, renameFirstHeader(masteryTable, 'Mastery'));
+	}
+	if (!hideWeaponTable) {
 		for (const name of directives.searches.length ? [] : missingNames) {
 			container.createDiv({ text: `Failed to load weapon: ${displayNameFromSlug(name)}` });
 		}
 	}
 
-	if (directives.propertyTableMode !== 'only' && !filteredEntries.length) {
+	if (!hideWeaponTable && !filteredEntries.length) {
 		renderNoResultsMessage(container, 'weapons');
 	}
 }
 
 function parseWeaponListDirectives(source: string, baseUrl: string): WeaponListDirectives {
-	const properties = getTextProperties(source, ['type', 'property', 'mastery', 'showPropertyTable']);
+	const properties = getTextProperties(source, [
+		'type',
+		'property',
+		'mastery',
+		'showPropertyTable',
+		'showMasteryTable',
+	]);
+	const is2024 = is2024Source(baseUrl);
 	return {
 		type: parseWeaponTypeDirective(properties.get('type') ?? []),
 		properties: parsePropertyDirective(properties.get('property') ?? []),
-		mastery: is2024Source(baseUrl)
+		mastery: is2024
 			? parseMasteryDirective(properties.get('mastery') ?? [])
 			: [],
 		propertyTableMode: parsePropertyTableMode(properties.get('showPropertyTable') ?? []),
+		masteryTableMode: is2024
+			? parsePropertyTableMode(properties.get('showMasteryTable') ?? [])
+			: 'hide',
 		searches: parseSearchDirective(source),
 		searchMode: parseSearchModeDirective(source),
 	};

@@ -35,7 +35,10 @@ export function renderTable(
 }
 
 /** Render a table whose rows retain whether each source cell was a header cell. */
-export function renderCellTable(el: HTMLElement, table: WikiCellTableData): void {
+export function renderCellTable(
+	el: HTMLElement,
+	table: WikiCellTableData,
+): void {
 	const renderedTable = el.createEl('table', { cls: 'dnd-wiki-table' });
 	const body = renderedTable.createEl('tbody');
 

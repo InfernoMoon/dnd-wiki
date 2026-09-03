@@ -53,18 +53,6 @@ export const STATIC_WEAPON_TYPES = new Map<string, string>([
   ["ammunition", "Ammunition"],
 ]);
 
-/** Weapon mastery options available in 2024 weapon tables. */
-export const STATIC_WEAPON_MASTERY: string[] = [
-  "Cleave",
-  "Graze",
-  "Nick",
-  "Push",
-  "Sap",
-  "Slow",
-  "Topple",
-  "Vex",
-];
-
 export const STATIC_ITEM_RARITY_WORD_TO_INDEX: Record<string, number> = {
   common: 0,
   uncommon: 1,

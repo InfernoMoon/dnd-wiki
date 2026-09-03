@@ -3,6 +3,7 @@ import { STATIC_EQUIPMENT_TYPES } from '../../data/staticData';
 import type { EquipmentFetchSettings, EquipmentIndex, EquipmentIndexEntry } from './equipmentService';
 import { getWikiContentTables, getWikiTablesByFirstHeader } from '../../utils/wikiTable';
 import type { WikiCellTableData, WikiTableData } from '../../utils/wikiTable';
+import { is2024Source } from '../../utils/wikiPageFetcher';
 
 /** Fetch all requested equipment categories and combine their entries. */
 export async function fetchEquipmentIndex(
@@ -21,9 +22,24 @@ export async function fetchEquipmentIndex(
 
 /** Fetch the property table from the shared weapons page. */
 export async function fetchWeaponPropertyTable(baseUrl: string): Promise<WikiCellTableData | null> {
+	return fetchWeaponReferenceTable(baseUrl, 0);
+}
+
+/** Fetch the 2024 mastery table from the shared weapons page. */
+export async function fetchWeaponMasteryTable(baseUrl: string): Promise<WikiCellTableData | null> {
+	if (!is2024Source(baseUrl)) return null;
+	return fetchWeaponReferenceTable(baseUrl, 1);
+}
+
+async function fetchWeaponReferenceTable(baseUrl: string, tableIndex: number): Promise<WikiCellTableData | null> {
 	const document = await fetchDocument(baseUrl, 'weapons');
 	if (!document) return null;
-	return getWikiTablesByFirstHeader(document, 'Property')[0] ?? null;
+
+	const tables = getWikiTablesByFirstHeader(
+		document,
+		header => header.trim().toLowerCase().startsWith('property'),
+	);
+	return tables[tableIndex] ?? null;
 }
 
 /** Fetch and parse the armor and shields equipment page. */

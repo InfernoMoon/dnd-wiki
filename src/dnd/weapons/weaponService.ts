@@ -4,14 +4,19 @@ import type { EquipmentIndex, EquipmentIndexEntry } from '../equipment/equipment
 import { getPrimarySlug, nameToSlugs } from '../../utils/text';
 import { matchesSearchText } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
-import { fetchWeaponPropertyTable as fetchPropertyTable } from '../equipment/equipmentFetcher';
+import {
+	fetchWeaponMasteryTable as fetchMasteryTable,
+	fetchWeaponPropertyTable as fetchPropertyTable,
+} from '../equipment/equipmentFetcher';
 import { getWikiTableColumnValues } from '../../utils/wikiTable';
 import type { WikiCellTableData } from '../../utils/wikiTable';
 import type { WeaponTypeDirective } from './weaponListCacheItem';
 
 export const weaponIdCache = new IdCache();
 const weaponPropertyCache = new IdCache();
+const weaponMasteryCache = new IdCache();
 const weaponPropertyTableCache = new Map<string, WikiCellTableData | null>();
+const weaponMasteryTableCache = new Map<string, WikiCellTableData | null>();
 
 /** Return the preloaded weapon IDs for a source URL. */
 export function getKnownWeaponIdsForKey(urlKey: string): string[] {
@@ -23,6 +28,11 @@ export function getKnownWeaponPropertiesForKey(urlKey: string): string[] {
 	return weaponPropertyCache.get(urlKey);
 }
 
+/** Return the fetched weapon masteries for a source URL. */
+export function getKnownWeaponMasteriesForKey(urlKey: string): string[] {
+	return weaponMasteryCache.get(urlKey);
+}
+
 /** Load weapon names and properties for the weapon suggesters. */
 export async function preloadWeaponData(urlKey: string, baseUrl: string): Promise<void> {
 	const [index, propertyTable] = await Promise.all([
@@ -32,6 +42,10 @@ export async function preloadWeaponData(urlKey: string, baseUrl: string): Promis
 	weaponIdCache.addMany(urlKey, index.items.map(item => getPrimarySlug(item.name)).filter(Boolean));
 	if (propertyTable) {
 		weaponPropertyCache.addMany(urlKey, getWikiTableColumnValues(propertyTable, 0));
+	}
+	const masteryTable = await getWeaponMasteryTable(baseUrl);
+	if (masteryTable) {
+		weaponMasteryCache.addMany(urlKey, getWikiTableColumnValues(masteryTable, 0));
 	}
 }
 
@@ -133,6 +147,17 @@ export async function getWeaponPropertyTable(baseUrl: string): Promise<WikiCellT
 
 	const table = await fetchPropertyTable(baseUrl);
 	weaponPropertyTableCache.set(baseUrl, table);
+	return table;
+}
+
+/** Fetch and cache the 2024 mastery table from the weapons page. */
+export async function getWeaponMasteryTable(baseUrl: string): Promise<WikiCellTableData | null> {
+	if (weaponMasteryTableCache.has(baseUrl)) {
+		return weaponMasteryTableCache.get(baseUrl) ?? null;
+	}
+
+	const table = await fetchMasteryTable(baseUrl);
+	weaponMasteryTableCache.set(baseUrl, table);
 	return table;
 }
 

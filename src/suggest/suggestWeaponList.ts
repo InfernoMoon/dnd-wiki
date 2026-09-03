@@ -1,6 +1,9 @@
 import type { App, EditorSuggestContext } from 'obsidian';
-import { getKnownWeaponPropertiesForKey } from '../dnd/weapons/weaponService';
-import { STATIC_WEAPON_MASTERY, STATIC_WEAPON_TYPES } from '../data/staticData';
+import {
+	getKnownWeaponMasteriesForKey,
+	getKnownWeaponPropertiesForKey,
+} from '../dnd/weapons/weaponService';
+import { STATIC_WEAPON_TYPES } from '../data/staticData';
 import { is2024Source } from '../utils/wikiPageFetcher';
 import { DndDirectiveSuggest } from './baseSuggest';
 import { getTextSuggestions } from './suggestHelpers';
@@ -14,7 +17,7 @@ export class WeaponListSuggest extends DndDirectiveSuggest {
 			appPlugin,
 			/^(?:```\s*dnd([a-z0-9]*)-weaponlist\s*)$/i,
 			['type', 'property', 'mastery'],
-			['type', 'property', 'mastery', 'showpropertytable', 'searchmode'],
+			['type', 'property', 'mastery', 'showpropertytable', 'showmasterytable', 'searchmode'],
 		);
 	}
 
@@ -31,20 +34,33 @@ export class WeaponListSuggest extends DndDirectiveSuggest {
 			);
 		}
 		if (this.currentKey === 'mastery') {
-			return is2024Source(this.getBaseUrl(this.currentUrlKey))
-				? getTextSuggestions(STATIC_WEAPON_MASTERY, query, 'startsWith')
-				: [];
+			if(is2024Source(this.getBaseUrl(this.currentUrlKey)))
+				return [];
+
+			return getTextSuggestions(
+				getKnownWeaponMasteriesForKey(this.currentUrlKey),
+				query,
+				'startsWith',
+			);
 		}
 		if (this.currentKey === 'showpropertytable') {
 			return getTextSuggestions(['Show', 'Hide', 'Only'], query, 'startsWith');
+		}
+		if (this.currentKey === 'showmasterytable') {
+			return is2024Source(this.getBaseUrl(this.currentUrlKey))
+				? getTextSuggestions(['Show', 'Hide', 'Only'], query, 'startsWith')
+				: [];
 		}
 
 		if (this.currentKey === 'searchmode') {
 			return getTextSuggestions(['Or', 'And'], query, 'startsWith');
 		}
 
-		const properties = ['type:', 'property:', 'showPropertyTable:', 'search:', 'searchMode:'];
-		if (is2024Source(this.getBaseUrl(this.currentUrlKey))) properties.splice(2, 0, 'mastery:');
+		const properties = ['type:', 'property:'];
+		if (is2024Source(this.getBaseUrl(this.currentUrlKey))) properties.push('mastery:');
+		properties.push('showPropertyTable:');
+		if (is2024Source(this.getBaseUrl(this.currentUrlKey))) properties.push('showMasteryTable:');
+		properties.push('search:', 'searchMode:');
 		return this.getDirectiveSuggestions(context, properties);
 	}
 }

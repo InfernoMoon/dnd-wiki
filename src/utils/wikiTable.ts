@@ -80,6 +80,18 @@ export function getWikiTableColumnValues(table: WikiCellTableData, columnIndex: 
 		.filter(Boolean);
 }
 
+/** Return a copy of a table with its first header cell renamed for display. */
+export function renameFirstHeader(table: WikiCellTableData, text: string): WikiCellTableData {
+	return {
+		rows: table.rows.map((row, rowIndex) => row.map((cell, cellIndex) => {
+			if (rowIndex === 0 && cellIndex === 0 && cell.isHeader) {
+				return { ...cell, text };
+			}
+			return cell;
+		})),
+	};
+}
+
 function matchesHeader(header: string, matcher: WikiTableHeaderMatcher): boolean {
 	if (typeof matcher === 'function') return matcher(header);
 	return header.trim().toLowerCase() === matcher.trim().toLowerCase();

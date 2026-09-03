@@ -7,10 +7,11 @@ import { STATIC_EQUIPMENT_TYPES } from '../../data/staticData';
 import { ensureEquipmentCached, getEquipmentCollectionName, getEquipmentIndex } from './equipmentService';
 import type { EquipmentIndexEntry } from './equipmentService';
 import { EquipmentListCacheItem } from './equipmentListCacheItem';
-import type { EquipmentTypeDirective } from './equipmentListCacheItem';
+import type { EquipmentTypeDirective, WeaponTypeDirective } from './equipmentListCacheItem';
 
 interface EquipmentListDirectives {
 	type: EquipmentTypeDirective;
+	weaponType: WeaponTypeDirective;
 }
 
 const equipmentListCache = new FilteredListCache<EquipmentListCacheItem, string[]>();
@@ -26,11 +27,11 @@ export async function renderEquipmentList(
 	if (!requireBaseUrl(el, baseUrl)) return;
 
 	const directives = parseEquipmentListDirectives(source);
-	const cacheItem = new EquipmentListCacheItem(directives.type);
+	const cacheItem = new EquipmentListCacheItem(directives.type, directives.weaponType);
 	let names = equipmentListCache.get(urlKey, cacheItem);
 	if (names === null) {
-		const index = await getEquipmentIndex(urlKey, baseUrl);
-		names = filterEquipmentNames(index.items, directives.type);
+		const index = await getEquipmentIndex(urlKey, baseUrl, directives.type, directives.weaponType);
+		names = filterEquipmentNames(index.items, directives.type, directives.weaponType);
 		equipmentListCache.set(urlKey, cacheItem, names);
 	}
 
@@ -62,8 +63,11 @@ export async function renderEquipmentList(
 }
 
 function parseEquipmentListDirectives(source: string): EquipmentListDirectives {
-	const properties = getTextProperties(source, ['type']);
-	return { type: parseTypeDirective(properties.get('type') ?? []) };
+	const properties = getTextProperties(source, ['type', 'weapontype']);
+	return {
+		type: parseTypeDirective(properties.get('type') ?? []),
+		weaponType: parseWeaponTypeDirective(properties.get('weapontype') ?? []),
+	};
 }
 
 function parseTypeDirective(values: string[]): EquipmentTypeDirective {
@@ -77,13 +81,38 @@ function parseTypeDirective(values: string[]): EquipmentTypeDirective {
 	return types.length ? Array.from(new Set(types)) : 'all';
 }
 
-function filterEquipmentNames(items: EquipmentIndexEntry[], type: EquipmentTypeDirective): string[] {
-	if (type === 'all' || !Array.isArray(type) || !type.length) {
-		return uniqueNames(items);
+function parseWeaponTypeDirective(values: string[]): WeaponTypeDirective {
+	const raw = values.join(',').trim();
+	if (!raw || raw.toLowerCase() === 'all') return 'all';
+
+	const types = raw
+		.split(',')
+		.map(value => normalizeWeaponType(value))
+		.filter(Boolean);
+	return types.length ? Array.from(new Set(types)) : 'all';
+}
+
+function filterEquipmentNames(
+	items: EquipmentIndexEntry[],
+	type: EquipmentTypeDirective,
+	weaponType: WeaponTypeDirective,
+): string[] {
+	let filteredItems = items;
+	if (Array.isArray(type) && type.length) {
+		const allowedTypes = new Set(type);
+		filteredItems = filteredItems.filter(item => allowedTypes.has(normalizeType(item.type)));
 	}
 
-	const allowedTypes = new Set(type);
-	return uniqueNames(items.filter(item => allowedTypes.has(normalizeType(item.type))));
+	if (Array.isArray(weaponType) && weaponType.length) {
+		const allowedWeaponTypes = new Set(weaponType);
+		filteredItems = filteredItems.filter(item =>
+			normalizeType(item.type) === 'weapons'
+			&& item.weaponType !== undefined
+			&& allowedWeaponTypes.has(normalizeWeaponType(item.weaponType)),
+		);
+	}
+
+	return uniqueNames(filteredItems);
 }
 
 function uniqueNames(items: EquipmentIndexEntry[]): string[] {
@@ -99,6 +128,10 @@ function normalizeType(type: string): string {
 	return normalized;
 }
 
+function normalizeWeaponType(type: string): string {
+	return type.trim().toLowerCase().replace(/\s+/g, '-');
+}
+
 function buildHeading(type: EquipmentTypeDirective): string {
 	if (type === 'all' || !Array.isArray(type) || !type.length) return 'All Equipment';
 	return type.map(formatEquipmentTypeForHeading).join(', ');
@@ -106,7 +139,7 @@ function buildHeading(type: EquipmentTypeDirective): string {
 
 function formatEquipmentTypeForHeading(type: string): string {
 	const normalized = normalizeType(type);
-	if (normalized === 'armor-and-shields') return STATIC_EQUIPMENT_TYPES[0];
-	if (normalized === 'weapons') return STATIC_EQUIPMENT_TYPES[1];
+	if (normalized === 'armor-and-shields') return STATIC_EQUIPMENT_TYPES.get('armor') ?? 'Armor and Shields';
+	if (normalized === 'weapons') return STATIC_EQUIPMENT_TYPES.get('weapons') ?? 'Weapons';
 	return displayNameFromSlug(type);
 }

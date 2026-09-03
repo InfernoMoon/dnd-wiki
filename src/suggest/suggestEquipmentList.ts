@@ -1,9 +1,9 @@
 import type { App, EditorSuggestContext } from 'obsidian';
-import { STATIC_EQUIPMENT_TYPES } from '../data/staticData';
+import { STATIC_EQUIPMENT_TYPES, STATIC_WEAPON_TYPES } from '../data/staticData';
 import { DndDirectiveSuggest } from './baseSuggest';
 import { getBlockPropertyValues, getTextSuggestions } from './suggestHelpers';
 
-const EQUIPMENT_TYPES = ['All', ...STATIC_EQUIPMENT_TYPES];
+const EQUIPMENT_TYPES = ['All', ...Array.from(STATIC_EQUIPMENT_TYPES.values())];
 
 /** Suggest equipment-list properties and their supported type values. */
 export class EquipmentListSuggest extends DndDirectiveSuggest {
@@ -11,8 +11,8 @@ export class EquipmentListSuggest extends DndDirectiveSuggest {
 		super(
 			appPlugin,
 			/^(?:```\s*dnd([a-z0-9]*)-equipmentlist\s*)$/i,
-			['type'],
-			['type'],
+			['type', 'weapontype'],
+			['type', 'weapontype'],
 			getEquipmentAdditionalProperties,
 		);
 	}
@@ -22,7 +22,9 @@ export class EquipmentListSuggest extends DndDirectiveSuggest {
 		if (this.currentKey === 'type') {
 			return getTextSuggestions(EQUIPMENT_TYPES, query, 'startsWith');
 		}
-		if (this.currentKey === 'weapontype') return [];
+		if (this.currentKey === 'weapontype') {
+			return getTextSuggestions(Array.from(STATIC_WEAPON_TYPES.values()), query, 'startsWith');
+		}
 
 		return this.getDirectiveSuggestions(context, ['type:']);
 	}
@@ -33,6 +35,6 @@ function getEquipmentAdditionalProperties(context: EditorSuggestContext): string
 	const includesWeapons = typeValues.some(value => value
 		.split(',')
 		.map(type => type.trim().toLowerCase().replace(/\s+/g, '-'))
-		.some(type => type === 'weapon' || type === 'weapons'));
+		.some(type => type === 'all' || type === 'weapon' || type === 'weapons'));
 	return includesWeapons ? ['weapontype:'] : [];
 }

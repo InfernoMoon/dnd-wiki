@@ -31,8 +31,19 @@ export function matchesSearch(
 	const text = `${cached.title} ${cached.html
 		.replace(/<[^>]*>/g, ' ')
 		.replace(/\s+/g, ' ')}`.toLowerCase();
+	return matchesSearchText(text, searches, searchMode);
+}
 
+/** Test whether plain text contains the requested search terms. */
+export function matchesSearchText(
+	text: string,
+	searches: string[],
+	searchMode: SearchMode,
+): boolean {
+	if (!searches.length) return true;
+
+	const normalizedText = text.toLowerCase();
 	return searchMode === 'and'
-		? searches.every(search => text.includes(search))
-		: searches.some(search => text.includes(search));
+		? searches.every(search => normalizedText.includes(search))
+		: searches.some(search => normalizedText.includes(search));
 }

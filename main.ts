@@ -13,6 +13,10 @@ import { ItemListSuggest } from './src/suggest/suggestItemList';
 import { EquipmentListSuggest } from './src/suggest/suggestEquipmentList';
 import { renderEquipment } from './src/dnd/equipment/equipment';
 import { renderEquipmentList } from './src/dnd/equipment/equipmentList';
+import { WeaponListSuggest } from './src/suggest/suggestWeaponList';
+import { WeaponNameSuggest } from './src/suggest/suggestWeapon';
+import { renderWeapon } from './src/dnd/weapons/weapon';
+import { renderWeaponList } from './src/dnd/weapons/weaponList';
 import { BackgroundNameSuggest } from './src/suggest/suggestBackground';
 import { FeatListSuggest } from './src/suggest/suggestFeatList';
 import { BackgroundListSuggest } from './src/suggest/suggestBackgroundList';
@@ -24,6 +28,7 @@ import { preloadAllFeatIds } from './src/dnd/feats/featService';
 import { preloadAllItemIds } from './src/dnd/items/itemService';
 import { preloadAllBackgroundIds } from './src/dnd/backgrounds/backgroundService';
 import { preloadAllLineageIds } from './src/dnd/lineages/lineageService';
+import { preloadAllWeaponNames } from './src/dnd/weapons/weaponService';
 import { renderFeatList } from './src/dnd/feats/featList';
 import { renderItemList } from './src/dnd/items/itemList';
 import { renderBackground } from './src/dnd/backgrounds/background';
@@ -68,6 +73,8 @@ export default class DndWiki extends Plugin {
 		registerSuggest(new ItemNameSuggest(this));
 		registerSuggest(new ItemListSuggest(this));
 		registerSuggest(new EquipmentListSuggest(this));
+		registerSuggest(new WeaponNameSuggest(this));
+		registerSuggest(new WeaponListSuggest(this));
 		registerSuggest(new BackgroundNameSuggest(this));
 		registerSuggest(new BackgroundListSuggest(this));
 		registerSuggest(new LineageNameSuggest(this));
@@ -122,6 +129,12 @@ export default class DndWiki extends Plugin {
 				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-equipmentlist`, async (source, el, ctx) => {
 					await renderEquipmentList(source, el, ctx, urlKey, baseUrl);
 				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-weapon`, async (source, el, ctx) => {
+					await renderWeapon(source, el, ctx, urlKey, baseUrl);
+				});
+				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-weaponlist`, async (source, el, ctx) => {
+					await renderWeaponList(source, el, ctx, urlKey, baseUrl);
+				});
 				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-background`, async (source, el, ctx) => {
 					await renderBackground(source, el, ctx, urlKey, baseUrl);
 				});
@@ -158,6 +171,7 @@ export default class DndWiki extends Plugin {
 					await preloadAllItemIds(urlKey, url);
 					await preloadAllBackgroundIds(urlKey, url);
 					await preloadAllLineageIds(urlKey, url);
+					await preloadAllWeaponNames(urlKey, url);
 				}
 			} catch (e) {
 				console.warn('Failed to preload data', e);

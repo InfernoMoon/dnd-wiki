@@ -38,10 +38,20 @@ export const STATIC_ITEM_TYPES: string[] = [
   "Wondrous Item"
 ];
 
-export const STATIC_EQUIPMENT_TYPES: string[] = [
-  "Armor and Shields",
-  "Weapons"
-];
+/** Equipment type IDs mapped to their display names. */
+export const STATIC_EQUIPMENT_TYPES = new Map<string, string>([
+  ["armor", "Armor and Shields"],
+  ["weapons", "Weapons"],
+]);
+
+/** Weapon type IDs mapped to their display names. */
+export const STATIC_WEAPON_TYPES = new Map<string, string>([
+  ["simple-melee", "Simple Melee"],
+  ["simple-ranged", "Simple Ranged"],
+  ["martial-melee", "Martial Melee"],
+  ["martial-ranged", "Martial Ranged"],
+  ["ammunition", "Ammunition"],
+]);
 
 export const STATIC_ITEM_RARITY_WORD_TO_INDEX: Record<string, number> = {
   common: 0,

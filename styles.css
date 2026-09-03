@@ -17,6 +17,7 @@
 .dnd-wiki-card-content {
 	display: none;
 	margin-top: 0.5em;
+	margin-left: 1.5em;
 }
 
 .dnd-wiki-card-content-visible {

@@ -1,19 +1,7 @@
-/**
- * spell.ts
- * Markdown code block processor for ```dnd-spell blocks.
- * Renders one or more spell cards by delegating to `renderSingleSpell`.
- * Keeps the entrypoint minimal and focused on parsing input and layout.
- */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { renderSingleSpell } from './spellUtils';
 import { prepareNameInput } from '../../utils/renderer';
 
-/**
- * Render one or more spells inside a ```dnd-spell code block.
- * - Splits the block content into lines (each a spell name)
- * - Validates Base URL from settings
- * - Creates a container and renders each spell as a collapsible card
- */
 export async function renderSpell(
   source: string,
   el: HTMLElement,

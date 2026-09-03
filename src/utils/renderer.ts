@@ -13,6 +13,26 @@ export function renderNoResultsMessage(el: HTMLElement, itemLabel: string): void
 	el.createDiv({ text: `No ${itemLabel} found.` });
 }
 
+/** Render plain text rows in a table using the headers supplied by the source. */
+export function renderTable(
+	el: HTMLElement,
+	headers: readonly string[],
+	rows: readonly (readonly string[])[],
+): void {
+	const table = el.createEl('table', { cls: 'dnd-wiki-table' });
+	const head = table.createEl('thead');
+	const headerRow = head.createEl('tr');
+	for (const header of headers) headerRow.createEl('th', { text: header });
+
+	const body = table.createEl('tbody');
+	for (const row of rows) {
+		const tableRow = body.createEl('tr');
+		for (let index = 0; index < headers.length; index++) {
+			tableRow.createEl('td', { text: row[index] ?? '' });
+		}
+	}
+}
+
 /** Prepare line-separated names or IDs for a renderer. */
 export function prepareNameInput(
 	el: HTMLElement,

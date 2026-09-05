@@ -3,6 +3,7 @@ import { peekBaseUrls, setBaseUrls } from './settingsService';
 import { DEFAULT_HOMEBREW_FOLDER, getHomebrewSettings, setHomebrewSettings } from '../homebrew/homebrewSettings';
 import type { HomebrewSettings } from '../homebrew/homebrewSettings';
 import { ensureHomebrewFolderPath } from '../homebrew/homebrew';
+import { updateHomebrewFiles } from '../homebrew/homebrew';
 import { createHomebrewTemplateFolders } from '../homebrew/homebrewTemplates';
 import { openHomebrewFileModal } from '../homebrew/homebrewCommand';
 
@@ -193,6 +194,26 @@ export class DndCardsSettingTab extends PluginSettingTab {
             void setHomebrewSettings(settings).catch((error: unknown) => {
               console.warn('DnD Wiki: Failed to save ignored homebrew file prefixes', error);
             });
+          });
+      });
+
+    new Setting(containerEl)
+      .setName('Refresh homebrew')
+      .setDesc('Find and cache homebrew files using the current settings.')
+      .addButton((button) => {
+        button.setButtonText('Refresh homebrew')
+          .onClick(() => {
+            void getHomebrewSettings()
+              .then((currentSettings) => updateHomebrewFiles(
+                this.app.vault,
+                this.app.metadataCache,
+                currentSettings,
+              ))
+              .then(() => new Notice('Homebrew refreshed.'))
+              .catch((error: unknown) => {
+                console.error('DnD Wiki: Failed to refresh homebrew files', error);
+                new Notice('Failed to refresh homebrew files. See the console for details.');
+              });
           });
       });
 

@@ -47,11 +47,13 @@ import { isBlankLineInsideDndBlock } from './src/suggest/suggestHelpers';
 import { ensureHomebrewPropertyTypes, updateHomebrewFiles } from './src/homebrew/homebrew';
 import { registerHomebrewFileCommand } from './src/homebrew/homebrewCommand';
 import { applyHomebrewSuggestionValues, getHomebrewSettings } from './src/homebrew/homebrewSettings';
+import { configureHomebrewService } from './src/homebrew/homebrewService';
 
 
 export default class DndWiki extends Plugin {
 	async onload() {
 		configurePluginRef(this);
+		configureHomebrewService(this.app);
 		registerHomebrewFileCommand(this.app, (command) => this.addCommand(command));
 		void ensureHomebrewPropertyTypes(this.app.vault).catch((error: unknown) => {
 			console.warn('DnD Wiki: Failed to ensure homebrew property types', error);
@@ -107,7 +109,7 @@ export default class DndWiki extends Plugin {
 		
 		this.app.workspace.onLayoutReady(async () => {
 			try {
-				updateHomebrewFiles(this.app.vault, this.app.metadataCache, await getHomebrewSettings());
+				await updateHomebrewFiles(this.app.vault, this.app.metadataCache, await getHomebrewSettings());
 			} catch (error: unknown) {
 				console.warn('DnD Wiki: Failed to find homebrew files', error);
 			}

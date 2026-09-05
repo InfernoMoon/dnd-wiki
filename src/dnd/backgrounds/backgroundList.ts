@@ -5,6 +5,7 @@ import { displayNameFromSlug } from '../../utils/text';
 import { matchesSearch, parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
 import { renderCollapsible, renderNoResultsMessage, requireBaseUrl } from '../../utils/renderer';
+import { getCachedHomebrewBackgroundIds } from '../../homebrew/homebrewService';
 
 async function renderBackgroundCards(
 	ids: string[],
@@ -46,7 +47,10 @@ export async function renderBackgroundList(
 	const searches = parseSearchDirective(source);
 	const searchMode = parseSearchModeDirective(source);
 	const status = el.createDiv({ text: 'Waiting for background data…' });
-	const ids = await waitForCachedIds(() => backgroundIdCache.get(urlKey));
+	const ids = await waitForCachedIds(() => Array.from(new Set([
+		...backgroundIdCache.get(urlKey),
+		...getCachedHomebrewBackgroundIds(),
+	])));
 
 	if (!ids.length) {
 		status.setText('No backgrounds found after 30 seconds. Please reload the plugin.');

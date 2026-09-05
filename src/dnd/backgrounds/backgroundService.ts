@@ -4,6 +4,12 @@ import type { CachedRender } from '../../cache/renderCache';
 import { fetchPageContentWithSlugFallbacks, is2024Source } from '../../utils/wikiPageFetcher';
 import { nameToSlugs } from '../../utils/text';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../../utils/wikiIndexLoader';
+import {
+	getCachedHomebrewBackgroundIds,
+	getSimpleCachedHomebrewContent,
+	homebrewBackgroundPaths,
+	homebrewBackgrounds,
+} from '../../homebrew/homebrewService';
 
 export const backgroundIdCache = new IdCache();
 const backgroundRenderCache = new RenderCache<CachedRender>();
@@ -23,6 +29,16 @@ export async function ensureBackgroundCached(
 		const existing = backgroundRenderCache.get(urlKey, backgroundId);
 		if (existing) return existing;
 	}
+	const homebrew = await getSimpleCachedHomebrewContent(
+		backgroundName,
+		homebrewBackgrounds,
+		homebrewBackgroundPaths,
+	);
+	if (homebrew) {
+		backgroundIdCache.addMany(urlKey, backgroundIds);
+		for (const backgroundId of backgroundIds) backgroundRenderCache.set(urlKey, backgroundId, homebrew);
+		return homebrew;
+	}
 
 	const fetched = await fetchPageContentWithSlugFallbacks(baseUrl, 'background', backgroundName);
 	if (!fetched.ok) return null;
@@ -36,6 +52,7 @@ export async function ensureBackgroundCached(
 }
 
 export async function preloadAllBackgroundIds(urlKey: string, baseUrl: string): Promise<void> {
+	backgroundIdCache.addMany(urlKey, getCachedHomebrewBackgroundIds());
 	const config: LoaderConfig = {
 		baseUrl,
 		indexPath: '/backgrounds',

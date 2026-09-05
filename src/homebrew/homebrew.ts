@@ -2,6 +2,7 @@ import { getAllTags, normalizePath, TFolder } from 'obsidian';
 import type { MetadataCache, TFile, Vault } from 'obsidian';
 import { DEFAULT_HOMEBREW_FOLDER } from './homebrewSettings';
 import type { HomebrewSettings } from './homebrewSettings';
+import { updateHomebrewFileCache } from './homebrewService';
 
 const HOMEBREW_PROPERTY_TYPES: Record<string, string> = {
 	'spell-level-dndwiki': 'number',
@@ -25,11 +26,11 @@ const HOMEBREW_PROPERTY_TYPES: Record<string, string> = {
 export type HomebrewFilesByType = Record<string, TFile[]>;
 
 /** Find Markdown homebrew files and group them by their `dndwiki/{type}` tag. */
-export function updateHomebrewFiles(
+export async function updateHomebrewFiles(
 	vault: Vault,
 	metadataCache: MetadataCache,
 	settings: HomebrewSettings,
-): HomebrewFilesByType {
+): Promise<void> {
 	const filesByType: HomebrewFilesByType = {};
 	const homebrewFolderPath = normalizePath(settings.folderPath).replace(/^\/+|\/+$/g, '');
 	const homebrewFolderPrefix = homebrewFolderPath ? `${homebrewFolderPath}/` : '';
@@ -41,7 +42,7 @@ export function updateHomebrewFiles(
 		const cache = metadataCache.getFileCache(file);
 		const tags = cache ? getAllTags(cache) ?? [] : [];
 		for (const tag of tags) {
-			const match = /^#dndwiki\/([^/\s]+)$/i.exec(tag);
+			const match = /^#?dndwiki\/([^/\s]+)$/i.exec(tag);
 			if (!match) continue;
 
 			const type = match[1].toLowerCase();
@@ -49,8 +50,7 @@ export function updateHomebrewFiles(
 		}
 	}
 
-
-	return filesByType;
+	await updateHomebrewFileCache(vault, filesByType);
 }
 
 export async function ensureHomebrewFolderPath(vault: Vault, settings: HomebrewSettings): Promise<string> {

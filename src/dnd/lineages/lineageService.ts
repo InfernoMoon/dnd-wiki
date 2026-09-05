@@ -4,6 +4,12 @@ import type { CachedRender } from '../../cache/renderCache';
 import { fetchPageContentWithSlugFallbacks, is2024Source } from '../../utils/wikiPageFetcher';
 import { nameToSlugs } from '../../utils/text';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../../utils/wikiIndexLoader';
+import {
+	getCachedHomebrewLineageIds,
+	getSimpleCachedHomebrewContent,
+	homebrewLineagePaths,
+	homebrewLineages,
+} from '../../homebrew/homebrewService';
 
 export const lineageIdCache = new IdCache();
 const lineageRenderCache = new RenderCache<CachedRender>();
@@ -23,6 +29,12 @@ export async function ensureLineageCached(
 		const existing = lineageRenderCache.get(urlKey, lineageId);
 		if (existing) return existing;
 	}
+	const homebrew = await getSimpleCachedHomebrewContent(lineageName, homebrewLineages, homebrewLineagePaths);
+	if (homebrew) {
+		lineageIdCache.addMany(urlKey, lineageIds);
+		for (const lineageId of lineageIds) lineageRenderCache.set(urlKey, lineageId, homebrew);
+		return homebrew;
+	}
 
 	const lineagePageType = is2024Source(baseUrl) ? 'species' : 'lineage';
 	const fetched = await fetchPageContentWithSlugFallbacks(baseUrl, lineagePageType, lineageName);
@@ -37,6 +49,7 @@ export async function ensureLineageCached(
 }
 
 export async function preloadAllLineageIds(urlKey: string, baseUrl: string): Promise<void> {
+	lineageIdCache.addMany(urlKey, getCachedHomebrewLineageIds());
 	const is2024 = is2024Source(baseUrl);
 
 	if (is2024) {

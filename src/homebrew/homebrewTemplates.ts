@@ -221,10 +221,10 @@ A creature can take a Utilize action to make a DC 5 Strength (Athletics) check, 
 				`,
 		},
 		{
-			path: `${rootPath}/Backgrounds/_Shelf.md`,
+			path: `${rootPath}/Lineages/_Shelf.md`,
 			content: `---
 tags:
-  - dndwiki/background
+  - dndwiki/lineage
 ---
 _**Shelves are a magical things of otherworldly utility, living in places of practical beauty, in the midst of ancient libraries or in towering cupboards glittering with polished wood, where the soft creak of floorboards drifts through the air and the gentle fragrance of old books wafts on the breeze. Shelves love storage and organization, books and decoration, and keeping things exactly where someone left them.**_
 
@@ -307,10 +307,10 @@ You gain the following benefits.
 `,
 		},
 		{
-			path: `${rootPath}/Lineages/_Folk Villain.md`,
+			path: `${rootPath}/Backgrounds/_Folk Villain.md`,
 			content: `---
 tags:
-  - dndwiki/lineage
+  - dndwiki/background
 ---
 **You come from an arrogant social rank, and you believe you were destined for exactly that. The people of your home village once regarded you as a useless chump, and your destiny calls you to rise above the common folk, crush those who stand against you, and take your rightful place among the tyrants and monsters who rule the world.**
 

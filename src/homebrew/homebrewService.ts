@@ -5,6 +5,10 @@ import { displayNameFromSlug, nameToSlugs } from '../utils/text';
 
 export const homebrewBackgrounds = new Map<string, string>();
 export const homebrewBackgroundPaths = new Map<string, string>();
+export const homebrewFeats = new Map<string, string>();
+export const homebrewFeatPaths = new Map<string, string>();
+export const homebrewLineages = new Map<string, string>();
+export const homebrewLineagePaths = new Map<string, string>();
 let app: App | null = null;
 
 /** Connect the homebrew renderer to the active Obsidian app. */
@@ -17,6 +21,14 @@ export function getCachedHomebrewBackgroundIds(): string[] {
 	return Array.from(homebrewBackgrounds.keys());
 }
 
+export function getCachedHomebrewFeatIds(): string[] {
+	return Array.from(homebrewFeats.keys());
+}
+
+export function getCachedHomebrewLineageIds(): string[] {
+	return Array.from(homebrewLineages.keys());
+}
+
 /** Cache supported homebrew files. Backgrounds are the first supported type. */
 export async function updateHomebrewFileCache(
 	vault: Vault,
@@ -24,11 +36,26 @@ export async function updateHomebrewFileCache(
 ): Promise<void> {
 	homebrewBackgrounds.clear();
 	homebrewBackgroundPaths.clear();
-	for (const file of filesByType.background ?? []) {
+	homebrewFeats.clear();
+	homebrewFeatPaths.clear();
+	homebrewLineages.clear();
+	homebrewLineagePaths.clear();
+	await cacheHomebrewFiles(vault, filesByType.background, homebrewBackgrounds, homebrewBackgroundPaths);
+	await cacheHomebrewFiles(vault, filesByType.feat, homebrewFeats, homebrewFeatPaths);
+	await cacheHomebrewFiles(vault, filesByType.lineage, homebrewLineages, homebrewLineagePaths);
+}
+
+async function cacheHomebrewFiles(
+	vault: Vault,
+	files: TFile[] | undefined,
+	contentByKey: Map<string, string>,
+	pathByKey: Map<string, string>,
+): Promise<void> {
+	for (const file of files ?? []) {
 		const text = await vault.cachedRead(file);
 		for (const key of nameToSlugs(file.basename)) {
-			homebrewBackgrounds.set(key, text);
-			homebrewBackgroundPaths.set(key, file.path);
+			contentByKey.set(key, text);
+			pathByKey.set(key, file.path);
 		}
 	}
 }
@@ -48,6 +75,9 @@ export async function getSimpleCachedHomebrewContent(
 	if (text === undefined || !app) return null;
 	const sourcePath = pathByKey.get(key) ?? '';
 	const container = document.createElement('div');
+	const sourceLabel = document.createElement('p');
+	sourceLabel.textContent = 'Source: Custom Homebrew';
+	container.appendChild(sourceLabel);
 	const component = new Component();
 	component.load();
 	try {

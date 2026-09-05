@@ -6,6 +6,7 @@ import { displayNameFromSlug } from '../../utils/text';
 import { matchesSearch, parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
 import { renderCollapsible, renderNoResultsMessage, requireBaseUrl } from '../../utils/renderer';
+import { getCachedHomebrewFeatIds } from '../../homebrew/homebrewService';
 
 async function renderFeatCards(
 	ids: string[],
@@ -48,7 +49,10 @@ export async function renderFeatList(
 	const searches = parseSearchDirective(source);
 	const searchMode = parseSearchModeDirective(source);
 	const status = el.createDiv({ text: 'Waiting for feat data…' });
-	const ids = await waitForCachedIds(() => featIdCache.get(urlKey));
+	const ids = await waitForCachedIds(() => Array.from(new Set([
+		...featIdCache.get(urlKey),
+		...getCachedHomebrewFeatIds(),
+	])));
 
 	if (!ids.length) {
 		status.setText('No feats found after 30 seconds. Please reload the plugin.');

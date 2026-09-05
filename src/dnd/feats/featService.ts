@@ -4,6 +4,12 @@ import type { CachedRender } from '../../cache/renderCache';
 import { fetchPageContentWithSlugFallbacks, is2024Source } from '../../utils/wikiPageFetcher';
 import { nameToSlugs } from '../../utils/text';
 import { loadFromLinks, loadFromTable, LoaderConfig } from '../../utils/wikiIndexLoader';
+import {
+	getCachedHomebrewFeatIds,
+	getSimpleCachedHomebrewContent,
+	homebrewFeatPaths,
+	homebrewFeats,
+} from '../../homebrew/homebrewService';
 
 export const featIdCache = new IdCache();
 const featRenderCache = new RenderCache<CachedRender>();
@@ -19,6 +25,12 @@ export async function ensureFeatCached(
 		const existing = featRenderCache.get(urlKey, featId);
 		if (existing) return existing;
 	}
+	const homebrew = await getSimpleCachedHomebrewContent(featName, homebrewFeats, homebrewFeatPaths);
+	if (homebrew) {
+		featIdCache.addMany(urlKey, featIds);
+		for (const featId of featIds) featRenderCache.set(urlKey, featId, homebrew);
+		return homebrew;
+	}
 
 	const fetched = await fetchPageContentWithSlugFallbacks(baseUrl, 'feat', featName);
 	if (!fetched.ok) return null;
@@ -32,6 +44,7 @@ export async function ensureFeatCached(
 }
 
 export async function preloadAllFeatIds(urlKey: string, baseUrl: string): Promise<void> {
+	featIdCache.addMany(urlKey, getCachedHomebrewFeatIds());
 	const config: LoaderConfig = {
 		baseUrl,
 		indexPath: '/feats',

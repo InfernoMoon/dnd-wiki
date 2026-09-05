@@ -46,6 +46,7 @@ import { BaseTextSuggest } from './src/suggest/baseSuggest';
 import { isBlankLineInsideDndBlock } from './src/suggest/suggestHelpers';
 import { ensureHomebrewPropertyTypes } from './src/homebrew/homebrew';
 import { registerHomebrewFileCommand } from './src/homebrew/homebrewCommand';
+import { applyHomebrewSuggestionValues, getHomebrewSettings } from './src/homebrew/homebrewSettings';
 
 
 export default class DndWiki extends Plugin {
@@ -56,6 +57,7 @@ export default class DndWiki extends Plugin {
 			console.warn('DnD Wiki: Failed to ensure homebrew property types', error);
 		});
 		await initializeDefaultUrls();
+		applyHomebrewSuggestionValues(await getHomebrewSettings());
 		const editorSuggesters: BaseTextSuggest[] = [];
 		const urlsSnapshot = await peekBaseUrls();
 		const registerSuggest = <T extends BaseTextSuggest>(suggest: T): T => {

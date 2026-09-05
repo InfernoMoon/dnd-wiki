@@ -5,7 +5,7 @@ import { requestUrl } from 'obsidian';
 import { displayNameFromSlug, nameToSlugs } from '../../utils/text';
 import { fetchPageContentWithSlugFallbacks, is2024Source } from '../../utils/wikiPageFetcher';
 import { loadFromTable, LoaderConfig } from '../../utils/wikiIndexLoader';
-import { STATIC_ITEM_TYPES } from '../../data/staticData';
+import { getHomebrewMagicItemTypes, STATIC_ITEM_TYPES } from '../../data/staticData';
 
 export const itemIdCache = new IdCache();
 const itemRenderCache = new RenderCache<CachedRender>();
@@ -60,7 +60,11 @@ export async function ensureItemCached(
 }
 
 export function getItemTypeSuggestions(): string[] {
-	return Array.from(new Set([...STATIC_ITEM_TYPES, ...itemTypeCache.values()]))
+	return Array.from(new Set([
+		...STATIC_ITEM_TYPES,
+		...getHomebrewMagicItemTypes(),
+		...itemTypeCache.values(),
+	]))
 		.sort((a, b) => a.localeCompare(b));
 }
 

@@ -1,5 +1,5 @@
 import { App, Modal, Notice, Setting, TFile } from 'obsidian';
-import { getClassNames, getItemRarityNames, getSchoolNames, STATIC_WEAPON_TYPES } from '../data/staticData';
+import { getClassNames, getItemRarityNames, getSchoolNames, getWeaponTypeNames } from '../data/staticData';
 import { getHomebrewSettings } from './homebrewSettings';
 import { getItemTypeSuggestions } from '../dnd/items/itemService';
 import { ensureHomebrewFolderPath } from './homebrew';
@@ -195,7 +195,7 @@ export class HomebrewFileModal extends Modal {
 			.setName('Weapon type')
 			.addDropdown((dropdown) => {
 				dropdown.addOption('', 'Select a weapon type');
-				for (const weaponType of STATIC_WEAPON_TYPES.values()) {
+				for (const weaponType of getWeaponTypeNames()) {
 					dropdown.addOption(weaponType, weaponType);
 				}
 				dropdown.setValue(this.weaponType).onChange((value) => {

@@ -32,6 +32,6 @@ export class ClassNameSuggest extends BaseTextSuggest {
 	}
 
 	getSuggestions(context: { query: string }): Array<{ text: string }> {
-		return getTextSuggestions(this.classNames, context.query);
+		return getTextSuggestions(getClassNames(), context.query);
 	}
 }

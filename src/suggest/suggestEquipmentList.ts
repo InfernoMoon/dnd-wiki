@@ -1,5 +1,5 @@
 import type { App, EditorSuggestContext } from 'obsidian';
-import { STATIC_EQUIPMENT_TYPES, STATIC_WEAPON_TYPES } from '../data/staticData';
+import { getWeaponTypeNames, STATIC_EQUIPMENT_TYPES } from '../data/staticData';
 import { DndDirectiveSuggest } from './baseSuggest';
 import { getBlockPropertyValues, getTextSuggestions } from './suggestHelpers';
 
@@ -23,7 +23,7 @@ export class EquipmentListSuggest extends DndDirectiveSuggest {
 			return getTextSuggestions(EQUIPMENT_TYPES, query, 'startsWith');
 		}
 		if (this.currentKey === 'weapontype') {
-			return getTextSuggestions(Array.from(STATIC_WEAPON_TYPES.values()), query, 'startsWith');
+			return getTextSuggestions(getWeaponTypeNames(), query, 'startsWith');
 		}
 
 		return this.getDirectiveSuggestions(context, ['type:']);

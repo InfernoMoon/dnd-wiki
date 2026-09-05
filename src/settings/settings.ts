@@ -1,6 +1,7 @@
 import { App, Plugin, PluginSettingTab, Setting, Notice } from 'obsidian';
 import { peekBaseUrls, setBaseUrls } from './settingsService';
 import { DEFAULT_HOMEBREW_FOLDER, getHomebrewSettings, setHomebrewSettings } from '../homebrew/homebrewSettings';
+import type { HomebrewSettings } from '../homebrew/homebrewSettings';
 import { ensureHomebrewFolderPath } from '../homebrew/homebrew';
 import { createHomebrewTemplateFolders } from '../homebrew/homebrewTemplates';
 import { openHomebrewFileModal } from '../homebrew/homebrewCommand';
@@ -152,7 +153,7 @@ export class DndCardsSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Create homebrew templates')
-      .setDesc('Create templates for spells, feats, backgrounds, lineages, and magic items.')
+      .setDesc('Create templates for spells, feats, backgrounds, lineages, magic items, and weapons.')
       .addButton((button) => {
         button.setButtonText('Create templates')
           .setCta()
@@ -174,11 +175,52 @@ export class DndCardsSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Add homebrew file')
-      .setDesc('Create and open a spell, feat, background, lineage, or magic item file. This is the same as the Create homebrew file command.')
+      .setDesc('Create and open a spell, feat, background, lineage, magic item, or weapon file. This is the same as the Create homebrew file command.')
       .addButton((button) => {
         button.setButtonText('Add file')
           .setCta()
           .onClick(() => openHomebrewFileModal(this.app));
       });
+
+    const suggestionDetails = containerEl.createEl('details', {
+      cls: 'dnd-wiki-homebrew-suggestion-values',
+    });
+    suggestionDetails.createEl('summary', { text: 'Homebrew suggestion values' });
+    const suggestionContainer = suggestionDetails.createDiv();
+    suggestionContainer.createEl('p', {
+      text: 'Add comma-separated values to include them alongside the built-in suggestions.',
+    });
+    this.addSuggestionValueSetting(suggestionContainer, settings, 'classes', 'Additional classes');
+    this.addSuggestionValueSetting(suggestionContainer, settings, 'magicSchools', 'Additional magic schools');
+    this.addSuggestionValueSetting(suggestionContainer, settings, 'weaponTypes', 'Additional weapon types');
+    this.addSuggestionValueSetting(suggestionContainer, settings, 'magicItemTypes', 'Additional magic item types');
   }
+
+  private addSuggestionValueSetting(
+    containerEl: HTMLElement,
+    settings: HomebrewSettings,
+    key: 'classes' | 'magicSchools' | 'weaponTypes' | 'magicItemTypes',
+    name: string,
+  ): void {
+    new Setting(containerEl)
+      .setName(name)
+      .addText((text) => {
+        text.setValue(settings[key].join(', '))
+          .setPlaceholder('Comma-separated values')
+          .onChange((value) => {
+            settings[key] = parseSuggestionValues(value);
+            void setHomebrewSettings(settings).catch((error: unknown) => {
+              console.warn('DnD Wiki: Failed to save homebrew suggestion values', error);
+            });
+          });
+      });
+  }
+}
+
+function parseSuggestionValues(value: string): string[] {
+  return Array.from(new Map(value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => [entry.toLowerCase(), entry] as const)).values());
 }

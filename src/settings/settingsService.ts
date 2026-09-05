@@ -6,6 +6,10 @@ export interface PluginData {
 	baseurls?: Record<string, string>;
 	homebrewSearchEntireVault?: boolean;
 	homebrewFolderPath?: string;
+	homebrewClasses?: string[];
+	homebrewMagicSchools?: string[];
+	homebrewWeaponTypes?: string[];
+	homebrewMagicItemTypes?: string[];
 }
 
 let pluginRef: Plugin | undefined;

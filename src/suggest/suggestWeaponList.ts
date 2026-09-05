@@ -3,12 +3,10 @@ import {
 	getKnownWeaponMasteriesForKey,
 	getKnownWeaponPropertiesForKey,
 } from '../dnd/weapons/weaponService';
-import { STATIC_WEAPON_TYPES } from '../data/staticData';
+import { getWeaponTypeNames } from '../data/staticData';
 import { is2024Source } from '../utils/wikiPageFetcher';
 import { DndDirectiveSuggest } from './baseSuggest';
 import { getTextSuggestions } from './suggestHelpers';
-
-const WEAPON_TYPES = ['All', ...Array.from(STATIC_WEAPON_TYPES.values())];
 
 /** Suggest weapon-list properties and supported weapon types. */
 export class WeaponListSuggest extends DndDirectiveSuggest {
@@ -24,7 +22,7 @@ export class WeaponListSuggest extends DndDirectiveSuggest {
 	getSuggestions(context: EditorSuggestContext): Array<{ text: string }> {
 		const query = context.query || '';
 		if (this.currentKey === 'type') {
-			return getTextSuggestions(WEAPON_TYPES, query, 'startsWith');
+			return getTextSuggestions(['All', ...getWeaponTypeNames()], query, 'startsWith');
 		}
 		if (this.currentKey === 'property') {
 			return getTextSuggestions(

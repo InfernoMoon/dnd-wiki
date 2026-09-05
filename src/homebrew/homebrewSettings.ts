@@ -8,6 +8,7 @@ export interface HomebrewSettings {
 	magicSchools: string[];
 	weaponTypes: string[];
 	magicItemTypes: string[];
+	ignoredFilePrefixes: string[];
 }
 
 export const DEFAULT_HOMEBREW_FOLDER = 'Custom Homebrew';
@@ -23,6 +24,7 @@ export async function getHomebrewSettings(): Promise<HomebrewSettings> {
 		magicSchools: normalizeSuggestionValues(data.homebrewMagicSchools),
 		weaponTypes: normalizeSuggestionValues(data.homebrewWeaponTypes),
 		magicItemTypes: normalizeSuggestionValues(data.homebrewMagicItemTypes),
+		ignoredFilePrefixes: normalizeSuggestionValues(data.homebrewIgnoredFilePrefixes, ['_']),
 	};
 }
 
@@ -35,6 +37,7 @@ export async function setHomebrewSettings(settings: HomebrewSettings): Promise<v
 	data.homebrewMagicSchools = settings.magicSchools;
 	data.homebrewWeaponTypes = settings.weaponTypes;
 	data.homebrewMagicItemTypes = settings.magicItemTypes;
+	data.homebrewIgnoredFilePrefixes = settings.ignoredFilePrefixes;
 	await savePluginData(data);
 	setHomebrewSuggestionValues(settings);
 }
@@ -44,8 +47,8 @@ export function applyHomebrewSuggestionValues(settings: HomebrewSettings): void 
 	setHomebrewSuggestionValues(settings);
 }
 
-function normalizeSuggestionValues(values: unknown): string[] {
-	if (!Array.isArray(values)) return [];
+function normalizeSuggestionValues(values: unknown, fallback: string[] = []): string[] {
+	if (!Array.isArray(values)) return fallback;
 	return Array.from(new Map(values
 		.filter((value): value is string => typeof value === 'string')
 		.map(value => value.trim())

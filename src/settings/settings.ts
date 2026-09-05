@@ -141,7 +141,7 @@ export class DndCardsSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Search the entire vault for homebrew templates')
-      .setDesc('Reserved for a future option to find homebrew files anywhere in the vault.')
+      .setDesc('Find tagged homebrew files anywhere in the vault instead of only in the homebrew folder.')
       .addToggle((toggle) => {
         toggle.setValue(settings.searchEntireVault).onChange((value) => {
           settings.searchEntireVault = value;
@@ -180,6 +180,20 @@ export class DndCardsSettingTab extends PluginSettingTab {
         button.setButtonText('Add file')
           .setCta()
           .onClick(() => openHomebrewFileModal(this.app));
+      });
+
+    new Setting(containerEl)
+      .setName('Ignored homebrew file prefixes')
+      .setDesc('Comma-separated filename prefixes to exclude when finding homebrew files.')
+      .addText((text) => {
+        text.setValue(settings.ignoredFilePrefixes.join(', '))
+          .setPlaceholder('_')
+          .onChange((value) => {
+            settings.ignoredFilePrefixes = parseSuggestionValues(value);
+            void setHomebrewSettings(settings).catch((error: unknown) => {
+              console.warn('DnD Wiki: Failed to save ignored homebrew file prefixes', error);
+            });
+          });
       });
 
     const suggestionDetails = containerEl.createEl('details', {

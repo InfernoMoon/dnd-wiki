@@ -10,6 +10,7 @@ export interface PluginData {
 	homebrewMagicSchools?: string[];
 	homebrewWeaponTypes?: string[];
 	homebrewMagicItemTypes?: string[];
+	homebrewIgnoredFilePrefixes?: string[];
 }
 
 let pluginRef: Plugin | undefined;

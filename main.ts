@@ -44,7 +44,7 @@ import { renderCustom } from './src/dnd/custom/custom';
 import { CustomSuggest } from './src/suggest/suggestCustom';
 import { BaseTextSuggest } from './src/suggest/baseSuggest';
 import { isBlankLineInsideDndBlock } from './src/suggest/suggestHelpers';
-import { ensureHomebrewPropertyTypes } from './src/homebrew/homebrew';
+import { ensureHomebrewPropertyTypes, updateHomebrewFiles } from './src/homebrew/homebrew';
 import { registerHomebrewFileCommand } from './src/homebrew/homebrewCommand';
 import { applyHomebrewSuggestionValues, getHomebrewSettings } from './src/homebrew/homebrewSettings';
 
@@ -105,6 +105,14 @@ export default class DndWiki extends Plugin {
 			}, 0);
 		}));
 		
+		this.app.workspace.onLayoutReady(async () => {
+			try {
+				updateHomebrewFiles(this.app.vault, this.app.metadataCache, await getHomebrewSettings());
+			} catch (error: unknown) {
+				console.warn('DnD Wiki: Failed to find homebrew files', error);
+			}
+		});
+
 		this.app.workspace.onLayoutReady(async () => {
 			const urls = await peekBaseUrls();
 			for (const [urlKey, baseUrl] of Object.entries(urls)) {

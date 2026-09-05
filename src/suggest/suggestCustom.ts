@@ -1,6 +1,6 @@
 import type { Editor, EditorPosition, EditorSuggestTriggerInfo, TFile } from 'obsidian';
 import { BaseTextSuggest } from './baseSuggest';
-import { findDndCodeBlock } from './suggestHelpers';
+import { findDndCodeBlock, getBlockDirectiveKeys } from './suggestHelpers';
 
 export class CustomSuggest extends BaseTextSuggest {
   private hasDirective = false;
@@ -31,7 +31,13 @@ export class CustomSuggest extends BaseTextSuggest {
   getSuggestions(context: { query: string }): Array<{ text: string }> {
     if (this.hasDirective) return [];
     const query = (context.query || '').toLowerCase();
+    const editorContext = this.context;
+    const existingKeys = editorContext ? getBlockDirectiveKeys(editorContext) : new Set<string>();
     return ['source:', 'section:', 'sectionFrom:']
+      .filter((directive) => {
+        const key = directive.replace(/:$/, '').toLowerCase();
+        return key === 'section' || key === 'sectionfrom' || !existingKeys.has(key);
+      })
       .filter((directive) => directive.toLowerCase().startsWith(query) || !query)
       .map((text) => ({ text }));
   }

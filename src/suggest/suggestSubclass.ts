@@ -3,7 +3,7 @@ import { getClassNames } from '../data/staticData';
 import { getKnownSubclassNamesForParent, preloadSubclassIds } from '../dnd/classes/subclassUtils';
 import { getPrimarySlug } from '../utils/text';
 import { DndDirectiveSuggest } from './baseSuggest';
-import { getTextSuggestions } from './suggestHelpers';
+import { getBlockDirectiveKeys, getTextSuggestions } from './suggestHelpers';
 
 export class SubclassNameSuggest extends DndDirectiveSuggest {
 	private currentBaseUrl = '';
@@ -54,7 +54,12 @@ export class SubclassNameSuggest extends DndDirectiveSuggest {
 			const directives = classSlug
 				? ['class:', 'subinfo:', 'section:', 'sectionFrom:']
 				: ['class:'];
-			return getTextSuggestions(directives, query, 'startsWith');
+			const existingKeys = getBlockDirectiveKeys(context);
+			const availableDirectives = directives.filter((directive) => {
+				const key = directive.replace(/:$/, '').toLowerCase();
+				return key === 'subinfo' || key === 'section' || key === 'sectionfrom' || !existingKeys.has(key);
+			});
+			return getTextSuggestions(availableDirectives, query, 'startsWith');
 		}
 
 		if (this.currentKey === 'class') {

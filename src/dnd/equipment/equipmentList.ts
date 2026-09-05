@@ -8,10 +8,13 @@ import { ensureEquipmentCached, getEquipmentCollectionName, getEquipmentIndex } 
 import type { EquipmentIndexEntry } from './equipmentService';
 import { EquipmentListCacheItem } from './equipmentListCacheItem';
 import type { EquipmentTypeDirective, WeaponTypeDirective } from './equipmentListCacheItem';
+import { filterHomebrewNames, parseHomebrewMode } from '../../homebrew/homebrewService';
+import type { HomebrewMode } from '../../homebrew/homebrewService';
 
 interface EquipmentListDirectives {
 	type: EquipmentTypeDirective;
 	weaponType: WeaponTypeDirective;
+	homebrew: HomebrewMode;
 }
 
 const equipmentListCache = new FilteredListCache<EquipmentListCacheItem, string[]>();
@@ -34,6 +37,7 @@ export async function renderEquipmentList(
 		names = filterEquipmentNames(index.items, directives.type, directives.weaponType);
 		equipmentListCache.set(urlKey, cacheItem, names);
 	}
+	names = filterHomebrewNames(names, 'equipment', directives.homebrew);
 
 	if (!names.length) {
 		renderNoResultsMessage(el, getEquipmentCollectionName().toLowerCase());
@@ -63,10 +67,11 @@ export async function renderEquipmentList(
 }
 
 function parseEquipmentListDirectives(source: string): EquipmentListDirectives {
-	const properties = getTextProperties(source, ['type', 'weapontype']);
+	const properties = getTextProperties(source, ['type', 'weapontype', 'homebrew']);
 	return {
 		type: parseTypeDirective(properties.get('type') ?? []),
 		weaponType: parseWeaponTypeDirective(properties.get('weapontype') ?? []),
+		homebrew: parseHomebrewMode(properties.get('homebrew') ?? []),
 	};
 }
 

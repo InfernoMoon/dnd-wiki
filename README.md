@@ -107,6 +107,7 @@ A `spelllist` block displays all available spells unless filters are supplied.
 | `removespells:` | Remove spells from the result | `removespells: Fireball` |
 | `search:` | Search names and rendered content | `search: damage` |
 | `searchMode:` | Combine searches with `and` or `or` | `searchMode: and` |
+| `homebrew:` | Include, exclude, or show only homebrew entries | `homebrew: Only` |
 
 Values within one `class:` or `school:` directive are alternatives. Different filter categories are combined. Repeated `search:` directives use `or` by default; use `searchMode: and` to require every term.
 
@@ -125,11 +126,11 @@ This creates a list of 1st- through 3rd-level Wizard Evocation spells. The chara
 
 | Content type | Filters |
 |---|---|
-| `featlist` | `search:`, `searchMode:` |
-| `weaponlist` | `type:`, `property:`, `mastery:` (2024 only), `showPropertyTable:`, `showMasteryTable:` (2024 only), `search:`, `searchMode:` |
-| `backgroundlist` | `search:`, `searchMode:` |
-| `lineagelist` | `search:`, `searchMode:` |
-| `magicitemlist` | `level:`, `type:`, `attuned:`, `search:`, `searchMode:` |
+| `featlist` | `homebrew:`, `search:`, `searchMode:` |
+| `weaponlist` | `type:`, `property:`, `mastery:` (2024 only), `showPropertyTable:`, `showMasteryTable:` (2024 only), `homebrew:`, `search:`, `searchMode:` |
+| `backgroundlist` | `homebrew:`, `search:`, `searchMode:` |
+| `lineagelist` | `homebrew:`, `search:`, `searchMode:` |
+| `magicitemlist` | `level:`, `type:`, `attuned:`, `homebrew:`, `search:`, `searchMode:` |
 
 This displays feats whose names or descriptions mention either Constitution or Strength:
 

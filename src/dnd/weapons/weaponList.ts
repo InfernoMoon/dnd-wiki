@@ -24,6 +24,8 @@ import { is2024Source } from '../../utils/wikiPageFetcher';
 import { WeaponListCacheItem } from './weaponListCacheItem';
 import type { WeaponTypeDirective } from './weaponListCacheItem';
 import { STATIC_WEAPON_TYPES } from '../../data/staticData';
+import { filterHomebrewNames, parseHomebrewMode } from '../../homebrew/homebrewService';
+import type { HomebrewMode } from '../../homebrew/homebrewService';
 
 interface WeaponListDirectives {
 	type: WeaponTypeDirective;
@@ -33,6 +35,7 @@ interface WeaponListDirectives {
 	masteryTableMode: PropertyTableMode;
 	searches: string[];
 	searchMode: SearchMode;
+	homebrew: HomebrewMode;
 }
 
 type PropertyTableMode = 'hide' | 'show' | 'only';
@@ -60,6 +63,7 @@ export async function renderWeaponList(
 		names = filterWeaponNames(index.items, directives.type);
 		weaponListCache.set(urlKey, cacheItem, names);
 	}
+	names = filterHomebrewNames(names, 'weapon', directives.homebrew);
 
 	if (!names.length) {
 		renderNoResultsMessage(el, getWeaponCollectionName().toLowerCase());
@@ -127,6 +131,7 @@ function parseWeaponListDirectives(source: string, baseUrl: string): WeaponListD
 		'mastery',
 		'showPropertyTable',
 		'showMasteryTable',
+		'homebrew',
 	]);
 	const is2024 = is2024Source(baseUrl);
 	return {
@@ -141,6 +146,7 @@ function parseWeaponListDirectives(source: string, baseUrl: string): WeaponListD
 			: 'hide',
 		searches: parseSearchDirective(source),
 		searchMode: parseSearchModeDirective(source),
+		homebrew: parseHomebrewMode(properties.get('homebrew') ?? []),
 	};
 }
 

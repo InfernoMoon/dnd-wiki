@@ -21,6 +21,8 @@ import type {
 	SpellLevelDirective,
 	SpellFilterDirective,
 } from './spellListCacheItem';
+import { filterHomebrewNames, parseHomebrewMode } from '../../homebrew/homebrewService';
+import type { HomebrewMode } from '../../homebrew/homebrewService';
 
 interface SpellListDirectives {
 	level: SpellLevelDirective;
@@ -30,6 +32,7 @@ interface SpellListDirectives {
 	removeSpells: string[];
 	searches: string[];
 	searchMode: SearchMode;
+	homebrew: HomebrewMode;
 }
 
 interface SpellIndexDocuments {
@@ -83,6 +86,7 @@ export async function renderSpellList(
 	}
 
 	names = applyExplicitSpellChanges(names, directives.addSpells, directives.removeSpells);
+	names = filterHomebrewNames(names, 'spell', directives.homebrew);
 	if (!names.length) {
 		renderNoResultsMessage(el, 'spells');
 		return;
@@ -112,6 +116,7 @@ function parseSpellListDirectives(source: string): SpellListDirectives {
 		'school',
 		'addspells',
 		'removespells',
+		'homebrew',
 	]);
 
 	return {
@@ -122,6 +127,7 @@ function parseSpellListDirectives(source: string): SpellListDirectives {
 		removeSpells: parseSpellNames(properties.get('removespells') ?? []),
 		searches: parseSearchDirective(source),
 		searchMode: parseSearchModeDirective(source),
+		homebrew: parseHomebrewMode(properties.get('homebrew') ?? []),
 	};
 }
 

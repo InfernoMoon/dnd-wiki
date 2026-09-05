@@ -167,7 +167,7 @@ export abstract class DndDirectiveSuggest extends BaseTextSuggest {
 /** Shared directive suggester for simple list blocks. */
 export class SearchListSuggest extends DndDirectiveSuggest {
 	constructor(appPlugin: { app: App }, blockPattern: RegExp) {
-		super(appPlugin, blockPattern, [], ['searchmode']);
+		super(appPlugin, blockPattern, [], ['searchmode', 'homebrew']);
 	}
 
 	getSuggestions(context: EditorSuggestContext): TextSuggestion[] {
@@ -175,6 +175,9 @@ export class SearchListSuggest extends DndDirectiveSuggest {
 		if (this.currentKey === 'searchmode') {
 			return getTextSuggestions(['Or', 'And'], query, 'startsWith');
 		}
-		return getTextSuggestions(['search:', 'searchMode:'], query, 'startsWith');
+		if (this.currentKey === 'homebrew') {
+			return getTextSuggestions(['Include', 'Exclude', 'Only'], query, 'startsWith');
+		}
+		return getTextSuggestions(['homebrew:', 'search:', 'searchMode:'], query, 'startsWith');
 	}
 }

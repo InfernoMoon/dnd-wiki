@@ -15,6 +15,8 @@ import {
 import type { ItemIndex, ItemIndexEntry } from './itemService';
 import { ItemListCacheItem } from './itemListCacheItem';
 import type { LevelDirective } from './itemListCacheItem';
+import { filterHomebrewNames, parseHomebrewMode } from '../../homebrew/homebrewService';
+import type { HomebrewMode } from '../../homebrew/homebrewService';
 
 type TypeDirective = string[] | 'all' | null;
 type AttunedDirective = 'all' | boolean | null;
@@ -25,6 +27,7 @@ interface ItemListDirectives {
 	attuned: AttunedDirective;
 	searches: string[];
 	searchMode: SearchMode;
+	homebrew: HomebrewMode;
 }
 
 interface FilteredItemsResult {
@@ -79,6 +82,7 @@ export async function renderItemList(
 		names = result.names;
 		itemListCache.set(urlKey, cacheItem, names);
 	}
+	names = filterHomebrewNames(names, 'item', directives.homebrew);
 
 	if (!names.length) {
 		renderNoResultsMessage(el, getItemCollectionName(baseUrl).toLowerCase());
@@ -108,7 +112,7 @@ export async function renderItemList(
 }
 
 function parseItemListDirectives(source: string): ItemListDirectives {
-	const properties = getTextProperties(source, ['level', 'type', 'attuned']);
+	const properties = getTextProperties(source, ['level', 'type', 'attuned', 'homebrew']);
 
 	return {
 		level: parseLevelDirective(properties.get('level') ?? []),
@@ -116,6 +120,7 @@ function parseItemListDirectives(source: string): ItemListDirectives {
 		attuned: parseAttunedDirective(properties.get('attuned') ?? []),
 		searches: parseSearchDirective(source),
 		searchMode: parseSearchModeDirective(source),
+		homebrew: parseHomebrewMode(properties.get('homebrew') ?? []),
 	};
 }
 

@@ -6,6 +6,8 @@ import { matchesSearch, parseSearchDirective, parseSearchModeDirective } from '.
 import type { SearchMode } from '../../utils/search';
 import { renderCollapsible, renderNoResultsMessage, requireBaseUrl } from '../../utils/renderer';
 import { getCachedHomebrewLineageIds } from '../../homebrew/homebrewService';
+import { filterHomebrewNames, parseHomebrewMode } from '../../homebrew/homebrewService';
+import { getTextProperties } from '../../utils/directives';
 
 async function renderLineageCards(
 	ids: string[],
@@ -46,11 +48,12 @@ export async function renderLineageList(
 
 	const searches = parseSearchDirective(source);
 	const searchMode = parseSearchModeDirective(source);
+	const homebrew = parseHomebrewMode(getTextProperties(source, ['homebrew']).get('homebrew') ?? []);
 	const status = el.createDiv({ text: 'Waiting for lineage data…' });
-	const ids = await waitForCachedIds(() => Array.from(new Set([
+	const ids = await waitForCachedIds(() => filterHomebrewNames(Array.from(new Set([
 		...lineageIdCache.get(urlKey),
 		...getCachedHomebrewLineageIds(),
-	])));
+	])), 'lineage', homebrew));
 
 	if (!ids.length) {
 		status.setText('No lineages found after 30 seconds. Please reload the plugin.');

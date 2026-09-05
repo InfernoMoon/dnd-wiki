@@ -11,7 +11,7 @@ export class SpellListSuggest extends DndDirectiveSuggest {
 			appPlugin,
 			/^(?:```\s*dnd([a-z0-9]*)-spelllist\s*)$/i,
 			['class', 'school', 'addspells', 'removespells'],
-			['level', 'class', 'school', 'addspells', 'removespells', 'searchmode'],
+			['level', 'class', 'school', 'addspells', 'removespells', 'searchmode', 'homebrew'],
 		);
 	}
 
@@ -20,7 +20,7 @@ export class SpellListSuggest extends DndDirectiveSuggest {
 
 		if (!this.currentKey) {
 			return getTextSuggestions(
-				['level:', 'class:', 'school:', 'addspells:', 'removespells:', 'search:', 'searchMode:'],
+				['level:', 'class:', 'school:', 'addspells:', 'removespells:', 'homebrew:', 'search:', 'searchMode:'],
 				query,
 				'startsWith',
 			);
@@ -36,6 +36,9 @@ export class SpellListSuggest extends DndDirectiveSuggest {
 		}
 		if (this.currentKey === 'searchmode') {
 			return getTextSuggestions(['Or', 'And'], query, 'startsWith');
+		}
+		if (this.currentKey === 'homebrew') {
+			return getTextSuggestions(['Include', 'Exclude', 'Only'], query, 'startsWith');
 		}
 		if (this.currentKey === 'addspells' || this.currentKey === 'removespells') {
 			const names = getKnownSpellIdsForKey(this.currentUrlKey).map(displayNameFromSlug);

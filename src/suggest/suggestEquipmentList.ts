@@ -11,7 +11,7 @@ export class EquipmentListSuggest extends DndDirectiveSuggest {
 		super(
 			appPlugin,
 			/^(?:```\s*dnd([a-z0-9]*)-equipmentlist\s*)$/i,
-			['type', 'weapontype'],
+			['type', 'weapontype', 'homebrew'],
 			['type', 'weapontype'],
 			getEquipmentAdditionalProperties,
 		);
@@ -25,8 +25,11 @@ export class EquipmentListSuggest extends DndDirectiveSuggest {
 		if (this.currentKey === 'weapontype') {
 			return getTextSuggestions(getWeaponTypeNames(), query, 'startsWith');
 		}
+		if (this.currentKey === 'homebrew') {
+			return getTextSuggestions(['Include', 'Exclude', 'Only'], query, 'startsWith');
+		}
 
-		return this.getDirectiveSuggestions(context, ['type:']);
+		return this.getDirectiveSuggestions(context, ['type:', 'homebrew:']);
 	}
 }
 

@@ -9,7 +9,7 @@ export class ItemListSuggest extends DndDirectiveSuggest {
 			appPlugin,
 			/^(?:```\s*dnd([a-z0-9]*)-magicitemlist\s*)$/i,
 			['level', 'type'],
-			['level', 'type', 'attuned', 'searchmode'],
+			['level', 'type', 'attuned', 'searchmode', 'homebrew'],
 		);
 	}
 
@@ -18,7 +18,7 @@ export class ItemListSuggest extends DndDirectiveSuggest {
 
 		if (!this.currentKey) {
 			return getTextSuggestions(
-				['level:', 'type:', 'attuned:', 'search:', 'searchMode:'],
+				['level:', 'type:', 'attuned:', 'homebrew:', 'search:', 'searchMode:'],
 				query,
 				'startsWith',
 			);
@@ -35,6 +35,9 @@ export class ItemListSuggest extends DndDirectiveSuggest {
 		}
 		if (this.currentKey === 'searchmode') {
 			return getTextSuggestions(['Or', 'And'], query, 'startsWith');
+		}
+		if (this.currentKey === 'homebrew') {
+			return getTextSuggestions(['Include', 'Exclude', 'Only'], query, 'startsWith');
 		}
 		if (this.currentKey === 'attuned') {
 			return getTextSuggestions(['All', 'Required', 'Not-Required'], query, 'startsWith');

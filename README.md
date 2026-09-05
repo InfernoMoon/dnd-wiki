@@ -7,12 +7,12 @@ The plugin includes source configurations for both the 2014/5e and 2024 rules. Y
 ## Features
 
 - Display DnD entries as collapsible cards.
-- Create complete or filtered lists of spells, feats, items, backgrounds, and lineages.
+- Create complete or filtered lists of spells, weapons, feats, items, backgrounds, and lineages.
 - Use the included `5e` and `2024` sources or configure your own.
 - Display complete class pages, subclasses, and selected page sections.
 - Load other wiki pages with the generic `custom` block.
 - Get autocomplete for block types, names, and supported filters.
-- Add experimental local custom cards to your vault.
+- Create experimental Markdown homebrew files in your vault.
 
 ![Spell Example](assets/spell-example.gif)
 
@@ -29,7 +29,7 @@ Two versions are configured by default:
 - `5e` uses the DnD 5e source.
 - `2024` uses the DnD 2024 source.
 
-The content type determines what is displayed. Examples include `spell`, `spelllist`, `feat`, `magicitem`, `classinfo`, and `custom`:
+The content type determines what is displayed. Examples include `spell`, `spelllist`, `weapon`, `weaponlist`, `feat`, `magicitem`, `classinfo`, and `custom`:
 
 Individual blocks display named entries:
 
@@ -82,6 +82,7 @@ Enter one name or identifier per line. The following individual content types sh
 | `spell` | Spells |
 | `feat` | Feats |
 | `magicitem` | Magic items |
+| `weapon` | Weapons |
 | `background` | Backgrounds |
 | `lineage` | Lineages, or species for the 2024 source |
 | `class` | Complete class pages |
@@ -125,6 +126,7 @@ This creates a list of 1st- through 3rd-level Wizard Evocation spells. The chara
 | Content type | Filters |
 |---|---|
 | `featlist` | `search:`, `searchMode:` |
+| `weaponlist` | `type:`, `property:`, `mastery:` (2024 only), `showPropertyTable:`, `showMasteryTable:` (2024 only), `search:`, `searchMode:` |
 | `backgroundlist` | `search:`, `searchMode:` |
 | `lineagelist` | `search:`, `searchMode:` |
 | `magicitemlist` | `level:`, `type:`, `attuned:`, `search:`, `searchMode:` |
@@ -211,22 +213,14 @@ Without `section:` or `sectionFrom:`, the complete page is displayed. Both secti
 
 Autocomplete suggests the directive names, but it cannot suggest wiki page paths or section names.
 
-## Local custom cards
+## Custom Homebrew
 
 > [!WARNING]
-> Local custom cards are still experimental. The workflow is somewhat clunky, metadata support is incomplete, and not every card type or field is supported yet.   
-> I intend to improve this feature over time and use Markdown metadata and clean Markdown content instead of the current plain YAML format. So i currently do not recommend spending too much time on local custom cards.
+> Custom homebrew has moved from YAML to Markdown files. The old YAML format is no longer used.
 
-Select **Add Custom Cards** under **Settings → DnD Wiki** to create example files and these folders:
+Create a homebrew file from **Settings → DnD Wiki → Homebrew templates → Add homebrew file**, or run the **Create homebrew file** command.
 
-```text
-DnD-Cards/
-├── Spells/
-├── Feats/
-└── Items/
-```
-
-`DnD-Cards/Backgrounds/` and `DnD-Cards/Lineages/` can be created manually. A Markdown filename becomes its card name, and a local card overrides a remote card with the same normalized name. Restart Obsidian if new files do not appear in autocomplete or lists.
+Currently, only homebrew-file creation is available. Custom homebrew is not yet displayed by cards or lists.
 
 ## Data and privacy
 
@@ -234,7 +228,7 @@ DnD Wiki does not collect telemetry, analytics, usage statistics, vault filename
 
 The plugin sends network requests only to its configured D&D wiki sources. It downloads the index and content pages needed to render cards and lists.
 
-Downloaded content is cached only in memory. It is not saved permanently and is discarded when Obsidian or the plugin restarts. The plugin permanently stores only its settings, such as configured source URLs. Local custom cards remain ordinary files in the user's vault.
+Downloaded content is cached only in memory. It is not saved permanently and is discarded when Obsidian or the plugin restarts. The plugin permanently stores only its settings, such as configured source URLs. Homebrew files remain ordinary files in the user's vault.
 
 ## Legal notice
 

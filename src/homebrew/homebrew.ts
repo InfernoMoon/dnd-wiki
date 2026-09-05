@@ -16,6 +16,12 @@ const HOMEBREW_PROPERTY_TYPES: Record<string, string> = {
 	'item-level-dndwiki': 'text',
 	'item-type-dndwiki': 'text',
 	'requires-attunement': 'checkbox',
+	'weapon-type-dndwiki': 'text',
+	'weapon-damage-dndwiki': 'text',
+	'weapon-properties-dndwiki': 'multitext',
+	'weapon-mastery-dndwiki': 'text',
+	'weight-dndwiki': 'text',
+	'cost-dndwiki': 'text',
 };
 
 export async function ensureHomebrewFolderPath(vault: Vault, settings: HomebrewSettings): Promise<string> {

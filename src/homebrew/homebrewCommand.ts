@@ -1,5 +1,5 @@
 import { App, Modal, Notice, Setting, TFile } from 'obsidian';
-import { getClassNames, getItemRarityNames, getSchoolNames } from '../data/staticData';
+import { getClassNames, getItemRarityNames, getSchoolNames, STATIC_WEAPON_TYPES } from '../data/staticData';
 import { getHomebrewSettings } from './homebrewSettings';
 import { getItemTypeSuggestions } from '../dnd/items/itemService';
 import { ensureHomebrewFolderPath } from './homebrew';
@@ -12,6 +12,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 	Backgrounds: 'Background',
 	Lineages: 'Lineage',
 	'Magic Items': 'Magic item',
+	Weapons: 'Weapon',
 };
 
 type HomebrewFileDestination = 'homebrew' | 'current';
@@ -30,6 +31,7 @@ export class HomebrewFileModal extends Modal {
 	private itemLevel = '';
 	private itemType = '';
 	private itemRequiresAttunement = false;
+	private weaponType = '';
 
 	onOpen(): void {
 		const { contentEl } = this;
@@ -97,6 +99,8 @@ export class HomebrewFileModal extends Modal {
 			this.renderSpellSettings(containerEl);
 		} else if (this.category === 'Magic Items') {
 			this.renderMagicItemSettings(containerEl);
+		} else if (this.category === 'Weapons') {
+			this.renderWeaponSettings(containerEl);
 		}
 	}
 
@@ -186,6 +190,20 @@ export class HomebrewFileModal extends Modal {
 			});
 	}
 
+	private renderWeaponSettings(containerEl: HTMLElement): void {
+		new Setting(containerEl)
+			.setName('Weapon type')
+			.addDropdown((dropdown) => {
+				dropdown.addOption('', 'Select a weapon type');
+				for (const weaponType of STATIC_WEAPON_TYPES.values()) {
+					dropdown.addOption(weaponType, weaponType);
+				}
+				dropdown.setValue(this.weaponType).onChange((value) => {
+					this.weaponType = value;
+				});
+			});
+	}
+
 	onClose(): void {
 		this.contentEl.empty();
 	}
@@ -232,6 +250,8 @@ export class HomebrewFileModal extends Modal {
 				type: this.itemType,
 				requiresAttunement: this.itemRequiresAttunement,
 			};
+		} else if (this.category === 'Weapons') {
+			templateOptions.weapon = { type: this.weaponType };
 		}
 		const file = existing instanceof TFile
 			? existing

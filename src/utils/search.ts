@@ -5,7 +5,7 @@ export type SearchMode = 'and' | 'or';
 /** Parse all `search:` directives from a code block. */
 export function parseSearchDirective(source: string): string[] {
 	const results: string[] = [];
-	const re = /^search:\s*(.+)$/gim;
+	const re = /^search:[^\S\r\n]*(.*)$/gim;
 	let match: RegExpExecArray | null;
 	while ((match = re.exec(source)) !== null) {
 		const term = match[1].trim().toLowerCase();

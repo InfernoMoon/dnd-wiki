@@ -1,6 +1,6 @@
 import { TFolder, Vault } from 'obsidian';
 
-export const HOMEBREW_CATEGORIES = ['Spells', 'Feats', 'Backgrounds', 'Lineages', 'Magic Items'] as const;
+export const HOMEBREW_CATEGORIES = ['Spells', 'Feats', 'Backgrounds', 'Lineages', 'Magic Items', 'Weapons'] as const;
 
 const HOMEBREW_CATEGORY_TAGS: Record<string, string> = {
 	Spells: 'dndwiki/spell',
@@ -8,6 +8,7 @@ const HOMEBREW_CATEGORY_TAGS: Record<string, string> = {
 	Backgrounds: 'dndwiki/background',
 	Lineages: 'dndwiki/lineage',
 	'Magic Items': 'dndwiki/item',
+	Weapons: 'dndwiki/weapon',
 };
 
 export interface HomebrewSpellProperties {
@@ -22,9 +23,14 @@ export interface HomebrewMagicItemProperties {
 	requiresAttunement: boolean;
 }
 
+export interface HomebrewWeaponProperties {
+	type: string;
+}
+
 export interface HomebrewFileTemplateOptions {
 	spell?: HomebrewSpellProperties;
 	magicItem?: HomebrewMagicItemProperties;
+	weapon?: HomebrewWeaponProperties;
 }
 
 export function getHomebrewFileTemplate(category: string, options: HomebrewFileTemplateOptions = {}): string {
@@ -63,6 +69,21 @@ tags:
 ${level}
 ${type}
 requires-attunement: ${requiresAttunement}
+---
+`;
+	}
+
+	if (category === 'Weapons') {
+		const type = options.weapon?.type ?? '';
+		return `---
+tags:
+  - ${tag}
+weapon-type-dndwiki: ${type}
+weapon-damage-dndwiki:
+weapon-properties-dndwiki:
+weapon-mastery-dndwiki:
+weight-dndwiki:
+cost-dndwiki:
 ---
 `;
 	}
@@ -142,6 +163,21 @@ async function createHomebrewTemplateFiles(
 	createdFiles: string[],
 ): Promise<void> {
 	const templates: Array<{ path: string; content: string }> = [
+		{
+			path: `${rootPath}/Weapons/_Shovel.md`,
+			content: `---
+tags:
+  - dndwiki/weapon
+weapon-type-dndwiki: Simple Melee
+weapon-damage-dndwiki: 1d8 bludgeoning
+weapon-properties-dndwiki:
+  - Versatile (1d10)
+weapon-mastery-dndwiki: Sap
+weight-dndwiki: 5 lb.
+cost-dndwiki: 2 GP
+---
+`,
+		},
 		{
 			path: `${rootPath}/Spells/_Snowball.md`,
 			content: `---

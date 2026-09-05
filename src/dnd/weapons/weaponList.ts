@@ -10,6 +10,8 @@ import { renameFirstHeader } from '../../utils/wikiTable';
 import {
 	filterWeaponEntries,
 	filterWeaponNames,
+	filterWeaponMasteryTable,
+	filterWeaponPropertyTable,
 	findWeaponEntry,
 	getWeaponCollectionName,
 	getWeaponIndex,
@@ -91,11 +93,21 @@ export async function renderWeaponList(
 	}
 	if (directives.propertyTableMode !== 'hide') {
 		const propertyTable = await getWeaponPropertyTable(baseUrl);
-		if (propertyTable) renderCellTable(container, propertyTable);
+		if (propertyTable) {
+			const visiblePropertyTable = directives.propertyTableMode === 'show'
+				? filterWeaponPropertyTable(propertyTable, filteredEntries)
+				: propertyTable;
+			renderCellTable(container, visiblePropertyTable);
+		}
 	}
 	if (directives.masteryTableMode !== 'hide') {
 		const masteryTable = await getWeaponMasteryTable(baseUrl);
-		if (masteryTable) renderCellTable(container, renameFirstHeader(masteryTable, 'Mastery'));
+		if (masteryTable) {
+			const visibleMasteryTable = directives.masteryTableMode === 'show'
+				? filterWeaponMasteryTable(masteryTable, filteredEntries)
+				: masteryTable;
+			renderCellTable(container, renameFirstHeader(visibleMasteryTable, 'Mastery'));
+		}
 	}
 	if (!hideWeaponTable) {
 		for (const name of directives.searches.length ? [] : missingNames) {

@@ -139,6 +139,48 @@ export interface WeaponTableGroup {
 	rows: string[][];
 }
 
+/** Keep only reference properties used by the weapons in the visible main table. */
+export function filterWeaponPropertyTable(
+	table: WikiCellTableData,
+	entries: EquipmentIndexEntry[],
+): WikiCellTableData {
+	return filterWeaponReferenceTable(table, entries, ['property', 'properties']);
+}
+
+/** Keep only reference masteries used by the weapons in the visible main table. */
+export function filterWeaponMasteryTable(
+	table: WikiCellTableData,
+	entries: EquipmentIndexEntry[],
+): WikiCellTableData {
+	return filterWeaponReferenceTable(table, entries, ['mastery']);
+}
+
+function filterWeaponReferenceTable(
+	table: WikiCellTableData,
+	entries: EquipmentIndexEntry[],
+	columnNames: string[],
+): WikiCellTableData {
+	const usedReferenceNames = entries
+		.map(entry => {
+			const propertyColumnIndex = entry.table?.headers.findIndex(header => {
+				const normalizedHeader = header.trim().toLowerCase();
+				return columnNames.includes(normalizedHeader);
+			}) ?? -1;
+			return propertyColumnIndex >= 0
+				? entry.table?.values[propertyColumnIndex]?.toLowerCase() ?? ''
+				: '';
+		})
+		.filter(Boolean);
+	return {
+		rows: table.rows.filter((row, rowIndex) => {
+			if (rowIndex === 0) return true;
+			const referenceName = row[0]?.text.trim().toLowerCase() ?? '';
+			return Boolean(referenceName)
+				&& usedReferenceNames.some(value => value.includes(referenceName));
+		}),
+	};
+}
+
 /** Fetch and cache the property table from the weapons page. */
 export async function getWeaponPropertyTable(baseUrl: string): Promise<WikiCellTableData | null> {
 	if (weaponPropertyTableCache.has(baseUrl)) {

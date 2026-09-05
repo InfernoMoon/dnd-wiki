@@ -52,7 +52,7 @@ export default class DndWiki extends Plugin {
 	async onload() {
 		configurePluginRef(this);
 		registerHomebrewFileCommand(this.app, (command) => this.addCommand(command));
-		void ensureHomebrewPropertyTypes(this.app.vault.adapter).catch((error: unknown) => {
+		void ensureHomebrewPropertyTypes(this.app.vault).catch((error: unknown) => {
 			console.warn('DnD Wiki: Failed to ensure homebrew property types', error);
 		});
 		await initializeDefaultUrls();

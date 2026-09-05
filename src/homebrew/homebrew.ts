@@ -1,9 +1,7 @@
 import { normalizePath, TFolder } from 'obsidian';
-import type { DataAdapter, Vault } from 'obsidian';
+import type { Vault } from 'obsidian';
 import { DEFAULT_HOMEBREW_FOLDER } from './homebrewSettings';
 import type { HomebrewSettings } from './homebrewSettings';
-
-const TYPES_PATH = '.obsidian/types.json';
 
 const HOMEBREW_PROPERTY_TYPES: Record<string, string> = {
 	'spell-level-dndwiki': 'number',
@@ -71,16 +69,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** Ensure the plugin-owned homebrew property types are present and correct. */
-export async function ensureHomebrewPropertyTypes(adapter: DataAdapter): Promise<void> {
+export async function ensureHomebrewPropertyTypes(vault: Vault): Promise<void> {
+	const typesPath = normalizePath(`${vault.configDir}/types.json`);
+	const adapter = vault.adapter;
 	let config: Record<string, unknown> = {};
 
-	if (await adapter.exists(TYPES_PATH)) {
-		const raw = await adapter.read(TYPES_PATH);
+	if (await adapter.exists(typesPath)) {
+		const raw = await adapter.read(typesPath);
 		let parsed: unknown;
 		try {
 			parsed = JSON.parse(raw) as unknown;
 		} catch (error: unknown) {
-			console.warn('DnD Wiki: Could not parse .obsidian/types.json', error);
+			console.warn(`DnD Wiki: Could not parse ${typesPath}`, error);
 			return;
 		}
 		if (!isRecord(parsed)) {
@@ -104,5 +104,5 @@ export async function ensureHomebrewPropertyTypes(adapter: DataAdapter): Promise
 	if (!changed) return;
 
 	config.types = updatedTypes;
-	await adapter.write(TYPES_PATH, `${JSON.stringify(config, null, 2)}\n`);
+	await adapter.write(typesPath, `${JSON.stringify(config, null, 2)}\n`);
 }

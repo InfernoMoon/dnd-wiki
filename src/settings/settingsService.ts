@@ -18,9 +18,9 @@ export function configurePluginRef(plugin: Plugin): void {
 /** Load the plugin's persisted data, returning empty data when unavailable. */
 export async function loadPluginData(): Promise<PluginData> {
 	try {
-		const data: unknown = await pluginRef?.loadData();
+	const data: unknown = await pluginRef?.loadData();
 		if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
-			return data as PluginData;
+			return data;
 		}
 	} catch {
 		// Return defaults when the plugin data cannot be read.

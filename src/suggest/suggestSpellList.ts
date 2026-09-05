@@ -19,11 +19,9 @@ export class SpellListSuggest extends DndDirectiveSuggest {
 		const query = context.query || '';
 
 		if (!this.currentKey) {
-			return getTextSuggestions(
-				['level:', 'class:', 'school:', 'addspells:', 'removespells:', 'homebrew:', 'search:', 'searchMode:'],
-				query,
-				'startsWith',
-			);
+			return this.getDirectiveSuggestions(context, [
+				'level:', 'class:', 'school:', 'addspells:', 'removespells:', 'homebrew:', 'search:', 'searchMode:',
+			]);
 		}
 		if (this.currentKey === 'level') {
 			return getTextSuggestions(['all', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], query, 'startsWith');

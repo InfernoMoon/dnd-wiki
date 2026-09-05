@@ -1,7 +1,7 @@
 import { EditorSuggest } from 'obsidian';
 import type { App, Editor, EditorPosition, EditorSuggestContext, EditorSuggestTriggerInfo, TFile } from 'obsidian';
 import { displayNameFromSlug } from '../utils/text';
-import { findDndCodeBlock, getCommaSeparatedStart, getTextSuggestions, TextSuggestion } from './suggestHelpers';
+import { findDndCodeBlock, getBlockDirectiveKeys, getCommaSeparatedStart, getTextSuggestions, TextSuggestion } from './suggestHelpers';
 
 /** Shared rendering and editor replacement behavior for text suggestions. */
 export abstract class BaseTextSuggest<T extends TextSuggestion = TextSuggestion> extends EditorSuggest<T> {
@@ -97,8 +97,13 @@ export abstract class DndDirectiveSuggest extends BaseTextSuggest {
 		properties: readonly string[],
 	): TextSuggestion[] {
 		const additionalProperties = this.additionalPropertiesProvider?.(context) ?? [];
+		const existingKeys = getBlockDirectiveKeys(context);
+		const availableProperties = [...properties, ...additionalProperties].filter(property => {
+			const key = property.replace(/:\s*$/, '').toLowerCase();
+			return key === 'search' || !existingKeys.has(key);
+		});
 		return getTextSuggestions(
-			[...properties, ...additionalProperties],
+			availableProperties,
 			context.query,
 			'startsWith',
 		);
@@ -178,6 +183,6 @@ export class SearchListSuggest extends DndDirectiveSuggest {
 		if (this.currentKey === 'homebrew') {
 			return getTextSuggestions(['Include', 'Exclude', 'Only'], query, 'startsWith');
 		}
-		return getTextSuggestions(['homebrew:', 'search:', 'searchMode:'], query, 'startsWith');
+		return this.getDirectiveSuggestions(context, ['homebrew:', 'search:', 'searchMode:']);
 	}
 }

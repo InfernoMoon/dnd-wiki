@@ -17,11 +17,9 @@ export class ItemListSuggest extends DndDirectiveSuggest {
 		const query = context.query || '';
 
 		if (!this.currentKey) {
-			return getTextSuggestions(
-				['level:', 'type:', 'attuned:', 'homebrew:', 'search:', 'searchMode:'],
-				query,
-				'startsWith',
-			);
+			return this.getDirectiveSuggestions(context, [
+				'level:', 'type:', 'attuned:', 'homebrew:', 'search:', 'searchMode:',
+			]);
 		}
 		if (this.currentKey === 'level') {
 			return getTextSuggestions(

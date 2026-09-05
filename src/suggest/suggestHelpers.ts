@@ -18,6 +18,23 @@ export function getBlockPropertyValues(context: EditorSuggestContext, property: 
 	return getTextProperties(lines.join('\n'), [property]).get(property) ?? [];
 }
 
+/** Return directive keys already present in the current D&D block. */
+export function getBlockDirectiveKeys(context: EditorSuggestContext): Set<string> {
+	const lines: string[] = [];
+	for (let lineNumber = context.end.line - 1; lineNumber >= 0; lineNumber--) {
+		const line = context.editor.getLine(lineNumber);
+		if (line.trim().startsWith('```')) break;
+		lines.push(line);
+	}
+
+	const keys = new Set<string>();
+	for (const line of lines) {
+		const match = /^([\w-]+):/.exec(line.trim());
+		if (match) keys.add(match[1].toLowerCase());
+	}
+	return keys;
+}
+
 /** Return whether the cursor is on a blank line inside a D&D code block. */
 export function isBlankLineInsideDndBlock(cursor: EditorPosition, editor: Editor): boolean {
 	if (editor.getLine(cursor.line).trim()) return false;

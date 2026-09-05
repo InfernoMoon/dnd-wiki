@@ -10,7 +10,8 @@ import { SpellListSuggest } from './src/suggest/suggestSpellList';
 import { FeatNameSuggest } from './src/suggest/suggestFeat';
 import { ItemNameSuggest } from './src/suggest/suggestItem';
 import { ItemListSuggest } from './src/suggest/suggestItemList';
-import { EquipmentListSuggest } from './src/suggest/suggestEquipmentList';
+// TODO: Re-enable equipment-list suggestions once equipment support is ready for release.
+// import { EquipmentListSuggest } from './src/suggest/suggestEquipmentList';
 import { renderEquipment } from './src/dnd/equipment/equipment';
 import { renderEquipmentList } from './src/dnd/equipment/equipmentList';
 import { WeaponListSuggest } from './src/suggest/suggestWeaponList';
@@ -73,7 +74,8 @@ export default class DndWiki extends Plugin {
 		registerSuggest(new FeatListSuggest(this));
 		registerSuggest(new ItemNameSuggest(this));
 		registerSuggest(new ItemListSuggest(this));
-		registerSuggest(new EquipmentListSuggest(this));
+		// TODO: Re-enable equipment-list suggestions once equipment support is ready for release.
+		// registerSuggest(new EquipmentListSuggest(this));
 		registerSuggest(new WeaponNameSuggest(this));
 		registerSuggest(new WeaponListSuggest(this, (urlKey) => urlsSnapshot[urlKey] || ''));
 		registerSuggest(new BackgroundNameSuggest(this));

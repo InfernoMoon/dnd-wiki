@@ -2,7 +2,13 @@ import type { Editor, EditorPosition, EditorSuggestTriggerInfo, TFile } from 'ob
 import { peekBaseUrls } from './settings/settingsService';
 import { BaseTextSuggest } from './suggest/baseSuggest';
 
-const BLOCK_SUFFIXES = ['-spell', '-spelllist', '-feat', '-featlist', '-magicitem', '-magicitemlist', '-equipment', '-equipmentlist', '-weapon', '-weaponlist', '-background', '-backgroundlist', '-lineage', '-lineagelist', '-class', '-classinfo', '-custom'];
+const BLOCK_SUFFIXES = [
+	'-spell', '-spelllist', '-feat', '-featlist', '-magicitem', '-magicitemlist',
+	// TODO: Re-enable equipment block suggestions once equipment support is ready for release.
+	// '-equipment', '-equipmentlist',
+	'-weapon', '-weaponlist', '-background', '-backgroundlist', '-lineage', '-lineagelist',
+	'-class', '-classinfo', '-custom',
+];
 
 export class DndPrefixSuggest extends BaseTextSuggest {
 	private autoSuggestSuffixFor = '';

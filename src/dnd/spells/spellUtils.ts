@@ -13,13 +13,14 @@ import { getPrimarySlug, nameToSlugs, displayNameFromSlug } from '../../utils/te
 import { fetchPageContent } from '../../utils/wikiPageFetcher';
 import { renderCollapsible } from '../../utils/renderer';
 import { loadFromTable, LoaderConfig } from "../../utils/wikiIndexLoader";
+import { getCachedHomebrewSpellContent, getCachedHomebrewSpellIds } from '../../homebrew/homebrewService';
 
 export const spellIdCache = new IdCache();
 const spellRenderCache = new RenderCache<CachedRender>();
 
 /** Return known spell IDs for a specific URL key */
 export function getKnownSpellIdsForKey(urlKey: string): string[] {
-  return spellIdCache.get(urlKey);
+  return Array.from(new Set([...spellIdCache.get(urlKey), ...getCachedHomebrewSpellIds()]));
 }
 
 /**
@@ -33,6 +34,7 @@ export function seedSpellNamesForKey(urlKey: string, names: string[]): void {
 
 /** Preload spell names for a specific URL key from its `/spells` index page */
 export async function preloadAllSpellNames(urlKey: string, baseUrl: string): Promise<void> {
+	spellIdCache.addMany(urlKey, getCachedHomebrewSpellIds());
   // Use generic table-based loader for the /spells index
   const config: LoaderConfig = {
     baseUrl,
@@ -55,11 +57,16 @@ export async function renderSingleSpell(
 ): Promise<boolean> {
   const spellIds = nameToSlugs(name);
   const id = spellIds[0] ?? '';
-  if (!id) {
-    host.createDiv({ text: 'No spell name provided' });
-    return false;
-  }
-  const cached = await ensureSpellCached(name, urlKey, baseUrl);
+	if (!id) {
+		host.createDiv({ text: 'No spell name provided' });
+		return false;
+	}
+	const homebrew = await getCachedHomebrewSpellContent(name);
+	if (homebrew) {
+		renderCollapsible(host, homebrew.title, homebrew.html);
+		return true;
+	}
+	const cached = await ensureSpellCached(name, urlKey, baseUrl);
   if (!cached) {
     renderCollapsible(host, `${displayNameFromSlug(id)} (Error)`, 'Error getting this spell.');
     return false;

@@ -23,6 +23,7 @@ import type {
 } from './spellListCacheItem';
 import { filterHomebrewNames, parseHomebrewMode } from '../../homebrew/homebrewService';
 import type { HomebrewMode } from '../../homebrew/homebrewService';
+import { getCachedHomebrewSpellData, getCachedHomebrewSpellIds } from '../../homebrew/homebrewService';
 
 interface SpellListDirectives {
 	level: SpellLevelDirective;
@@ -85,6 +86,12 @@ export async function renderSpellList(
 		spellListCache.set(urlKey, cacheItem, names);
 	}
 
+	names = uniqueNames([
+		...names,
+		...getCachedHomebrewSpellIds()
+			.filter(name => matchesHomebrewSpellFilters(name, directives))
+			.map(displayNameFromSlug),
+	]);
 	names = applyExplicitSpellChanges(names, directives.addSpells, directives.removeSpells);
 	names = filterHomebrewNames(names, 'spell', directives.homebrew);
 	if (!names.length) {
@@ -273,8 +280,32 @@ function getFilteredSpellNames(
 	if (schoolNames) names = names.filter(name => schoolNames.has(getPrimarySlug(name)));
 
 	const levelResult = filterByLevel(index.base, names, directives.level);
-	if (levelResult.message) return levelResult;
-	return { names: uniqueNames(levelResult.names) };
+	const homebrewNames = getCachedHomebrewSpellIds()
+		.filter(name => matchesHomebrewSpellFilters(name, directives))
+		.map(displayNameFromSlug);
+	if (levelResult.message && !homebrewNames.length) return levelResult;
+	return { names: uniqueNames([...levelResult.names, ...homebrewNames]) };
+}
+
+function matchesHomebrewSpellFilters(name: string, directives: SpellListDirectives): boolean {
+	const spell = getCachedHomebrewSpellData(name);
+	if (!spell) return false;
+
+	const levels = typeof directives.level === 'number'
+		? [directives.level]
+		: Array.isArray(directives.level) ? directives.level : [];
+	if (levels.length && !levels.includes(Number.parseInt(spell.level, 10))) return false;
+
+	const classDirective = directives.classDirective;
+	if (Array.isArray(classDirective) && classDirective.length
+		&& !spell.classes.some(className => classDirective.includes(getPrimarySlug(className)))) {
+		return false;
+	}
+	if (Array.isArray(directives.schoolDirective) && directives.schoolDirective.length
+		&& !directives.schoolDirective.includes(getPrimarySlug(spell.school))) {
+		return false;
+	}
+	return true;
 }
 
 function unionDocumentNames(documents: Document[]): Set<string> | null {

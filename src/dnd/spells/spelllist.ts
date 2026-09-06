@@ -1,6 +1,7 @@
 /** Render filtered `spellList` code blocks. */
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { requestUrl } from 'obsidian';
+import { getClassNames, getSchoolNames } from '../../data/staticData';
 import { FilteredListCache } from '../../cache/filteredListCache';
 import { extractTableNamesFromFirstCell } from '../../utils/dom';
 import { getTextProperties } from '../../utils/directives';
@@ -60,6 +61,10 @@ export async function renderSpellList(
 	if (!requireBaseUrl(el, baseUrl)) return;
 
 	const directives = parseSpellListDirectives(source);
+	if (hasInvalidSpellDirective(directives)) {
+		renderNoResultsMessage(el, 'spells');
+		return;
+	}
 	const cacheItem = new SpellListCacheItem(
 		directives.level,
 		directives.classDirective,
@@ -145,12 +150,26 @@ function parseLevelDirective(values: string[]): SpellLevelDirective {
 
 	const levels: number[] = [];
 	for (const token of raw.split(',')) {
-		levels.push(...parseLevelToken(token));
+		const parsed = parseLevelToken(token);
+		if (!parsed.length) return [];
+		levels.push(...parsed);
 	}
 
 	const uniqueLevels = Array.from(new Set(levels)).sort((a, b) => a - b);
 	if (!uniqueLevels.length) return null;
 	return uniqueLevels.length === 1 ? uniqueLevels[0] : uniqueLevels;
+}
+
+function hasInvalidSpellDirective(directives: SpellListDirectives): boolean {
+	if (Array.isArray(directives.level) && !directives.level.length) return true;
+	return hasUnknownFilterValue(directives.classDirective, getClassNames())
+		|| hasUnknownFilterValue(directives.schoolDirective, getSchoolNames());
+}
+
+function hasUnknownFilterValue(value: SpellFilterDirective, allowedNames: string[]): boolean {
+	if (!Array.isArray(value)) return false;
+	const allowed = new Set(allowedNames.map(getPrimarySlug));
+	return value.some(slug => !allowed.has(slug));
 }
 
 function parseLevelToken(token: string): number[] {
@@ -261,9 +280,12 @@ async function fetchFilterDocuments(
 			const response = await requestUrl({ url: `${baseUrl}/spells:${slug}`, method: 'GET' });
 			if (response.status >= 200 && response.status < 300) {
 				documents.push(parser.parseFromString(response.text, 'text/html'));
+			} else {
+				documents.push(parser.parseFromString('', 'text/html'));
 			}
 		} catch {
-			// A missing class or school page simply contributes no matches.
+			// A missing class or school page contributes no matches.
+			documents.push(parser.parseFromString('', 'text/html'));
 		}
 	}
 	return documents;

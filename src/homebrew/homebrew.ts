@@ -50,7 +50,7 @@ export async function updateHomebrewFiles(
 		}
 	}
 
-	await updateHomebrewFileCache(filesByType);
+	updateHomebrewFileCache(filesByType);
 }
 
 export async function ensureHomebrewFolderPath(vault: Vault, settings: HomebrewSettings): Promise<string> {
@@ -115,7 +115,7 @@ export async function ensureHomebrewPropertyTypes(vault: Vault): Promise<void> {
 			return;
 		}
 		if (!isRecord(parsed)) {
-			console.warn('DnD Wiki: Ignoring invalid .obsidian/types.json contents');
+			console.warn(`DnD Wiki: Ignoring invalid ${typesPath} contents`);
 			return;
 		}
 		config = parsed;

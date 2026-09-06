@@ -55,9 +55,7 @@ export type HomebrewMode = 'include' | 'exclude' | 'only';
 
 /** Add the source label displayed above rendered homebrew content. */
 export function addHomebrewSourceLabel(container: HTMLElement, source = 'Custom Homebrew'): void {
-	const sourceLabel = document.createElement('p');
-	sourceLabel.textContent = `Source: ${source}`;
-	container.appendChild(sourceLabel);
+	container.createEl('p', { text: `Source: ${source}` });
 }
 
 /** Parse the reusable homebrew list directive. */
@@ -122,7 +120,7 @@ export async function getCachedHomebrewSpellContent(spellName: string): Promise<
 	].join('\n');
 	const markdown = `${metadata}\n\n${parsed.body}`.trim();
 	const sourcePath = file.path;
-	const container = document.createElement('div');
+	const container = createDiv();
 	addHomebrewSourceLabel(container);
 	const component = new Component();
 	component.load();
@@ -234,7 +232,7 @@ export async function getSimpleCachedHomebrewContent(
 		return null;
 	}
 	const sourcePath = file.path;
-	const container = document.createElement('div');
+	const container = createDiv();
 	addHomebrewSourceLabel(container);
 	const component = new Component();
 	component.load();

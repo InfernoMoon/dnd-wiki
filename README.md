@@ -217,11 +217,11 @@ Autocomplete suggests the directive names, but it cannot suggest wiki page paths
 ## Custom Homebrew
 
 > [!WARNING]
-> Custom homebrew has moved from YAML to Markdown files. The old YAML format is no longer used.
+> Custom homebrew now uses Markdown files instead of YAML. The old YAML format is no longer supported.
+> Search support for weapons and magic items is not yet available.
 
 Create a homebrew file from **Settings → DnD Wiki → Homebrew templates → Add homebrew file**, or run the **Create homebrew file** command.
 
-Currently, only homebrew-file creation is available. Custom homebrew is not yet displayed by cards or lists.
 
 ## Data and privacy
 

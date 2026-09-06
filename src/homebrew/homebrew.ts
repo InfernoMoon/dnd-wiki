@@ -50,7 +50,7 @@ export async function updateHomebrewFiles(
 		}
 	}
 
-	await updateHomebrewFileCache(vault, filesByType);
+	await updateHomebrewFileCache(filesByType);
 }
 
 export async function ensureHomebrewFolderPath(vault: Vault, settings: HomebrewSettings): Promise<string> {

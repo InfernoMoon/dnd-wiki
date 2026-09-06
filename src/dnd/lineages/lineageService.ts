@@ -7,7 +7,7 @@ import { loadFromLinks, loadFromTable, LoaderConfig } from '../../utils/wikiInde
 import {
 	getCachedHomebrewLineageIds,
 	getSimpleCachedHomebrewContent,
-	homebrewLineagePaths,
+	hasCachedHomebrewFile,
 	homebrewLineages,
 } from '../../homebrew/homebrewService';
 
@@ -25,17 +25,16 @@ export async function ensureLineageCached(
 ): Promise<CachedRender | null> {
 	const lineageIds = nameToSlugs(lineageName);
 	if (!lineageIds.length) return null;
+	const isHomebrew = hasCachedHomebrewFile(lineageName, homebrewLineages);
+	const homebrew = await getSimpleCachedHomebrewContent(lineageName, homebrewLineages);
+	if (isHomebrew) {
+		lineageIdCache.addMany(urlKey, lineageIds);
+		return homebrew;
+	}
 	for (const lineageId of lineageIds) {
 		const existing = lineageRenderCache.get(urlKey, lineageId);
 		if (existing) return existing;
 	}
-	const homebrew = await getSimpleCachedHomebrewContent(lineageName, homebrewLineages, homebrewLineagePaths);
-	if (homebrew) {
-		lineageIdCache.addMany(urlKey, lineageIds);
-		for (const lineageId of lineageIds) lineageRenderCache.set(urlKey, lineageId, homebrew);
-		return homebrew;
-	}
-
 	const lineagePageType = is2024Source(baseUrl) ? 'species' : 'lineage';
 	const fetched = await fetchPageContentWithSlugFallbacks(baseUrl, lineagePageType, lineageName);
 	if (!fetched.ok) return null;

@@ -7,7 +7,7 @@ import { loadFromLinks, loadFromTable, LoaderConfig } from '../../utils/wikiInde
 import {
 	getCachedHomebrewFeatIds,
 	getSimpleCachedHomebrewContent,
-	homebrewFeatPaths,
+	hasCachedHomebrewFile,
 	homebrewFeats,
 } from '../../homebrew/homebrewService';
 
@@ -21,17 +21,16 @@ export async function ensureFeatCached(
 ): Promise<CachedRender | null> {
 	const featIds = nameToSlugs(featName);
 	if (!featIds.length) return null;
+	const isHomebrew = hasCachedHomebrewFile(featName, homebrewFeats);
+	const homebrew = await getSimpleCachedHomebrewContent(featName, homebrewFeats);
+	if (isHomebrew) {
+		featIdCache.addMany(urlKey, featIds);
+		return homebrew;
+	}
 	for (const featId of featIds) {
 		const existing = featRenderCache.get(urlKey, featId);
 		if (existing) return existing;
 	}
-	const homebrew = await getSimpleCachedHomebrewContent(featName, homebrewFeats, homebrewFeatPaths);
-	if (homebrew) {
-		featIdCache.addMany(urlKey, featIds);
-		for (const featId of featIds) featRenderCache.set(urlKey, featId, homebrew);
-		return homebrew;
-	}
-
 	const fetched = await fetchPageContentWithSlugFallbacks(baseUrl, 'feat', featName);
 	if (!fetched.ok) return null;
 

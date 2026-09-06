@@ -1,16 +1,13 @@
-import { Component, MarkdownRenderer } from 'obsidian';
-import type { App, TFile, Vault } from 'obsidian';
+import { Component, MarkdownRenderer, TFile } from 'obsidian';
+import type { App } from 'obsidian';
 import type { CachedRender } from '../cache/renderCache';
 import { displayNameFromSlug, nameToSlugs } from '../utils/text';
 
+/** Homebrew IDs mapped to their vault file paths. Content is loaded on demand. */
 export const homebrewBackgrounds = new Map<string, string>();
-export const homebrewBackgroundPaths = new Map<string, string>();
 export const homebrewFeats = new Map<string, string>();
-export const homebrewFeatPaths = new Map<string, string>();
 export const homebrewLineages = new Map<string, string>();
-export const homebrewLineagePaths = new Map<string, string>();
 export const homebrewSpells = new Map<string, string>();
-export const homebrewSpellPaths = new Map<string, string>();
 const homebrewIdsByType = new Map<string, Set<string>>();
 let app: App | null = null;
 
@@ -75,41 +72,29 @@ export function filterHomebrewNames(names: string[], type: string, mode: Homebre
 	return names.filter(name => isHomebrewContent(type, name) === (mode === 'only'));
 }
 
-/** Cache supported homebrew files. Backgrounds are the first supported type. */
-export async function updateHomebrewFileCache(
-	vault: Vault,
+/** Cache supported homebrew file paths. Content is loaded only when needed. */
+export function updateHomebrewFileCache(
 	filesByType: Record<string, TFile[]>,
-): Promise<void> {
+): void {
 	homebrewBackgrounds.clear();
-	homebrewBackgroundPaths.clear();
 	homebrewFeats.clear();
-	homebrewFeatPaths.clear();
 	homebrewLineages.clear();
-	homebrewLineagePaths.clear();
 	homebrewSpells.clear();
-	homebrewSpellPaths.clear();
 	homebrewIdsByType.clear();
 	for (const [type, files] of Object.entries(filesByType)) {
 		const ids = new Set<string>();
 		for (const file of files) for (const key of nameToSlugs(file.basename)) ids.add(key);
 		homebrewIdsByType.set(type.toLowerCase(), ids);
 	}
-	await cacheHomebrewFiles(vault, filesByType.background, homebrewBackgrounds, homebrewBackgroundPaths);
-	await cacheHomebrewFiles(vault, filesByType.feat, homebrewFeats, homebrewFeatPaths);
-	await cacheHomebrewFiles(vault, filesByType.lineage, homebrewLineages, homebrewLineagePaths);
-	await cacheHomebrewFiles(vault, filesByType.spell, homebrewSpells, homebrewSpellPaths);
+	cacheHomebrewFiles(filesByType.background, homebrewBackgrounds);
+	cacheHomebrewFiles(filesByType.feat, homebrewFeats);
+	cacheHomebrewFiles(filesByType.lineage, homebrewLineages);
+	cacheHomebrewFiles(filesByType.spell, homebrewSpells);
 }
 
-async function cacheHomebrewFiles(
-	vault: Vault,
-	files: TFile[] | undefined,
-	contentByKey: Map<string, string>,
-	pathByKey: Map<string, string>,
-): Promise<void> {
+function cacheHomebrewFiles(files: TFile[] | undefined, pathByKey: Map<string, string>): void {
 	for (const file of files ?? []) {
-		const text = await vault.cachedRead(file);
 		for (const key of nameToSlugs(file.basename)) {
-			contentByKey.set(key, text);
 			pathByKey.set(key, file.path);
 		}
 	}
@@ -120,8 +105,14 @@ export async function getCachedHomebrewSpellContent(spellName: string): Promise<
 	const key = nameToSlugs(spellName).find(candidate => homebrewSpells.has(candidate));
 	if (!key || !app) return null;
 
-	const text = homebrewSpells.get(key);
-	if (text === undefined) return null;
+	const file = getHomebrewFile(homebrewSpells, key);
+	if (!file) return null;
+	let text: string;
+	try {
+		text = await app.vault.read(file);
+	} catch {
+		return null;
+	}
 
 	const parsed = parseHomebrewSpell(text);
 	const metadata = [
@@ -130,7 +121,7 @@ export async function getCachedHomebrewSpellContent(spellName: string): Promise<
 		...formatSpellProperties(parsed),
 	].join('\n');
 	const markdown = `${metadata}\n\n${parsed.body}`.trim();
-	const sourcePath = homebrewSpellPaths.get(key) ?? '';
+	const sourcePath = file.path;
 	const container = document.createElement('div');
 	addHomebrewSourceLabel(container);
 	const component = new Component();
@@ -144,10 +135,16 @@ export async function getCachedHomebrewSpellContent(spellName: string): Promise<
 }
 
 /** Return parsed metadata for a cached homebrew spell. */
-export function getCachedHomebrewSpellData(spellName: string): HomebrewSpellData | null {
+export async function getCachedHomebrewSpellData(spellName: string): Promise<HomebrewSpellData | null> {
 	const key = nameToSlugs(spellName).find(candidate => homebrewSpells.has(candidate));
-	const text = key ? homebrewSpells.get(key) : undefined;
-	return text === undefined ? null : parseHomebrewSpell(text);
+	if (!key) return null;
+	const file = getHomebrewFile(homebrewSpells, key);
+	if (!file || !app) return null;
+	try {
+		return parseHomebrewSpell(await app.vault.read(file));
+	} catch {
+		return null;
+	}
 }
 
 export interface HomebrewSpellData {
@@ -218,20 +215,25 @@ function formatSpellProperties(spell: HomebrewSpellData): string[] {
 		.map(([label, value]) => `**${label}:** ${value}`);
 }
 
-/** Render simple cached homebrew Markdown content from the supplied content maps. */
+/** Render simple homebrew Markdown loaded from the supplied path map. */
 export async function getSimpleCachedHomebrewContent(
 	name: string,
-	contentByKey: Map<string, string>,
 	pathByKey: Map<string, string>,
 ): Promise<CachedRender | null> {
-	const key = nameToSlugs(name).find(candidate => contentByKey.has(candidate));
+	const key = nameToSlugs(name).find(candidate => pathByKey.has(candidate));
 	if (!key) {
 		return null;
 	}
 
-	const text = contentByKey.get(key);
-	if (text === undefined || !app) return null;
-	const sourcePath = pathByKey.get(key) ?? '';
+	const file = getHomebrewFile(pathByKey, key);
+	if (!file || !app) return null;
+	let text: string;
+	try {
+		text = await app.vault.read(file);
+	} catch {
+		return null;
+	}
+	const sourcePath = file.path;
 	const container = document.createElement('div');
 	addHomebrewSourceLabel(container);
 	const component = new Component();
@@ -246,4 +248,16 @@ export async function getSimpleCachedHomebrewContent(
 	finally {
 		component.unload();
 	}
+}
+
+/** Return whether a scanned homebrew entry exists for the supplied name. */
+export function hasCachedHomebrewFile(name: string, pathByKey: Map<string, string>): boolean {
+	return nameToSlugs(name).some(key => pathByKey.has(key));
+}
+
+function getHomebrewFile(pathByKey: Map<string, string>, key: string): TFile | null {
+	if (!app) return null;
+	const path = pathByKey.get(key);
+	const file = path ? app.vault.getAbstractFileByPath(path) : null;
+	return file instanceof TFile ? file : null;
 }

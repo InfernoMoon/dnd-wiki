@@ -81,7 +81,7 @@ export async function renderSpellList(
 		);
 		if (!index) return;
 
-		const filtered = getFilteredSpellNames(index, directives);
+		const filtered = await getFilteredSpellNames(index, directives);
 		if (filtered.message) {
 			el.setText(filtered.message);
 			return;
@@ -91,12 +91,7 @@ export async function renderSpellList(
 		spellListCache.set(urlKey, cacheItem, names);
 	}
 
-	names = uniqueNames([
-		...names,
-		...getCachedHomebrewSpellIds()
-			.filter(name => matchesHomebrewSpellFilters(name, directives))
-			.map(displayNameFromSlug),
-	]);
+	names = uniqueNames([...names, ...(await getMatchingHomebrewSpellNames(directives))]);
 	names = applyExplicitSpellChanges(names, directives.addSpells, directives.removeSpells);
 	names = filterHomebrewNames(names, 'spell', directives.homebrew);
 	if (!names.length) {
@@ -291,10 +286,10 @@ async function fetchFilterDocuments(
 	return documents;
 }
 
-function getFilteredSpellNames(
+async function getFilteredSpellNames(
 	index: SpellIndexDocuments,
 	directives: SpellListDirectives,
-): FilteredSpellNames {
+): Promise<FilteredSpellNames> {
 	let names = extractTableNamesFromFirstCell(index.base);
 	const classNames = unionDocumentNames(index.classes);
 	const schoolNames = unionDocumentNames(index.schools);
@@ -302,15 +297,20 @@ function getFilteredSpellNames(
 	if (schoolNames) names = names.filter(name => schoolNames.has(getPrimarySlug(name)));
 
 	const levelResult = filterByLevel(index.base, names, directives.level);
-	const homebrewNames = getCachedHomebrewSpellIds()
-		.filter(name => matchesHomebrewSpellFilters(name, directives))
-		.map(displayNameFromSlug);
+	const homebrewNames = await getMatchingHomebrewSpellNames(directives);
 	if (levelResult.message && !homebrewNames.length) return levelResult;
 	return { names: uniqueNames([...levelResult.names, ...homebrewNames]) };
 }
 
-function matchesHomebrewSpellFilters(name: string, directives: SpellListDirectives): boolean {
-	const spell = getCachedHomebrewSpellData(name);
+async function getMatchingHomebrewSpellNames(directives: SpellListDirectives): Promise<string[]> {
+	const names = await Promise.all(getCachedHomebrewSpellIds().map(async name =>
+		(await matchesHomebrewSpellFilters(name, directives)) ? displayNameFromSlug(name) : null,
+	));
+	return names.filter((name): name is string => name !== null);
+}
+
+async function matchesHomebrewSpellFilters(name: string, directives: SpellListDirectives): Promise<boolean> {
+	const spell = await getCachedHomebrewSpellData(name);
 	if (!spell) return false;
 
 	const levels = typeof directives.level === 'number'

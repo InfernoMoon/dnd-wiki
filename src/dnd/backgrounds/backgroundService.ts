@@ -7,7 +7,7 @@ import { loadFromLinks, loadFromTable, LoaderConfig } from '../../utils/wikiInde
 import {
 	getCachedHomebrewBackgroundIds,
 	getSimpleCachedHomebrewContent,
-	homebrewBackgroundPaths,
+	hasCachedHomebrewFile,
 	homebrewBackgrounds,
 } from '../../homebrew/homebrewService';
 
@@ -25,21 +25,16 @@ export async function ensureBackgroundCached(
 ): Promise<CachedRender | null> {
 	const backgroundIds = nameToSlugs(backgroundName);
 	if (!backgroundIds.length) return null;
+	const isHomebrew = hasCachedHomebrewFile(backgroundName, homebrewBackgrounds);
+	const homebrew = await getSimpleCachedHomebrewContent(backgroundName, homebrewBackgrounds);
+	if (isHomebrew) {
+		backgroundIdCache.addMany(urlKey, backgroundIds);
+		return homebrew;
+	}
 	for (const backgroundId of backgroundIds) {
 		const existing = backgroundRenderCache.get(urlKey, backgroundId);
 		if (existing) return existing;
 	}
-	const homebrew = await getSimpleCachedHomebrewContent(
-		backgroundName,
-		homebrewBackgrounds,
-		homebrewBackgroundPaths,
-	);
-	if (homebrew) {
-		backgroundIdCache.addMany(urlKey, backgroundIds);
-		for (const backgroundId of backgroundIds) backgroundRenderCache.set(urlKey, backgroundId, homebrew);
-		return homebrew;
-	}
-
 	const fetched = await fetchPageContentWithSlugFallbacks(baseUrl, 'background', backgroundName);
 	if (!fetched.ok) return null;
 

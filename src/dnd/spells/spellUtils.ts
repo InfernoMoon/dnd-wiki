@@ -13,7 +13,12 @@ import { getPrimarySlug, nameToSlugs, displayNameFromSlug } from '../../utils/te
 import { fetchPageContent } from '../../utils/wikiPageFetcher';
 import { renderCollapsible } from '../../utils/renderer';
 import { loadFromTable, LoaderConfig } from "../../utils/wikiIndexLoader";
-import { getCachedHomebrewSpellContent, getCachedHomebrewSpellIds } from '../../homebrew/homebrewService';
+import {
+	getCachedHomebrewSpellContent,
+	getCachedHomebrewSpellIds,
+	hasCachedHomebrewFile,
+	homebrewSpells,
+} from '../../homebrew/homebrewService';
 
 export const spellIdCache = new IdCache();
 const spellRenderCache = new RenderCache<CachedRender>();
@@ -63,6 +68,7 @@ export async function renderSingleSpell(
 	}
 	const homebrew = await getCachedHomebrewSpellContent(name);
 	if (homebrew) {
+		spellIdCache.addMany(urlKey, spellIds);
 		renderCollapsible(host, homebrew.title, homebrew.html);
 		return true;
 	}
@@ -82,10 +88,16 @@ export async function ensureSpellCached(
   urlKey: string,
   baseUrl: string,
 ): Promise<CachedRender | null> {
-  const spellIds = nameToSlugs(spellName);
-  if (!spellIds.length) return null;
+	const spellIds = nameToSlugs(spellName);
+	if (!spellIds.length) return null;
+	const isHomebrew = hasCachedHomebrewFile(spellName, homebrewSpells);
+	const homebrew = await getCachedHomebrewSpellContent(spellName);
+	if (isHomebrew) {
+		spellIdCache.addMany(urlKey, spellIds);
+		return homebrew;
+	}
 
-  const cached = getCachedSpell(spellIds, urlKey);
+	const cached = getCachedSpell(spellIds, urlKey);
   if (cached) return cached;
 
   const fetched = await fetchSpellPageWithFallback(baseUrl, spellName);

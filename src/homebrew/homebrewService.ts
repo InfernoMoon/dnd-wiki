@@ -53,11 +53,7 @@ export function getCachedHomebrewIds(type: string): string[] {
 /** Return whether a name is present in the scanned homebrew type. */
 export function isHomebrewContent(type: string, name: string): boolean {
 	const normalizedType = type.toLowerCase();
-	const types = normalizedType === 'magicitem'
-		? ['item']
-		: normalizedType === 'equipment'
-			? ['item', 'weapon', 'armor']
-			: [normalizedType];
+	const types = normalizedType === 'magicitem' ? ['item'] : [normalizedType];
 	return nameToSlugs(name).some(slug => types.some(candidateType =>
 		homebrewIdsByType.get(candidateType)?.has(slug) ?? false,
 	));

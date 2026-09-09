@@ -10,10 +10,6 @@ import { SpellListSuggest } from './src/suggest/suggestSpellList';
 import { FeatNameSuggest } from './src/suggest/suggestFeat';
 import { ItemNameSuggest } from './src/suggest/suggestItem';
 import { ItemListSuggest } from './src/suggest/suggestItemList';
-// TODO: Re-enable equipment-list suggestions once equipment support is ready for release.
-// import { EquipmentListSuggest } from './src/suggest/suggestEquipmentList';
-import { renderEquipment } from './src/dnd/equipment/equipment';
-import { renderEquipmentList } from './src/dnd/equipment/equipmentList';
 import { WeaponListSuggest } from './src/suggest/suggestWeaponList';
 import { WeaponNameSuggest } from './src/suggest/suggestWeapon';
 import { renderWeapon } from './src/dnd/weapons/weapon';
@@ -78,8 +74,6 @@ export default class DndWiki extends Plugin {
 		registerSuggest(new FeatListSuggest(this));
 		registerSuggest(new ItemNameSuggest(this));
 		registerSuggest(new ItemListSuggest(this));
-		// TODO: Re-enable equipment-list suggestions once equipment support is ready for release.
-		// registerSuggest(new EquipmentListSuggest(this));
 		registerSuggest(new WeaponNameSuggest(this));
 		registerSuggest(new WeaponListSuggest(this, (urlKey) => urlsSnapshot[urlKey] || ''));
 		registerSuggest(new BackgroundNameSuggest(this));
@@ -136,12 +130,6 @@ export default class DndWiki extends Plugin {
 				});
 				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-magicitemlist`, async (source, el, ctx) => {
 					await renderItemList(source, el, ctx, urlKey, baseUrl);
-				});
-				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-equipment`, async (source, el, ctx) => {
-					await renderEquipment(source, el, ctx, urlKey, baseUrl);
-				});
-				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-equipmentlist`, async (source, el, ctx) => {
-					await renderEquipmentList(source, el, ctx, urlKey, baseUrl);
 				});
 				this.registerMarkdownCodeBlockProcessor(`dnd${urlKey}-weapon`, async (source, el, ctx) => {
 					await renderWeapon(source, el, ctx, urlKey, baseUrl);

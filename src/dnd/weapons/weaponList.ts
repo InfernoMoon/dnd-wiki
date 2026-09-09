@@ -1,6 +1,6 @@
 import type { MarkdownPostProcessorContext } from 'obsidian';
 import { FilteredListCache } from '../../cache/filteredListCache';
-import type { EquipmentIndexEntry } from '../equipment/equipmentService';
+import type { WeaponIndexEntry } from './weaponTypes';
 import { getTextProperties } from '../../utils/directives';
 import { renderCellTable, renderNoResultsMessage, renderTable, requireBaseUrl } from '../../utils/renderer';
 import { parseSearchDirective, parseSearchModeDirective } from '../../utils/search';
@@ -85,7 +85,7 @@ export async function renderWeaponList(
 
 	const entries = names
 		.map(name => findWeaponEntry(index, name))
-		.filter((entry): entry is EquipmentIndexEntry => entry !== null);
+		.filter((entry): entry is WeaponIndexEntry => entry !== null);
 	const filteredEntries = filterWeaponEntries(
 		entries,
 		directives.properties,

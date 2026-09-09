@@ -4,8 +4,6 @@ import { BaseTextSuggest } from './suggest/baseSuggest';
 
 const BLOCK_SUFFIXES = [
 	'-spell', '-spelllist', '-feat', '-featlist', '-magicitem', '-magicitemlist',
-	// TODO: Re-enable equipment block suggestions once equipment support is ready for release.
-	// '-equipment', '-equipmentlist',
 	'-weapon', '-weaponlist', '-background', '-backgroundlist', '-lineage', '-lineagelist',
 	'-class', '-classinfo', '-custom',
 ];

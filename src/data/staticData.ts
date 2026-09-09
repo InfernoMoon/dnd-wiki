@@ -60,12 +60,6 @@ export function setHomebrewSuggestionValues(values: {
   };
 }
 
-/** Equipment type IDs mapped to their display names. */
-export const STATIC_EQUIPMENT_TYPES = new Map<string, string>([
-  ["armor", "Armor and Shields"],
-  ["weapons", "Weapons"],
-]);
-
 /** Weapon type IDs mapped to their display names. */
 export const STATIC_WEAPON_TYPES = new Map<string, string>([
   ["simple-melee", "Simple Melee"],

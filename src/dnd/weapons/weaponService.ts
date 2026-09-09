@@ -1,16 +1,17 @@
 import { IdCache } from '../../cache/idCache';
-import { getEquipmentIndex } from '../equipment/equipmentService';
-import type { EquipmentIndex, EquipmentIndexEntry } from '../equipment/equipmentService';
 import { displayNameFromSlug, getPrimarySlug, nameToSlugs } from '../../utils/text';
 import { matchesSearchText } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
 import {
+	fetchWeaponIndex,
 	fetchWeaponMasteryTable as fetchMasteryTable,
 	fetchWeaponPropertyTable as fetchPropertyTable,
-} from '../equipment/equipmentFetcher';
+} from './weaponFetcher';
 import { getWikiTableColumnValues } from '../../utils/wikiTable';
 import type { WikiCellTableData } from '../../utils/wikiTable';
 import type { WeaponTypeDirective } from './weaponListCacheItem';
+import type { WeaponIndex, WeaponIndexEntry } from './weaponTypes';
+import { STATIC_WEAPON_TYPES } from '../../data/staticData';
 import {
 	getCachedHomebrewWeaponData,
 	getCachedHomebrewWeaponIds,
@@ -21,6 +22,7 @@ import { is2024Source } from '../../utils/wikiPageFetcher';
 export const weaponIdCache = new IdCache();
 const weaponPropertyCache = new IdCache();
 const weaponMasteryCache = new IdCache();
+const weaponIndexCache = new Map<string, WeaponIndex>();
 const weaponPropertyTableCache = new Map<string, WikiCellTableData | null>();
 const weaponMasteryTableCache = new Map<string, WikiCellTableData | null>();
 
@@ -55,25 +57,35 @@ export async function preloadWeaponData(urlKey: string, baseUrl: string): Promis
 	}
 }
 
-/** Return the weapon index through the shared equipment table fetcher. */
+/** Return the weapon index through the weapon table fetcher. */
 export async function getWeaponIndex(
 	urlKey: string,
 	baseUrl: string,
 	typeDirective: WeaponTypeDirective,
-): Promise<EquipmentIndex> {
-	const index = await getEquipmentIndex(urlKey, baseUrl, ['weapons'], typeDirective);
+	): Promise<WeaponIndex> {
+	const weaponTypes = getWeaponTypesToFetch(typeDirective);
+	const cacheKey = `${urlKey}|types:${weaponTypes.join(',')}`;
+	const index = weaponIndexCache.get(cacheKey) ?? await fetchWeaponIndex(baseUrl, weaponTypes);
+	weaponIndexCache.set(cacheKey, index);
 	const homebrewItems = await getHomebrewWeaponEntries(index.items, baseUrl, typeDirective);
 	return homebrewItems.length
 		? { items: [...index.items, ...homebrewItems] }
 		: index;
 }
 
+function getWeaponTypesToFetch(typeDirective: WeaponTypeDirective): string[] {
+	if (typeDirective === 'all' || !Array.isArray(typeDirective) || !typeDirective.length) {
+		return Array.from(STATIC_WEAPON_TYPES.keys());
+	}
+	return Array.from(new Set(typeDirective.map(normalizeWeaponType).filter(Boolean)));
+}
+
 /** Convert homebrew weapon metadata into the same rows used by fetched weapons. */
 async function getHomebrewWeaponEntries(
-	fetchedItems: EquipmentIndexEntry[],
+	fetchedItems: WeaponIndexEntry[],
 	baseUrl: string,
 	typeDirective: WeaponTypeDirective,
-): Promise<EquipmentIndexEntry[]> {
+): Promise<WeaponIndexEntry[]> {
 	const candidates = getCachedHomebrewWeaponIds();
 	const entries = await Promise.all(candidates.map(async (id) => {
 		const data = await getCachedHomebrewWeaponData(id);
@@ -126,7 +138,7 @@ function getHomebrewWeaponCellValue(
 
 /** Return unique weapon names after applying the type filter. */
 export function filterWeaponNames(
-	items: EquipmentIndexEntry[],
+	items: WeaponIndexEntry[],
 	type: WeaponTypeDirective,
 ): string[] {
 	const filteredItems = Array.isArray(type) && type.length
@@ -139,19 +151,19 @@ export function filterWeaponNames(
 
 /** Apply weapon property, mastery, and full-text search filters. */
 export function filterWeaponEntries(
-	entries: EquipmentIndexEntry[],
+	entries: WeaponIndexEntry[],
 	properties: string[],
 	mastery: string[],
 	searches: string[],
 	searchMode: SearchMode,
-): EquipmentIndexEntry[] {
+): WeaponIndexEntry[] {
 	return entries
 		.filter(entry => matchesWeaponProperties(entry, properties))
 		.filter(entry => matchesWeaponMastery(entry, mastery))
 		.filter(entry => matchesWeaponSearch(entry, searches, searchMode));
 }
 
-function matchesWeaponProperties(entry: EquipmentIndexEntry, properties: string[]): boolean {
+function matchesWeaponProperties(entry: WeaponIndexEntry, properties: string[]): boolean {
 	if (!properties.length) return true;
 
 	const propertyColumnIndex = entry.table?.headers.findIndex(header =>
@@ -163,7 +175,7 @@ function matchesWeaponProperties(entry: EquipmentIndexEntry, properties: string[
 	return properties.some(property => propertyText.includes(property));
 }
 
-function matchesWeaponMastery(entry: EquipmentIndexEntry, mastery: string[]): boolean {
+function matchesWeaponMastery(entry: WeaponIndexEntry, mastery: string[]): boolean {
 	if (!mastery.length) return true;
 
 	const masteryColumnIndex = entry.table?.headers.findIndex(header =>
@@ -176,7 +188,7 @@ function matchesWeaponMastery(entry: EquipmentIndexEntry, mastery: string[]): bo
 }
 
 function matchesWeaponSearch(
-	entry: EquipmentIndexEntry,
+	entry: WeaponIndexEntry,
 	searches: string[],
 	searchMode: SearchMode,
 ): boolean {
@@ -191,9 +203,9 @@ export function normalizeWeaponType(value: string): string {
 
 /** Find a weapon entry by any compatible slug generated from its name. */
 export function findWeaponEntry(
-	index: EquipmentIndex,
+	index: WeaponIndex,
 	weaponName: string,
-): EquipmentIndexEntry | null {
+	): WeaponIndexEntry | null {
 	const requestedSlugs = new Set(nameToSlugs(weaponName));
 	return index.items.find(item =>
 		nameToSlugs(item.name).some(slug => requestedSlugs.has(slug)),
@@ -208,7 +220,7 @@ export interface WeaponTableGroup {
 /** Keep only reference properties used by the weapons in the visible main table. */
 export function filterWeaponPropertyTable(
 	table: WikiCellTableData,
-	entries: EquipmentIndexEntry[],
+	entries: WeaponIndexEntry[],
 ): WikiCellTableData {
 	return filterWeaponReferenceTable(table, entries, ['property', 'properties']);
 }
@@ -216,14 +228,14 @@ export function filterWeaponPropertyTable(
 /** Keep only reference masteries used by the weapons in the visible main table. */
 export function filterWeaponMasteryTable(
 	table: WikiCellTableData,
-	entries: EquipmentIndexEntry[],
+	entries: WeaponIndexEntry[],
 ): WikiCellTableData {
 	return filterWeaponReferenceTable(table, entries, ['mastery']);
 }
 
 function filterWeaponReferenceTable(
 	table: WikiCellTableData,
-	entries: EquipmentIndexEntry[],
+	entries: WeaponIndexEntry[],
 	columnNames: string[],
 ): WikiCellTableData {
 	const usedReferenceNames = entries
@@ -270,7 +282,7 @@ export async function getWeaponMasteryTable(baseUrl: string): Promise<WikiCellTa
 }
 
 /** Group weapon rows by their source table layout so columns stay aligned. */
-export function groupWeaponTableRows(entries: EquipmentIndexEntry[]): WeaponTableGroup[] {
+export function groupWeaponTableRows(entries: WeaponIndexEntry[]): WeaponTableGroup[] {
 	const groups = new Map<string, WeaponTableGroup>();
 	for (const entry of entries) {
 		if (!entry.table) continue;

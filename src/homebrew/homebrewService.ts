@@ -8,6 +8,7 @@ export const homebrewBackgrounds = new Map<string, string>();
 export const homebrewFeats = new Map<string, string>();
 export const homebrewLineages = new Map<string, string>();
 export const homebrewSpells = new Map<string, string>();
+export const homebrewItems = new Map<string, string>();
 const homebrewIdsByType = new Map<string, Set<string>>();
 let app: App | null = null;
 
@@ -31,6 +32,11 @@ export function getCachedHomebrewLineageIds(): string[] {
 
 export function getCachedHomebrewSpellIds(): string[] {
 	return Array.from(homebrewSpells.keys());
+}
+
+/** Return normalized homebrew magic-item IDs. */
+export function getCachedHomebrewItemIds(): string[] {
+	return Array.from(homebrewItems.keys());
 }
 
 /** Return normalized homebrew IDs for any scanned tag type. */
@@ -78,6 +84,7 @@ export function updateHomebrewFileCache(
 	homebrewFeats.clear();
 	homebrewLineages.clear();
 	homebrewSpells.clear();
+	homebrewItems.clear();
 	homebrewIdsByType.clear();
 	for (const [type, files] of Object.entries(filesByType)) {
 		const ids = new Set<string>();
@@ -88,6 +95,7 @@ export function updateHomebrewFileCache(
 	cacheHomebrewFiles(filesByType.feat, homebrewFeats);
 	cacheHomebrewFiles(filesByType.lineage, homebrewLineages);
 	cacheHomebrewFiles(filesByType.spell, homebrewSpells);
+	cacheHomebrewFiles(filesByType.item, homebrewItems);
 }
 
 function cacheHomebrewFiles(files: TFile[] | undefined, pathByKey: Map<string, string>): void {
@@ -140,6 +148,59 @@ export async function getCachedHomebrewSpellData(spellName: string): Promise<Hom
 	if (!file || !app) return null;
 	try {
 		return parseHomebrewSpell(await app.vault.read(file));
+	} catch {
+		return null;
+	}
+}
+
+/** Render a homebrew magic item from its Markdown file. */
+export async function getCachedHomebrewItemContent(itemName: string): Promise<CachedRender | null> {
+	const key = nameToSlugs(itemName).find(candidate => homebrewItems.has(candidate));
+	if (!key || !app) return null;
+
+	const file = getHomebrewFile(homebrewItems, key);
+	if (!file) return null;
+
+	let source: string;
+	try {
+		source = await app.vault.read(file);
+	} catch {
+		return null;
+	}
+
+	const item = parseHomebrewMagicItem(source);
+	const description = [item.type, item.level].filter(Boolean).join(', ');
+	const attunement = item.requiresAttunement ? '(Requires Attunement)' : '';
+	const metadata = [description, attunement].filter(Boolean).join(' ');
+	const markdown = [metadata ? `*${metadata}*` : '', item.body].filter(Boolean).join('\n\n');
+	const container = createDiv();
+	addHomebrewSourceLabel(container);
+	const component = new Component();
+	component.load();
+	try {
+		await MarkdownRenderer.render(app, markdown, container, file.path, component);
+		return { title: displayNameFromSlug(key), html: container.innerHTML };
+	} finally {
+		component.unload();
+	}
+}
+
+export interface HomebrewMagicItemData {
+	level: string;
+	type: string;
+	requiresAttunement: boolean;
+	body: string;
+}
+
+/** Return parsed metadata for a cached homebrew magic item. */
+export async function getCachedHomebrewItemData(itemName: string): Promise<HomebrewMagicItemData | null> {
+	const key = nameToSlugs(itemName).find(candidate => homebrewItems.has(candidate));
+	if (!key || !app) return null;
+
+	const file = getHomebrewFile(homebrewItems, key);
+	if (!file) return null;
+	try {
+		return parseHomebrewMagicItem(await app.vault.read(file));
 	} catch {
 		return null;
 	}
@@ -200,6 +261,29 @@ function getSpellValue(values: Map<string, string | string[]>, key: string): str
 function getSpellListValue(values: Map<string, string | string[]>, key: string): string[] {
 	const value = values.get(key);
 	return Array.isArray(value) ? value.map(item => item.trim()).filter(Boolean) : [];
+}
+
+function parseHomebrewMagicItem(source: string): HomebrewMagicItemData {
+	const result: HomebrewMagicItemData = {
+		level: '',
+		type: '',
+		requiresAttunement: false,
+		body: source,
+	};
+	const frontmatterMatch = /^---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)([\s\S]*)$/u.exec(source);
+	if (!frontmatterMatch) return result;
+
+	const values = new Map<string, string>();
+	for (const line of frontmatterMatch[1].split(/\r?\n/)) {
+		const property = /^([\w-]+):\s*(.*)$/.exec(line.trim());
+		if (property) values.set(property[1], property[2].trim());
+	}
+
+	result.level = values.get('item-level-dndwiki') ?? '';
+	result.type = values.get('item-type-dndwiki') ?? '';
+	result.requiresAttunement = (values.get('requires-attunement') ?? '').toLowerCase() === 'true';
+	result.body = frontmatterMatch[2].trim();
+	return result;
 }
 
 function formatSpellProperties(spell: HomebrewSpellData): string[] {

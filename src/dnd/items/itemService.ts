@@ -6,6 +6,7 @@ import { displayNameFromSlug, nameToSlugs } from '../../utils/text';
 import { fetchPageContentWithSlugFallbacks, is2024Source } from '../../utils/wikiPageFetcher';
 import { loadFromTable, LoaderConfig } from '../../utils/wikiIndexLoader';
 import { getHomebrewMagicItemTypes, STATIC_ITEM_TYPES } from '../../data/staticData';
+import { getCachedHomebrewItemContent, getCachedHomebrewItemIds } from '../../homebrew/homebrewService';
 
 export const itemIdCache = new IdCache();
 const itemRenderCache = new RenderCache<CachedRender>();
@@ -39,6 +40,12 @@ export async function ensureItemCached(
 ): Promise<CachedRender | null> {
 	const itemIds = nameToSlugs(itemName);
 	if (!itemIds.length) return null;
+
+	const homebrew = await getCachedHomebrewItemContent(itemName);
+	if (homebrew) {
+		itemIdCache.addMany(urlKey, itemIds);
+		return homebrew;
+	}
 
 	for (const itemId of itemIds) {
 		const existing = itemRenderCache.get(urlKey, itemId);
@@ -94,6 +101,7 @@ export async function getItemIndex(urlKey: string, baseUrl: string): Promise<Ite
 }
 
 export async function preloadAllItemIds(urlKey: string, baseUrl: string): Promise<void> {
+	itemIdCache.addMany(urlKey, getCachedHomebrewItemIds());
 	const rowProcessor = (row: Element, _name: string): void => {
 		const cells = Array.from(row.querySelectorAll('td'));
 		const nameIndex = cells.findIndex(cell => !!cell.querySelector('a[href]'));

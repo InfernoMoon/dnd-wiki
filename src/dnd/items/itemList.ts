@@ -17,6 +17,10 @@ import { ItemListCacheItem } from './itemListCacheItem';
 import type { LevelDirective } from './itemListCacheItem';
 import { filterHomebrewNames, parseHomebrewMode } from '../../homebrew/homebrewService';
 import type { HomebrewMode } from '../../homebrew/homebrewService';
+import {
+	getCachedHomebrewItemData,
+	getCachedHomebrewItemIds,
+} from '../../homebrew/homebrewService';
 
 type TypeDirective = string[] | 'all' | null;
 type AttunedDirective = 'all' | boolean | null;
@@ -66,22 +70,35 @@ export async function renderItemList(
 	);
 
 	let names = itemListCache.get(urlKey, cacheItem);
+	let indexFailed = false;
+	let filterMessage: string | undefined;
 	if (names === null) {
 		const index = await getItemIndex(urlKey, baseUrl);
 		if (!index) {
-			el.setText(`Failed to load ${getItemCollectionName(baseUrl).toLowerCase()} index.`);
-			return;
+			names = [];
+			indexFailed = true;
+		} else {
+			const result = filterItems(index, directives);
+			if (result.message) {
+				names = [];
+				filterMessage = result.message;
+			} else {
+				names = result.names;
+				itemListCache.set(urlKey, cacheItem, names);
+			}
 		}
-
-		const result = filterItems(index, directives);
-		if (result.message) {
-			el.setText(result.message);
-			return;
-		}
-
-		names = result.names;
-		itemListCache.set(urlKey, cacheItem, names);
 	}
+
+	const homebrewNames = await getMatchingHomebrewItemNames(directives);
+	if (indexFailed && !homebrewNames.length) {
+		el.setText(`Failed to load ${getItemCollectionName(baseUrl).toLowerCase()} index.`);
+		return;
+	}
+	if (filterMessage && !homebrewNames.length) {
+		el.setText(filterMessage);
+		return;
+	}
+	names = uniqueNames([...names, ...homebrewNames]);
 	names = filterHomebrewNames(names, 'item', directives.homebrew);
 
 	if (!names.length) {
@@ -109,6 +126,43 @@ export async function renderItemList(
 		directives.searchMode,
 	);
 	if (!visibleCount) renderNoResultsMessage(container, getItemCollectionName(baseUrl).toLowerCase());
+}
+
+async function getMatchingHomebrewItemNames(directives: ItemListDirectives): Promise<string[]> {
+	const names = await Promise.all(getCachedHomebrewItemIds().map(async name =>
+		(await matchesHomebrewItemFilters(name, directives)) ? displayNameFromSlug(name) : null,
+	));
+	return names.filter((name): name is string => name !== null);
+}
+
+async function matchesHomebrewItemFilters(name: string, directives: ItemListDirectives): Promise<boolean> {
+	const item = await getCachedHomebrewItemData(name);
+	if (!item) return false;
+
+	const levels = typeof directives.level === 'number'
+		? [directives.level]
+		: Array.isArray(directives.level) ? directives.level : [];
+	if (levels.length) {
+		const itemLevel = getHomebrewItemLevel(item.level);
+		if (itemLevel === null || !levels.includes(itemLevel)) return false;
+	}
+
+	if (Array.isArray(directives.type) && directives.type.length
+		&& !directives.type.includes(normalizeType(item.type))) {
+		return false;
+	}
+	if (typeof directives.attuned === 'boolean' && item.requiresAttunement !== directives.attuned) {
+		return false;
+	}
+	return true;
+}
+
+function getHomebrewItemLevel(level: string): number | null {
+	const normalized = level.trim().replace(/\s+/g, '-').toLowerCase();
+	const rarityLevel = STATIC_ITEM_RARITY_WORD_TO_INDEX[normalized];
+	if (rarityLevel !== undefined) return rarityLevel;
+	if (/^\d+$/.test(normalized)) return Number.parseInt(normalized, 10);
+	return null;
 }
 
 function parseItemListDirectives(source: string): ItemListDirectives {
@@ -256,6 +310,12 @@ function normalizeType(type: string): string {
 function uniqueItemNames(items: ItemIndexEntry[]): string[] {
 	return Array.from(new Map(
 		items.map(item => [getPrimarySlug(item.name), item.name]),
+	).values());
+}
+
+function uniqueNames(names: string[]): string[] {
+	return Array.from(new Map(
+		names.map(name => [getPrimarySlug(name), name]),
 	).values());
 }
 

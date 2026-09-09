@@ -2,6 +2,7 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
 import { ensureItemCached } from './itemService';
 import { getPrimarySlug, displayNameFromSlug } from '../../utils/text';
 import { prepareNameInput, renderCollapsible } from '../../utils/renderer';
+import { getCachedHomebrewItemContent } from '../../homebrew/homebrewService';
 
 export async function renderItem(
 	source: string,
@@ -19,7 +20,7 @@ export async function renderItem(
 		if (!itemId) continue;
 
 		const host = container.createDiv('dnd-wiki-card-spacer');
-		const cached = await ensureItemCached(line, urlKey, baseUrl);
+		const cached = await getCachedHomebrewItemContent(line) ?? await ensureItemCached(line, urlKey, baseUrl);
 
 		if (cached?.html) {
 			renderCollapsible(host, cached.title, cached.html);

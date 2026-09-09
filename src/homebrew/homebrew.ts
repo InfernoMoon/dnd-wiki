@@ -37,7 +37,10 @@ export async function updateHomebrewFiles(
 
 	for (const file of vault.getMarkdownFiles()) {
 		if (!settings.searchEntireVault && !file.path.startsWith(homebrewFolderPrefix)) continue;
-		if (settings.ignoredFilePrefixes.some(prefix => file.basename.startsWith(prefix))) continue;
+		const pathParts = file.path.split('/');
+		if (settings.ignoredFilePrefixes.some(prefix =>
+			pathParts.some(pathPart => pathPart.startsWith(prefix)),
+		)) continue;
 
 		const cache = metadataCache.getFileCache(file);
 		const tags = cache ? getAllTags(cache) ?? [] : [];

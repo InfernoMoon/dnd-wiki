@@ -174,8 +174,8 @@ export class DndCardsSettingTab extends PluginSettingTab {
         },
       },
       {
-        name: 'Ignored homebrew file prefixes',
-        desc: 'Comma-separated filename prefixes to exclude when finding homebrew files.',
+        name: 'Ignored homebrew file and folder prefixes',
+        desc: 'Comma-separated file and folder prefixes to exclude when finding homebrew files.',
         render: (setting) => {
           void this.withHomebrewSettings(setting, (row, settings) => {
             row.addText((text) => {
@@ -328,8 +328,8 @@ export class DndCardsSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName('Ignored homebrew file prefixes')
-      .setDesc('Comma-separated filename prefixes to exclude when finding homebrew files.')
+      .setName('Ignored homebrew file and folder prefixes')
+      .setDesc('Comma-separated file and folder prefixes to exclude when finding homebrew files.')
       .addText((text) => {
         text.setValue(settings.ignoredFilePrefixes.join(', '))
           .setPlaceholder('_')

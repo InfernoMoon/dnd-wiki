@@ -215,14 +215,11 @@ Without `section:` or `sectionFrom:`, the complete page is displayed. Both secti
 Autocomplete suggests the directive names, but it cannot suggest wiki page paths or section names.
 
 ## Custom Homebrew
-
-> [!WARNING]
-> Custom homebrew now uses Markdown files instead of YAML. The old YAML format is no longer supported.
-> Search support for weapons and magic items is not yet available.
-
-Create a homebrew file from **Settings → DnD Wiki → Homebrew templates → Add homebrew file**, or run the **Create homebrew file** command.
+Create a homebrew file from **Settings → DnD Wiki → Homebrew templates → Add homebrew file**, or run the **Create homebrew file** command. Each homebrew category includes a starter template you can copy and customize.
 
 If you create or edit a homebrew file manually, run the **Update homebrew content** command or select **Refresh homebrew** in the settings to update the plugin's homebrew cache.
+
+You can exclude homebrew files and folders by configuring ignored prefixes in the homebrew settings. The default prefix is `_`, so template files and folders beginning with `_` are ignored automatically.
 
 
 ## Data and privacy

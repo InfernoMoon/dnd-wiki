@@ -1,8 +1,9 @@
 import { App, Modal, Notice, Setting, TFile } from 'obsidian';
+import type { EventRef } from 'obsidian';
 import { getClassNames, getItemRarityNames, getSchoolNames, getWeaponTypeNames } from '../data/staticData';
 import { getHomebrewSettings } from './homebrewSettings';
 import { getItemTypeSuggestions } from '../dnd/items/itemService';
-import { ensureHomebrewFolderPath } from './homebrew';
+import { ensureHomebrewFolderPath, updateHomebrewFiles } from './homebrew';
 import { ensureHomebrewCategoryFolder, getHomebrewFileTemplate, HOMEBREW_CATEGORIES } from './homebrewTemplates';
 import type { HomebrewFileTemplateOptions } from './homebrewTemplates';
 
@@ -253,12 +254,39 @@ export class HomebrewFileModal extends Modal {
 		} else if (this.category === 'Weapons') {
 			templateOptions.weapon = { type: this.weaponType };
 		}
-		const file = existing instanceof TFile
-			? existing
-			: await this.app.vault.create(filePath, getHomebrewFileTemplate(this.category, templateOptions));
+		const fileWasCreated = !(existing instanceof TFile);
+		const file = fileWasCreated
+			? await this.app.vault.create(filePath, getHomebrewFileTemplate(this.category, templateOptions))
+			: existing;
+		if (fileWasCreated) {
+			await waitForHomebrewFileMetadata(this.app, file);
+			await updateHomebrewFiles(this.app.vault, this.app.metadataCache, await getHomebrewSettings());
+		}
 		this.close();
 		await this.app.workspace.getLeaf(false).openFile(file);
 	}
+}
+
+/** Wait until Obsidian has indexed a newly created homebrew file. */
+async function waitForHomebrewFileMetadata(app: App, file: TFile): Promise<void> {
+	if (app.metadataCache.getFileCache(file)) return;
+
+	await new Promise<void>((resolve) => {
+		let eventRef: EventRef | null = null;
+		let finished = false;
+		const finish = (): void => {
+			if (finished) return;
+			finished = true;
+			if (eventRef) app.metadataCache.offref(eventRef);
+			window.clearTimeout(timeoutId);
+			resolve();
+		};
+		const timeoutId = window.setTimeout(finish, 5000);
+		eventRef = app.metadataCache.on('changed', (changedFile) => {
+			if (changedFile.path === file.path) finish();
+		});
+		if (app.metadataCache.getFileCache(file)) finish();
+	});
 }
 
 export function registerHomebrewFileCommand(app: App, addCommand: (command: { id: string; name: string; callback: () => void }) => void): void {
@@ -266,5 +294,18 @@ export function registerHomebrewFileCommand(app: App, addCommand: (command: { id
 		id: 'create-homebrew-file',
 		name: 'Create homebrew file',
 		callback: () => openHomebrewFileModal(app),
+	});
+	addCommand({
+		id: 'update-homebrew-content',
+		name: 'Update homebrew content',
+		callback: () => {
+			void getHomebrewSettings()
+				.then((settings) => updateHomebrewFiles(app.vault, app.metadataCache, settings))
+				.then(() => new Notice('Homebrew content updated.'))
+				.catch((error: unknown) => {
+					console.error('DnD Wiki: Failed to update homebrew content', error);
+					new Notice('Failed to update homebrew content. See the console for details.');
+				});
+		},
 	});
 }

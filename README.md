@@ -222,6 +222,8 @@ Autocomplete suggests the directive names, but it cannot suggest wiki page paths
 
 Create a homebrew file from **Settings → DnD Wiki → Homebrew templates → Add homebrew file**, or run the **Create homebrew file** command.
 
+If you create or edit a homebrew file manually, run the **Update homebrew content** command or select **Refresh homebrew** in the settings to update the plugin's homebrew cache.
+
 
 ## Data and privacy
 

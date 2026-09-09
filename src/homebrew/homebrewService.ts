@@ -9,6 +9,7 @@ export const homebrewFeats = new Map<string, string>();
 export const homebrewLineages = new Map<string, string>();
 export const homebrewSpells = new Map<string, string>();
 export const homebrewItems = new Map<string, string>();
+export const homebrewWeapons = new Map<string, string>();
 const homebrewIdsByType = new Map<string, Set<string>>();
 let app: App | null = null;
 
@@ -37,6 +38,11 @@ export function getCachedHomebrewSpellIds(): string[] {
 /** Return normalized homebrew magic-item IDs. */
 export function getCachedHomebrewItemIds(): string[] {
 	return Array.from(homebrewItems.keys());
+}
+
+/** Return normalized homebrew weapon IDs. */
+export function getCachedHomebrewWeaponIds(): string[] {
+	return Array.from(homebrewWeapons.keys());
 }
 
 /** Return normalized homebrew IDs for any scanned tag type. */
@@ -85,6 +91,7 @@ export function updateHomebrewFileCache(
 	homebrewLineages.clear();
 	homebrewSpells.clear();
 	homebrewItems.clear();
+	homebrewWeapons.clear();
 	homebrewIdsByType.clear();
 	for (const [type, files] of Object.entries(filesByType)) {
 		const ids = new Set<string>();
@@ -96,6 +103,7 @@ export function updateHomebrewFileCache(
 	cacheHomebrewFiles(filesByType.lineage, homebrewLineages);
 	cacheHomebrewFiles(filesByType.spell, homebrewSpells);
 	cacheHomebrewFiles(filesByType.item, homebrewItems);
+	cacheHomebrewFiles(filesByType.weapon, homebrewWeapons);
 }
 
 function cacheHomebrewFiles(files: TFile[] | undefined, pathByKey: Map<string, string>): void {
@@ -192,6 +200,30 @@ export interface HomebrewMagicItemData {
 	body: string;
 }
 
+export interface HomebrewWeaponData {
+	type: string;
+	damage: string;
+	properties: string[];
+	mastery: string;
+	weight: string;
+	cost: string;
+	body: string;
+}
+
+/** Return parsed metadata for a cached homebrew weapon. */
+export async function getCachedHomebrewWeaponData(weaponName: string): Promise<HomebrewWeaponData | null> {
+	const key = nameToSlugs(weaponName).find(candidate => homebrewWeapons.has(candidate));
+	if (!key || !app) return null;
+
+	const file = getHomebrewFile(homebrewWeapons, key);
+	if (!file) return null;
+	try {
+		return parseHomebrewWeapon(await app.vault.read(file));
+	} catch {
+		return null;
+	}
+}
+
 /** Return parsed metadata for a cached homebrew magic item. */
 export async function getCachedHomebrewItemData(itemName: string): Promise<HomebrewMagicItemData | null> {
 	const key = nameToSlugs(itemName).find(candidate => homebrewItems.has(candidate));
@@ -284,6 +316,60 @@ function parseHomebrewMagicItem(source: string): HomebrewMagicItemData {
 	result.requiresAttunement = (values.get('requires-attunement') ?? '').toLowerCase() === 'true';
 	result.body = frontmatterMatch[2].trim();
 	return result;
+}
+
+function parseHomebrewWeapon(source: string): HomebrewWeaponData {
+	const result: HomebrewWeaponData = {
+		type: '',
+		damage: '',
+		properties: [],
+		mastery: '',
+		weight: '',
+		cost: '',
+		body: source,
+	};
+	const frontmatterMatch = /^---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)([\s\S]*)$/u.exec(source);
+	if (!frontmatterMatch) return result;
+
+	const values = new Map<string, string | string[]>();
+	let currentKey = '';
+	for (const line of frontmatterMatch[1].split(/\r?\n/)) {
+		const property = /^([\w-]+):\s*(.*)$/.exec(line.trim());
+		if (property) {
+			currentKey = property[1];
+			values.set(currentKey, property[2].trim());
+			continue;
+		}
+		const listItem = /^-\s*(.*)$/.exec(line.trim());
+		if (listItem && currentKey) {
+			const existing = values.get(currentKey);
+			const list = Array.isArray(existing) ? existing : [];
+			list.push(listItem[1].trim());
+			values.set(currentKey, list);
+		}
+	}
+
+	result.type = getFrontmatterValue(values, 'weapon-type-dndwiki');
+	result.damage = getFrontmatterValue(values, 'weapon-damage-dndwiki');
+	result.properties = getFrontmatterListValue(values, 'weapon-properties-dndwiki');
+	result.mastery = getFrontmatterValue(values, 'weapon-mastery-dndwiki');
+	result.weight = getFrontmatterValue(values, 'weight-dndwiki');
+	result.cost = getFrontmatterValue(values, 'cost-dndwiki');
+	result.body = frontmatterMatch[2].trim();
+	return result;
+}
+
+function getFrontmatterValue(values: Map<string, string | string[]>, key: string): string {
+	const value = values.get(key);
+	return typeof value === 'string' ? value.trim() : '';
+}
+
+function getFrontmatterListValue(values: Map<string, string | string[]>, key: string): string[] {
+	const value = values.get(key);
+	if (Array.isArray(value)) return value.map(item => item.trim()).filter(Boolean);
+	return typeof value === 'string'
+		? value.split(',').map(item => item.trim()).filter(Boolean)
+		: [];
 }
 
 function formatSpellProperties(spell: HomebrewSpellData): string[] {

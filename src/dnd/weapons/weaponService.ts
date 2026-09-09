@@ -1,7 +1,7 @@
 import { IdCache } from '../../cache/idCache';
 import { getEquipmentIndex } from '../equipment/equipmentService';
 import type { EquipmentIndex, EquipmentIndexEntry } from '../equipment/equipmentService';
-import { getPrimarySlug, nameToSlugs } from '../../utils/text';
+import { displayNameFromSlug, getPrimarySlug, nameToSlugs } from '../../utils/text';
 import { matchesSearchText } from '../../utils/search';
 import type { SearchMode } from '../../utils/search';
 import {
@@ -11,6 +11,12 @@ import {
 import { getWikiTableColumnValues } from '../../utils/wikiTable';
 import type { WikiCellTableData } from '../../utils/wikiTable';
 import type { WeaponTypeDirective } from './weaponListCacheItem';
+import {
+	getCachedHomebrewWeaponData,
+	getCachedHomebrewWeaponIds,
+} from '../../homebrew/homebrewService';
+import type { HomebrewWeaponData } from '../../homebrew/homebrewService';
+import { is2024Source } from '../../utils/wikiPageFetcher';
 
 export const weaponIdCache = new IdCache();
 const weaponPropertyCache = new IdCache();
@@ -20,7 +26,7 @@ const weaponMasteryTableCache = new Map<string, WikiCellTableData | null>();
 
 /** Return the preloaded weapon IDs for a source URL. */
 export function getKnownWeaponIdsForKey(urlKey: string): string[] {
-	return weaponIdCache.get(urlKey);
+	return Array.from(new Set([...weaponIdCache.get(urlKey), ...getCachedHomebrewWeaponIds()]));
 }
 
 /** Return the fetched weapon properties for a source URL. */
@@ -55,7 +61,67 @@ export async function getWeaponIndex(
 	baseUrl: string,
 	typeDirective: WeaponTypeDirective,
 ): Promise<EquipmentIndex> {
-	return getEquipmentIndex(urlKey, baseUrl, ['weapons'], typeDirective);
+	const index = await getEquipmentIndex(urlKey, baseUrl, ['weapons'], typeDirective);
+	const homebrewItems = await getHomebrewWeaponEntries(index.items, baseUrl, typeDirective);
+	return homebrewItems.length
+		? { items: [...index.items, ...homebrewItems] }
+		: index;
+}
+
+/** Convert homebrew weapon metadata into the same rows used by fetched weapons. */
+async function getHomebrewWeaponEntries(
+	fetchedItems: EquipmentIndexEntry[],
+	baseUrl: string,
+	typeDirective: WeaponTypeDirective,
+): Promise<EquipmentIndexEntry[]> {
+	const candidates = getCachedHomebrewWeaponIds();
+	const entries = await Promise.all(candidates.map(async (id) => {
+		const data = await getCachedHomebrewWeaponData(id);
+		if (!data) return null;
+
+		const normalizedType = normalizeWeaponType(data.type);
+		if (Array.isArray(typeDirective)
+			&& typeDirective.length
+			&& !typeDirective.includes(normalizedType)) return null;
+
+		const sourceTable = fetchedItems.find(item =>
+			normalizeWeaponType(item.weaponType ?? '') === normalizedType && item.table,
+		)?.table ?? fetchedItems.find(item => item.table)?.table;
+		const headers = sourceTable?.headers ?? getFallbackWeaponHeaders(baseUrl);
+		const name = displayNameFromSlug(id);
+		return {
+			name,
+			type: 'weapons',
+			weaponType: normalizedType,
+			table: {
+				headers,
+				values: headers.map(header => getHomebrewWeaponCellValue(header, name, data)),
+			},
+		};
+	}));
+	return entries.filter((entry): entry is Exclude<typeof entry, null> => entry !== null);
+}
+
+function getFallbackWeaponHeaders(baseUrl: string): string[] {
+	return is2024Source(baseUrl)
+		? ['Name', 'Cost', 'Damage', 'Weight', 'Properties', 'Mastery']
+		: ['Name', 'Cost', 'Damage', 'Weight', 'Properties'];
+}
+
+function getHomebrewWeaponCellValue(
+	header: string,
+	name: string,
+	data: HomebrewWeaponData,
+): string {
+	const normalizedHeader = header.trim().toLowerCase();
+	if (normalizedHeader === 'name') return name;
+	if (normalizedHeader === 'type') return data.type;
+	if (normalizedHeader === 'cost') return data.cost;
+	if (normalizedHeader === 'damage') return data.damage;
+	if (normalizedHeader === 'weight') return data.weight;
+	if (normalizedHeader === 'properties') return data.properties.join(', ');
+	if (normalizedHeader === 'mastery') return data.mastery;
+	return '';
 }
 
 /** Return unique weapon names after applying the type filter. */

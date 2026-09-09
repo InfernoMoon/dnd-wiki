@@ -32,7 +32,7 @@ export class WeaponListSuggest extends DndDirectiveSuggest {
 			);
 		}
 		if (this.currentKey === 'mastery') {
-			if(is2024Source(this.getBaseUrl(this.currentUrlKey)))
+			if (!is2024Source(this.getBaseUrl(this.currentUrlKey)))
 				return [];
 
 			return getTextSuggestions(

@@ -24,7 +24,7 @@ import { is2024Source } from '../../utils/wikiPageFetcher';
 import { WeaponListCacheItem } from './weaponListCacheItem';
 import type { WeaponTypeDirective } from './weaponListCacheItem';
 import { STATIC_WEAPON_TYPES } from '../../data/staticData';
-import { filterHomebrewNames, parseHomebrewMode } from '../../homebrew/homebrewService';
+import { filterHomebrewNames, isHomebrewContent, parseHomebrewMode } from '../../homebrew/homebrewService';
 import type { HomebrewMode } from '../../homebrew/homebrewService';
 
 interface WeaponListDirectives {
@@ -60,9 +60,15 @@ export async function renderWeaponList(
 	const index = await getWeaponIndex(urlKey, baseUrl, directives.type);
 	let names = weaponListCache.get(urlKey, cacheItem);
 	if (names === null) {
-		names = filterWeaponNames(index.items, directives.type);
+		const fetchedItems = index.items.filter(item => !isHomebrewContent('weapon', item.name));
+		names = filterWeaponNames(fetchedItems, directives.type);
 		weaponListCache.set(urlKey, cacheItem, names);
 	}
+	const homebrewNames = filterWeaponNames(
+		index.items.filter(item => isHomebrewContent('weapon', item.name)),
+		directives.type,
+	);
+	names = Array.from(new Set([...names, ...homebrewNames]));
 	names = filterHomebrewNames(names, 'weapon', directives.homebrew);
 
 	if (!names.length) {

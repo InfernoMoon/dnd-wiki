@@ -1,16 +1,13 @@
 # DnD Wiki
 
 DnD Wiki displays spells, feats, magic items, and other wiki content directly inside your notes.
-
-The plugin includes source configurations for both the 2014/5e and 2024 rules. You can add other compatible wiki-style sources in the plugin settings.
+The plugin includes source configurations for both the 2014/5e and 2024 rules.
 
 ## Features
 
 - Display DnD entries as collapsible cards.
-- Create complete or filtered lists of spells, weapons, feats, items, backgrounds, and lineages.
-- Use the included `5e` and `2024` sources or configure your own.
+- Create complete or filtered lists of spells, weapons, feats, items and more.
 - Display complete class pages, subclasses, and selected page sections.
-- Load other wiki pages with the generic `custom` block.
 - Get autocomplete for block types, names, and supported filters.
 - Create experimental Markdown homebrew files in your vault.
 
@@ -29,35 +26,8 @@ Two versions are configured by default:
 - `5e` uses the DnD 5e source.
 - `2024` uses the DnD 2024 source.
 
-The content type determines what is displayed. Examples include `spell`, `spelllist`, `weapon`, `weaponlist`, `feat`, `magicitem`, `classinfo`, and `custom`:
+The content type determines what is displayed. Examples include `spell`, `spelllist`, `weapon`, `weaponlist`, `feat`, etc.
 
-Individual blocks display named entries:
-
-````markdown
-```dnd5e-spell
-Fireball
-Mage Hand
-```
-````
-
-List blocks load a collection and apply filters:
-
-````markdown
-```dnd5e-spelllist
-level: 3
-class: Wizard
-school: Divination
-```
-````
-
-````markdown
-```dnd2024-spelllist
-level: 1-4
-class: Cleric
-```
-````
-
-Open the note in Reading view or Live Preview, then select a card heading to expand or collapse it.
 
 ## Autocomplete
 
@@ -69,47 +39,68 @@ You do not need to remember block names, spell names, or filter options. Start b
 
 DnD Wiki suggests a version such as `5e` or `2024`, followed by available content types. For example, typing ` ```dnd5e-` suggests `spell`, `spelllist`, `feat`, `magicitem`, and the other registered types.
 
-Inside a block, autocomplete suggests known card names and supported directives. Some free-form values are not suggested, including custom page paths and section names.
+Inside a block, autocomplete suggests known card names and supported directives.
 
 ## DnD features
 
-### Individual cards
+Individual blocks display named entries. List blocks load a collection and apply filters.
 
-Enter one name or identifier per line. The following individual content types share this behavior:
-
-| Content type | Displays |
+| Feature | Blocks |
 |---|---|
-| `spell` | Spells |
-| `feat` | Feats |
-| `magicitem` | Magic items |
-| `weapon` | Weapons |
-| `background` | Backgrounds |
-| `lineage` | Lineages, or species for the 2024 source |
-| `class` | Complete class pages |
+| Spells | `spell`, `spelllist` |
+| Feats | `feat`, `featlist` |
+| Magic items | `magicitem`, `magicitemlist` |
+| Weapons | `weapon`, `weaponlist` |
+| Backgrounds | `background`, `backgroundlist` |
+| Lineages | `lineage`, `lineagelist` |
+| Class pages | `classinfo` |
+| Custom wiki pages | `custom` |
+
+For example, an individual block renders named entries:
 
 ````markdown
-```dnd5e-feat
-Alert
-Lucky
+```dnd5e-spell
+Fireball
+Mage Hand
 ```
 ````
 
-### Spell lists and filters
+A list block renders matching entries and can apply filters:
 
-A `spelllist` block displays all available spells unless filters are supplied.
+````markdown
+```dnd5e-spelllist
+level: 3
+class: Wizard
+school: Evocation
+```
+````
 
-| Directive | Purpose | Example |
-|---|---|---|
-| `level:` | Levels 0–9, comma-separated values, ranges, or `all` | `level: 2-4` |
-| `class:` | One or more classes | `class: Wizard, Sorcerer` |
-| `school:` | One or more schools | `school: Evocation` |
-| `addspells:` | Add spells after filtering | `addspells: Light` |
-| `removespells:` | Remove spells from the result | `removespells: Fireball` |
-| `search:` | Search names and rendered content | `search: damage` |
-| `searchMode:` | Combine searches with `and` or `or` | `searchMode: and` |
-| `homebrew:` | Include, exclude, or show only homebrew entries | `homebrew: Only` |
+<details>
+<summary><h3 style="display: inline;">Spell</h3></summary>
 
-Values within one `class:` or `school:` directive are alternatives. Different filter categories are combined. Repeated `search:` directives use `or` by default; use `searchMode: and` to require every term.
+The `spell` block displays one or more spells by name or identifier, one per line.
+
+````markdown
+```dnd5e-spell
+Fireball
+Mage Hand
+```
+````
+
+The `spelllist` block displays spells and supports these directives:
+
+| Directive | Purpose |
+|---|---|
+| `level:` | Levels 0–9, comma-separated values, ranges, or `all` |
+| `class:` | One or more classes |
+| `school:` | One or more schools |
+| `addspells:` | Add spells after filtering |
+| `removespells:` | Remove spells from the result |
+| `search:` | Search names and rendered content |
+| `searchMode:` | Combine searches with `and` or `or` |
+| `homebrew:` | Include, exclude, or show only homebrew entries |
+
+Values within one `class:` or `school:` directive are alternatives. Different filter categories are combined. Repeated `search:` directives use `or` by default.
 
 ````markdown
 ```dnd5e-spelllist
@@ -120,19 +111,21 @@ addspells: Healing Word
 ```
 ````
 
-This creates a list of 1st- through 3rd-level Wizard Evocation spells. The character also gained access to Healing Word from another feature, even though it is not normally a Wizard spell, so `addspells:` includes it manually.
+</details>
 
-### Other lists
+<details>
+<summary><h3 style="display: inline;">Feat</h3></summary>
 
-| Content type | Filters |
-|---|---|
-| `featlist` | `homebrew:`, `search:`, `searchMode:` |
-| `weaponlist` | `type:`, `property:`, `mastery:` (2024 only), `showPropertyTable:`, `showMasteryTable:` (2024 only), `homebrew:`, `search:`, `searchMode:` |
-| `backgroundlist` | `homebrew:`, `search:`, `searchMode:` |
-| `lineagelist` | `homebrew:`, `search:`, `searchMode:` |
-| `magicitemlist` | `level:`, `type:`, `attuned:`, `homebrew:`, `search:`, `searchMode:` |
+The `feat` block displays one or more feats by name or identifier, one per line.
 
-This displays feats whose names or descriptions mention either Constitution or Strength:
+````markdown
+```dnd5e-feat
+Alert
+Lucky
+```
+````
+
+The `featlist` block displays feats with `homebrew:`, `search:`, and `searchMode:` filters.
 
 ````markdown
 ```dnd5e-featlist
@@ -141,8 +134,21 @@ search: strength
 searchMode: or
 ```
 ````
-Change `searchMode:` to `and` to require both terms.
 
+</details>
+
+<details>
+<summary><h3 style="display: inline;">Magic item</h3></summary>
+
+The `magicitem` block displays one or more magic items by name or identifier, one per line.
+
+````markdown
+```dnd5e-magicitem
+Bag of Holding
+```
+````
+
+The `magicitemlist` block displays magic items with `level:`, `type:`, `attuned:`, `homebrew:`, `search:`, and `searchMode:` filters.
 
 ````markdown
 ```dnd5e-magicitemlist
@@ -150,29 +156,84 @@ level: Uncommon, Rare
 type: Wondrous Item
 attuned: required
 search: teleport
-search: 30 feet
-searchMode: And
 ```
 ````
 
-The same repeated `search:` and `searchMode:` behavior used by spell lists also applies to these list blocks.
+</details>
 
-## Class information
+<details>
+<summary><h3 style="display: inline;">Weapon</h3></summary>
 
-Use `classinfo` to display a subclass or another class-related wiki page. `class:` and the final `subinfo:` value are combined into `{baseUrl}/{class}:{subinfo}`.
-
-A subclass can be displayed directly:
+The `weapon` block displays one or more weapons as tables, one per line.
 
 ````markdown
-```dnd5e-classinfo
-class: Fighter
-subinfo: Battle Master
+```dnd2024-weapon
+Longsword
+Shortbow
 ```
 ````
 
-Use `section:` to display one matching heading. Use `sectionFrom:` to display that heading and all following headings at the same level. A `sectionFrom:` range stops at a higher-level heading or the end of the page.
+The `weaponlist` block displays weapons with `type:`, `property:`, `homebrew:`, `search:`, and `searchMode:` filters. The 2024 source also supports `mastery:`, `showPropertyTable:`, and `showMasteryTable:`.
 
-This example displays Warlock invocations beginning with Agonizing Blast:
+````markdown
+```dnd2024-weaponlist
+type: Martial Melee
+property: Finesse
+mastery: Vex
+search: damage
+```
+````
+
+</details>
+
+<details>
+<summary><h3 style="display: inline;">Background</h3></summary>
+
+The `background` block displays one or more backgrounds by name or identifier, one per line.
+
+````markdown
+```dnd5e-background
+Folk Hero
+```
+````
+
+The `backgroundlist` block displays backgrounds with `homebrew:`, `search:`, and `searchMode:` filters.
+
+````markdown
+```dnd5e-backgroundlist
+search: skills
+```
+````
+
+</details>
+
+<details>
+<summary><h3 style="display: inline;">Lineage</h3></summary>
+
+The `lineage` block displays one or more lineages by name or identifier. For the 2024 source, this represents species.
+
+````markdown
+```dnd2024-lineage
+Elf
+```
+````
+
+The `lineagelist` block displays lineages with `homebrew:`, `search:`, and `searchMode:` filters.
+
+````markdown
+```dnd2024-lineagelist
+search: darkvision
+```
+````
+
+</details>
+
+<details>
+<summary><h3 style="display: inline;">Class information</h3></summary>
+
+Displays a class-related page or subclass. `class:` and the final `subinfo:` value are combined into `{baseUrl}/{class}:{subinfo}`.
+
+Use `section:` to display one matching heading, or `sectionFrom:` to display that heading and following headings at the same level.
 
 ````markdown
 ```dnd2024-classinfo
@@ -182,24 +243,12 @@ sectionFrom: Agonizing Blast
 ```
 ````
 
-This example displays Blood Hunter mutagens beginning with Aether:
+</details>
 
-````markdown
-```dnd5e-classinfo
-class: Blood Hunter
-subinfo: Mutant
-subinfo: Mutagens
-sectionFrom: Aether
-```
-````
+<details>
+<summary><h3 style="display: inline;">Custom wiki page</h3></summary>
 
-When multiple `subinfo:` lines are present, autocomplete can use the preceding values as a path, while the final value determines the page that is rendered.
-
-You may mix multiple `section:` and `sectionFrom:` directives. Their results are rendered in the order in which they are written. Without either directive, the complete page is displayed.
-
-## Custom wiki pages
-
-Use `custom` for content that exists on the wiki but does not have a dedicated DnD Wiki content type. For example, this displays the weapon-mastery properties table:
+Loads content that does not have a dedicated DnD Wiki content type. It can use `section:` and `sectionFrom:` to select part of the page.
 
 ````markdown
 ```dnd2024-custom
@@ -208,19 +257,17 @@ section: Mastery Properties
 ```
 ````
 
-The `source:` value is appended directly to the selected base URL, producing `{baseUrl}/equipment:weapon` in this example. Colons and additional path segments are preserved.
+The `source:` value is appended directly to the selected base URL. Autocomplete suggests directive names, but not custom page paths or section names.
 
-Without `section:` or `sectionFrom:`, the complete page is displayed. Both section directives behave exactly as described under **Class information**.
-
-Autocomplete suggests the directive names, but it cannot suggest wiki page paths or section names.
+</details>
 
 ## Custom Homebrew
+
 Create a homebrew file from **Settings → DnD Wiki → Homebrew templates → Add homebrew file**, or run the **Create homebrew file** command. Each homebrew category includes a starter template you can copy and customize.
 
 If you create or edit a homebrew file manually, run the **Update homebrew content** command or select **Refresh homebrew** in the settings to update the plugin's homebrew cache.
 
 You can exclude homebrew files and folders by configuring ignored prefixes in the homebrew settings. The default prefix is `_`, so template files and folders beginning with `_` are ignored automatically.
-
 
 ## Data and privacy
 
@@ -247,4 +294,5 @@ See the official [Wizards of the Coast Fan Content Policy](https://company.wizar
 This project is mostly for fun. I created it to make writing my DM and player notes in Obsidian easier and to reference DnD rules directly from those notes.
 
 DnD Wiki depends on the structure of external wikis. If those wikis change, some features may stop working. I intend to fix issues when they arise.
+
 Also sometimes the wiki pages may be temporarily unavailable, so the plugin won't be able to display content during those times.
